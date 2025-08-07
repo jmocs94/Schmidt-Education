@@ -89,6 +89,62 @@
     const song = document.getElementById("song");
     const recordButton = document.getElementById("recordButton");
 
+    async function startRecording() {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false
+        }
+      });
+
+      const chunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+
+      mediaRecorder.ondataavailable = e => chunks.push(e.data);
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        const url = URL.createObjectURL(blob);
+        const playback = document.getElementById('playback');
+        playback.src = url;
+        document.getElementById("downloadBtn").onclick = () => {
+          const link = document.createElement('a');
+          const filename = document.getElementById('filename').value || `recording_${new Date().toISOString()}`;
+          link.href = url;
+          link.download = `${filename}.webm`;
+          link.click();
+        };
+      };
+
+      song.src = document.getElementById("songSelect").value;
+      song.load();
+
+      document.getElementById("countdown").textContent = "3";
+      setTimeout(() => document.getElementById("countdown").textContent = "2", 1000);
+      setTimeout(() => document.getElementById("countdown").textContent = "1", 2000);
+
+      setTimeout(() => {
+        document.getElementById("countdown").textContent = "";
+        mediaRecorder.start();
+        song.play();
+        const timer = document.getElementById("timer");
+        let seconds = 0;
+        const interval = setInterval(() => {
+          if (!isRecording) return clearInterval(interval);
+          seconds++;
+          const min = Math.floor(seconds / 60).toString().padStart(1, '0');
+          const sec = (seconds % 60).toString().padStart(2, '0');
+          timer.textContent = `Recording Length: ${min}:${sec}`;
+        }, 1000);
+
+        song.onended = () => {
+          if (mediaRecorder.state === "recording") mediaRecorder.stop();
+          isRecording = false;
+        };
+      }, 3000);
+    }
+
     recordButton.addEventListener("click", () => {
       if (!isRecording) {
         isRecording = true;
