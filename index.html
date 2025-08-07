@@ -3,226 +3,234 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sing and Record</title>
-  <script src="https://apis.google.com/js/api.js"></script>
+  <title>Crescendos 25-26</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background-color: #111;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 20px;
-    }
-    .neon-box {
-      border: 4px solid #00ffff;
-      border-radius: 20px;
-      padding: 20px;
-      margin-bottom: 10px;
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      background: linear-gradient(to bottom right, #fef6e4, #e0f7fa);
       text-align: center;
-      position: relative;
-      overflow: hidden;
+      padding: 2em;
+      color: #333;
     }
-    .neon-box h1 {
+    h1 {
       font-size: 2.5em;
-      margin: 0;
+      color: #2e7d32;
+      margin: 0.5em 0;
     }
-    .controls {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 10px;
-    }
-    .control-icon {
-      font-size: 1.5em;
-      cursor: pointer;
-    }
-    .color-picker {
-      display: none;
+    #logo {
+      width: 200px;
+      margin-bottom: 1em;
     }
     select, input[type="text"] {
-      padding: 10px;
-      margin: 10px;
-      width: 300px;
-      border-radius: 8px;
-      border: none;
       font-size: 1em;
+      margin: 1em 0;
+      padding: 0.5em;
+      border-radius: 10px;
+      border: 1px solid #ccc;
     }
-    audio, button {
-      margin: 10px;
-    }
-    button {
-      padding: 10px 20px;
-      font-size: 1em;
-      border-radius: 8px;
+    #recordButton {
+      background: none;
       border: none;
-      background-color: #444;
+      cursor: pointer;
+      margin: 1em;
+    }
+    #recordButton img {
+      width: 80px;
+    }
+    #waveform {
+      width: 100%;
+      height: 100px;
+      background: #fff;
+      border: 2px dashed #4db6ac;
+      margin-top: 1em;
+    }
+    audio {
+      margin-top: 1em;
+    }
+    button, #downloadBtn {
+      background-color: #4db6ac;
       color: white;
+      border: none;
+      padding: 0.5em 1em;
+      margin: 0.5em;
+      font-size: 1em;
+      border-radius: 10px;
       cursor: pointer;
     }
-    #recordingsList audio {
-      display: block;
-      margin-top: 5px;
+    #playbackContainer {
+      background: #fff3e0;
+      border-radius: 10px;
+      padding: 1em;
+      margin-top: 1em;
+      display: inline-block;
+    }
+    #countdown {
+      font-size: 2em;
+      color: #e65100;
+      margin-top: 1em;
     }
   </style>
 </head>
 <body>
-<div class="neon-box">
-  <h1>Sing and Record</h1>
-</div>
+  <img id="logo" src="https://drive.google.com/uc?export=view&id=14cG1-zIMn_UBaQPkaK01dwlRqwUYTcN5" alt="Crescendos Logo">
+  <h1>Crescendos 25-26</h1>
+  <label for="songSelect">Choose a song:</label>
+  <select id="songSelect">
+    <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/01%20Seize%20the%20Day%20-%20Performance.mp3">Seize the Day</option>
+    <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/3-GoTheDistance-Full.mp3">Go the Distance</option>
+    <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/4-LifeIsAHighway-Full.mp3">Life is a Highway</option>
+    <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/5-I%20Lived%20-%20SATB%20(Faster).mp3">I Lived</option>
+  </select>
 
-<select id="trackSelect" onchange="handleTrackChange(this.value)">
-  <option value="">-- Choose a track --</option>
-  <option value="custom">Custom URL</option>
-  <option value="https://drive.google.com/file/d/1xQA2KQEWAwmiTSClV1q5rwz_Ec2_xdF7/preview">Seize the Day</option>
-  <option value="https://drive.google.com/file/d/1NaVCLIkSP9nsuGdhVdjHbSl_IIouNreA/preview">Go the Distance</option>
-  <option value="https://drive.google.com/file/d/1w2JUTr7RWYoDpE8j3qRQfzyFFIYmrTob/preview">Life is a Highway</option>
-  <option value="https://drive.google.com/file/d/1Q1ZVQnSXfQAktbcOWcTGefp0RwRpJLVD/preview">I Lived</option>
-</select>
+  <button id="recordButton">
+    <img id="recordIcon" src="https://cdn-icons-png.flaticon.com/512/727/727245.png" alt="Record">
+  </button>
+  <div id="countdown"></div>
+  <div id="recordingLength"></div>
+  <canvas id="waveform"></canvas>
 
-<div id="customUrlInput" style="display: none;">
-  <input type="text" id="customUrl" placeholder="Paste Google Drive share link" oninput="validateCustomUrl(this.value)">
-  <div id="errorMsg"></div>
-</div>
+  <div id="playbackContainer" style="display:none">
+    <h3>Your Recording</h3>
+    <audio id="playback" controls></audio>
+    <br>
+    <input type="text" id="filename" placeholder="Enter filename">
+    <button id="downloadBtn">Download</button>
+  </div>
 
-<audio id="backingTrack" controls></audio>
+  <script>
+    const recordButton = document.getElementById('recordButton');
+    const recordIcon = document.getElementById('recordIcon');
+    const songSelect = document.getElementById('songSelect');
+    const playback = document.getElementById('playback');
+    const filenameInput = document.getElementById('filename');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const recordingLength = document.getElementById('recordingLength');
+    const countdownEl = document.getElementById('countdown');
+    const waveformCanvas = document.getElementById('waveform');
+    const ctx = waveformCanvas.getContext('2d');
 
-<div class="controls">
-  <button onclick="startRecording()">🎤 Record</button>
-  <button onclick="stopRecording()">🛑 Stop</button>
-  <button onclick="resetRecording()">🔄 Reset</button>
-</div>
+    let mediaRecorder;
+    let audioChunks = [];
+    let isRecording = false;
+    let audioContext, analyser, dataArray, animationId;
+    let startTime;
+    let songAudio = new Audio();
+    songAudio.crossOrigin = "anonymous";
 
-<div>
-  <input type="text" id="filename" placeholder="Filename (optional)">
-  <button onclick="downloadRecording()">⬇️ Download</button>
-  <button onclick="submitToClassroomBlob()">📘 Submit to Classroom</button>
-  <button onclick="uploadToDriveBlob()">📤 Upload to Drive</button>
-</div>
-
-<div id="recordingsList"></div>
-
-<script>
-  const API_KEY = 'AIzaSyBsr1jRZElMibwMiRMek8Z3d204-7uF254';
-  const CLIENT_ID = '898010171923-45uc2mbusq1r3p845tl0au0h95lc9r7s.apps.googleusercontent.com';
-  const SCOPES = 'https://www.googleapis.com/auth/classroom.coursework.me https://www.googleapis.com/auth/drive.file';
-
-  let mediaRecorder;
-  let recordedChunks = [];
-  let recordedBlob;
-
-  function gapiInit() {
-    gapi.load('client:auth2', () => {
-      gapi.client.init({
-        apiKey: API_KEY,
-        clientId: CLIENT_ID,
-        scope: SCOPES
-      });
-    });
-  }
-
-  async function authenticateUser() {
-    const authInstance = gapi.auth2.getAuthInstance();
-    if (!authInstance.isSignedIn.get()) {
-      await authInstance.signIn();
+    function drawWaveform() {
+      animationId = requestAnimationFrame(drawWaveform);
+      analyser.getByteTimeDomainData(dataArray);
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, waveformCanvas.width, waveformCanvas.height);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#00f';
+      ctx.beginPath();
+      const sliceWidth = waveformCanvas.width / dataArray.length;
+      let x = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        const v = dataArray[i] / 128.0;
+        const y = v * waveformCanvas.height / 2;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        x += sliceWidth;
+      }
+      ctx.lineTo(waveformCanvas.width, waveformCanvas.height / 2);
+      ctx.stroke();
     }
-  }
 
-  function startRecording() {
-    const backingTrack = document.getElementById("backingTrack");
-    backingTrack.play();
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-      mediaRecorder = new MediaRecorder(stream);
-      mediaRecorder.start();
-      recordedChunks = [];
-      mediaRecorder.ondataavailable = e => recordedChunks.push(e.data);
-      mediaRecorder.onstop = () => {
-        recordedBlob = new Blob(recordedChunks, { type: 'audio/webm' });
-        const audioURL = URL.createObjectURL(recordedBlob);
-        document.getElementById("recordingsList").innerHTML = `<audio controls src="${audioURL}"></audio>`;
-      };
-    });
-  }
-
-  function stopRecording() {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      mediaRecorder.stop();
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60).toString().padStart(2, '0');
+      return `${mins}:${secs}`;
     }
-  }
 
-  function resetRecording() {
-    document.getElementById("recordingsList").innerHTML = '';
-    recordedChunks = [];
-    recordedBlob = null;
-  }
-
-  function downloadRecording() {
-    if (!recordedBlob) return alert("No recording to download.");
-    const a = document.createElement("a");
-    const url = URL.createObjectURL(recordedBlob);
-    const filenameInput = document.getElementById("filename").value.trim();
-    const defaultName = (document.getElementById("trackSelect").selectedOptions[0]?.text || 'recording') + '-' + new Date().toISOString().slice(0,10);
-    a.href = url;
-    a.download = filenameInput || defaultName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  }
-
-  function uploadToDriveBlob() {
-    if (!recordedBlob) return alert("No recording to upload.");
-    const filename = document.getElementById("filename").value.trim() || 'recording-' + new Date().toISOString().slice(0,10);
-    uploadToDrive(recordedBlob, filename);
-  }
-
-  function submitToClassroomBlob() {
-    if (!recordedBlob) return alert("No recording to submit.");
-    const filename = document.getElementById("filename").value.trim() || 'recording-' + new Date().toISOString().slice(0,10);
-    submitToClassroom(recordedBlob, filename);
-  }
-
-  function handleTrackChange(value) {
-    const audio = document.getElementById('backingTrack');
-    const customInput = document.getElementById('customUrlInput');
-    const error = document.getElementById('errorMsg');
-    error.textContent = '';
-
-    if (value === 'custom') {
-      customInput.style.display = 'block';
-      audio.src = '';
-    } else {
-      customInput.style.display = 'none';
-      const match = value.match(/\/d\/([^/]+)/);
-      if (match) {
-        const fileId = match[1];
-        const previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
-        audio.src = previewUrl;
-        audio.load();
+    function startCountdown(seconds, callback) {
+      countdownEl.textContent = seconds;
+      if (seconds > 0) {
+        setTimeout(() => startCountdown(seconds - 1, callback), 1000);
       } else {
-        audio.src = '';
-        console.error('Invalid Google Drive link');
+        countdownEl.textContent = '';
+        callback();
       }
     }
-  }
 
-  function validateCustomUrl(link) {
-    const match = link.match(/https:\/\/drive\.google\.com\/file\/d\/(.+?)\/view/);
-    const audio = document.getElementById('backingTrack');
-    const error = document.getElementById('errorMsg');
+    async function startRecording() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false
+          }
+        });
 
-    if (!match) {
-      error.textContent = 'Only Google Drive links are supported at this time';
-      audio.src = '';
-      return;
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+
+        audioContext = new AudioContext();
+        analyser = audioContext.createAnalyser();
+        const source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+        analyser.fftSize = 2048;
+        dataArray = new Uint8Array(analyser.fftSize);
+
+        drawWaveform();
+
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.onstop = () => {
+          cancelAnimationFrame(animationId);
+          const blob = new Blob(audioChunks, { type: 'audio/webm' });
+          const url = URL.createObjectURL(blob);
+          playback.src = url;
+          document.getElementById('playbackContainer').style.display = 'block';
+          const songName = songSelect.options[songSelect.selectedIndex].text;
+          const dateStr = new Date().toISOString().slice(2, 10);
+          filenameInput.value = `${songName.replace(/\s+/g, '_')}_${dateStr}`;
+          downloadBtn.onclick = () => {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${filenameInput.value || 'recording'}.webm`;
+            a.click();
+          };
+        };
+
+        mediaRecorder.start();
+        startTime = Date.now();
+        setInterval(() => {
+          if (isRecording) {
+            const elapsed = (Date.now() - startTime) / 1000;
+            recordingLength.textContent = `Recording: ${formatTime(elapsed)}`;
+          }
+        }, 1000);
+
+        songAudio.src = songSelect.value;
+        songAudio.play();
+
+        songAudio.onended = () => {
+          if (isRecording) {
+            isRecording = false;
+            mediaRecorder.stop();
+            recordIcon.src = 'https://cdn-icons-png.flaticon.com/512/727/727245.png';
+          }
+        };
+
+      } catch (err) {
+        alert("Microphone access denied or error: " + err);
+      }
     }
-    const fileId = match[1];
-    error.textContent = '';
-    const previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
-    audio.src = previewUrl;
-    audio.load();
-  }
-</script>
-<script async defer src="https://apis.google.com/js/api.js" onload="gapiInit()"></script>
+
+    recordButton.addEventListener('click', () => {
+      if (!isRecording) {
+        isRecording = true;
+        recordIcon.src = 'https://cdn-icons-png.flaticon.com/512/1828/1828665.png'; // Stop icon
+        startCountdown(3, startRecording);
+      } else {
+        isRecording = false;
+        recordIcon.src = 'https://cdn-icons-png.flaticon.com/512/727/727245.png';
+        mediaRecorder.stop();
+        songAudio.pause();
+        songAudio.currentTime = 0;
+      }
+    });
+  </script>
 </body>
 </html>
