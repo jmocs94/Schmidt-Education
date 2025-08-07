@@ -12,13 +12,13 @@
       padding: 2em;
       color: #333;
     }
-    video {
+    canvas {
       width: 90%;
       max-width: 1920px;
       aspect-ratio: 16 / 9;
-      transform: scaleX(-1); /* mirror horizontally */
       border-radius: 10px;
       box-shadow: 0 0 12px rgba(0, 0, 0, 0.3);
+      background: #000;
     }
     button {
       font-size: 1.1em;
@@ -42,13 +42,10 @@
 </head>
 <body>
   <h1>🎬 Rehearsal Recorder</h1>
-  <p>
-    This tool captures your webcam (mirrored), microphone, and system audio.<br />
-    When you're ready, go fullscreen and press record!
-  </p>
+  <p>This captures your mirrored webcam, microphone, and system audio.<br>Go fullscreen before recording!</p>
 
   <div id="countdown"></div>
-  <video id="webcamPreview" autoplay muted playsinline></video>
+  <canvas id="webcamCanvas" width="1920" height="1080"></canvas>
   <br />
   <button id="fullscreenBtn">Go Fullscreen</button>
   <button id="startRecording">Start Recording</button>
@@ -61,17 +58,20 @@
   <button id="downloadBtn">Download</button>
 
   <script>
-    const webcamVideo = document.getElementById('webcamPreview');
-    const playback = document.getElementById('playback');
-    const fullscreenBtn = document.getElementById('fullscreenBtn');
-    const startBtn = document.getElementById('startRecording');
-    const stopBtn = document.getElementById('stopRecording');
-    const countdown = document.getElementById('countdown');
-    const filenameInput = document.getElementById('filename');
-    const downloadBtn = document.getElementById('downloadBtn');
+    const canvas = document.getElementById("webcamCanvas");
+    const ctx = canvas.getContext("2d");
+    const fullscreenBtn = document.getElementById("fullscreenBtn");
+    const startBtn = document.getElementById("startRecording");
+    const stopBtn = document.getElementById("stopRecording");
+    const countdown = document.getElementById("countdown");
+    const filenameInput = document.getElementById("filename");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const playback = document.getElementById("playback");
 
     let mediaRecorder;
     let recordedChunks = [];
+    let videoStream;
+    let animationFrameId;
 
     function getFormattedDate() {
       const d = new Date();
@@ -79,7 +79,7 @@
     }
 
     async function setupWebcam() {
-      const webcamStream = await navigator.mediaDevices.getUserMedia({
+      videoStream = await navigator.mediaDevices.getUserMedia({
         video: {
           width: { ideal: 3840 },
           height: { ideal: 2160 },
@@ -87,15 +87,24 @@
         },
         audio: false
       });
-      webcamVideo.srcObject = webcamStream;
+
+      const videoEl = document.createElement("video");
+      videoEl.srcObject = videoStream;
+      videoEl.play();
+
+      function drawFrame() {
+        ctx.save();
+        ctx.scale(-1, 1); // flip horizontally
+        ctx.drawImage(videoEl, -canvas.width, 0, canvas.width, canvas.height);
+        ctx.restore();
+        animationFrameId = requestAnimationFrame(drawFrame);
+      }
+      drawFrame();
     }
 
     fullscreenBtn.onclick = () => {
-      if (webcamVideo.requestFullscreen) {
-        webcamVideo.requestFullscreen();
-      } else if (webcamVideo.webkitRequestFullscreen) {
-        webcamVideo.webkitRequestFullscreen();
-      }
+      if (canvas.requestFullscreen) canvas.requestFullscreen();
+      else if (canvas.webkitRequestFullscreen) canvas.webkitRequestFullscreen();
     };
 
     startBtn.onclick = async () => {
@@ -114,7 +123,7 @@
     async function startScreenRecording() {
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
         video: true,
-        audio: true // Capture system audio if available
+        audio: true
       });
 
       const micStream = await navigator.mediaDevices.getUserMedia({
@@ -135,21 +144,19 @@
         ...combinedAudio.getTracks()
       ]);
 
-      mediaRecorder = new MediaRecorder(combinedStream);
-
       recordedChunks = [];
-      mediaRecorder.ondataavailable = (e) => {
+      mediaRecorder = new MediaRecorder(combinedStream);
+      mediaRecorder.ondataavailable = e => {
         if (e.data.size > 0) recordedChunks.push(e.data);
       };
-
       mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const blob = new Blob(recordedChunks, { type: "video/webm" });
         const url = URL.createObjectURL(blob);
         playback.src = url;
         downloadBtn.onclick = () => {
-          const a = document.createElement('a');
-          a.href = url;
           const name = filenameInput.value.trim() || `Rehearsal_${getFormattedDate()}`;
+          const a = document.createElement("a");
+          a.href = url;
           a.download = name + ".webm";
           a.click();
         };
@@ -164,6 +171,7 @@
       mediaRecorder.stop();
       startBtn.disabled = false;
       stopBtn.disabled = true;
+      cancelAnimationFrame(animationFrameId);
     };
 
     setupWebcam();
