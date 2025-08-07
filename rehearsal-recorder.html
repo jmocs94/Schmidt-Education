@@ -59,4 +59,130 @@
 
   <script>
     const canvas = document.getElementById("webcamCanvas");
-    const ctx = canva
+    const ctx = canvas.getContext("2d");
+    const fullscreenBtn = document.getElementById("fullscreenBtn");
+    const startBtn = document.getElementById("startRecording");
+    const stopBtn = document.getElementById("stopRecording");
+    const countdown = document.getElementById("countdown");
+    const filenameInput = document.getElementById("filename");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const playback = document.getElementById("playback");
+
+    let mediaRecorder;
+    let recordedChunks = [];
+    let webcamStream;
+    let animationFrameId;
+
+    function getFormattedDate() {
+      const d = new Date();
+      return `${String(d.getFullYear()).slice(2)}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    async function setupWebcam() {
+      webcamStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 3840 },
+          height: { ideal: 2160 },
+          aspectRatio: 16 / 9
+        },
+        audio: false
+      });
+
+      const videoEl = document.createElement("video");
+      videoEl.srcObject = webcamStream;
+      videoEl.play();
+
+      function drawFrame() {
+        ctx.save();
+        ctx.scale(-1, 1); // flip horizontally
+        ctx.drawImage(videoEl, -canvas.width, 0, canvas.width, canvas.height);
+        ctx.restore();
+        animationFrameId = requestAnimationFrame(drawFrame);
+      }
+
+      drawFrame();
+    }
+
+    fullscreenBtn.onclick = () => {
+      canvas.requestFullscreen?.();
+    };
+
+    startBtn.onclick = () => {
+      canvas.requestFullscreen?.();
+
+      let count = 3;
+      countdown.textContent = count;
+
+      const interval = setInterval(() => {
+        count--;
+        countdown.textContent = count > 0 ? count : "";
+        if (count <= 0) {
+          clearInterval(interval);
+          startScreenRecording();
+        }
+      }, 1000);
+    };
+
+    async function startScreenRecording() {
+      const canvasStream = canvas.captureStream(30); // 30 fps
+      const audioCtx = new AudioContext();
+      const destination = audioCtx.createMediaStreamDestination();
+
+      const micStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false
+        }
+      });
+      const micSource = audioCtx.createMediaStreamSource(micStream);
+      micSource.connect(destination);
+
+      // Get system audio from screen
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      const systemAudioTrack = screenStream.getAudioTracks()[0];
+      if (systemAudioTrack) {
+        const systemSource = audioCtx.createMediaStreamSource(new MediaStream([systemAudioTrack]));
+        systemSource.connect(destination);
+      }
+
+      const finalStream = new MediaStream([
+        ...canvasStream.getVideoTracks(),
+        ...destination.stream.getAudioTracks()
+      ]);
+
+      recordedChunks = [];
+      mediaRecorder = new MediaRecorder(finalStream);
+      mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+      };
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: "video/webm" });
+        const url = URL.createObjectURL(blob);
+        playback.src = url;
+
+        downloadBtn.onclick = () => {
+          const name = filenameInput.value.trim() || `Rehearsal_${getFormattedDate()}`;
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = name + ".webm";
+          a.click();
+        };
+      };
+
+      mediaRecorder.start();
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+    }
+
+    stopBtn.onclick = () => {
+      mediaRecorder?.stop();
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      cancelAnimationFrame(animationFrameId);
+    };
+
+    setupWebcam();
+  </script>
+</body>
+</html>
