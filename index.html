@@ -1,391 +1,491 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <title>Creative Agency Page</title>
-    <meta property="og:title" content="Creative Agency Page" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta charset="utf-8" />
-    <meta property="twitter:card" content="summary_large_image" />
-
-    <style data-tag="reset-style-sheet">
-      html {  line-height: 1.15;}body {  margin: 0;}* {  box-sizing: border-box;  border-width: 0;  border-style: solid;}p,li,ul,pre,div,h1,h2,h3,h4,h5,h6,figure,blockquote,figcaption {  margin: 0;  padding: 0;}button {  background-color: transparent;}button,input,optgroup,select,textarea {  font-family: inherit;  font-size: 100%;  line-height: 1.15;  margin: 0;}button,select {  text-transform: none;}button,[type="button"],[type="reset"],[type="submit"] {  -webkit-appearance: button;}button::-moz-focus-inner,[type="button"]::-moz-focus-inner,[type="reset"]::-moz-focus-inner,[type="submit"]::-moz-focus-inner {  border-style: none;  padding: 0;}button:-moz-focus,[type="button"]:-moz-focus,[type="reset"]:-moz-focus,[type="submit"]:-moz-focus {  outline: 1px dotted ButtonText;}a {  color: inherit;  text-decoration: inherit;}input {  padding: 2px 4px;}img {  display: block;}html { scroll-behavior: smooth  }
-    </style>
-    <style data-tag="default-style-sheet">
-      html {
-        font-family: DM Sans;
-        font-size: 16px;
-      }
-
-      body {
-        font-weight: 400;
-        font-style:normal;
-        text-decoration: none;
-        text-transform: undefined;
-        letter-spacing: normal;
-        line-height: 1.3;
-        color: var(--dl-color-scheme-darkblue);
-        background-color: var(--dl-color-scheme-white);
-
-        fill: var(--dl-color-scheme-darkblue);
-      }
-    </style>
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/animate.css@4.1.1/animate.css"
-    />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&amp;display=swap"
-      data-tag="font"
-    />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital,wght@0,400;1,400&amp;display=swap"
-      data-tag="font"
-    />
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/@teleporthq/teleport-custom-scripts/dist/style.css"
-    />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Singing Recorder with Google Classroom</title>
+    <script src="https://apis.google.com/js/api.js"></script>
     <style>
-      .services-card:hover > div{
-      background-color: #fff
-      }
+        /* Fun music-themed styles */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 2.5rem;
+            animation: bounce 2s infinite;
+        }
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-20px); }
+            60% { transform: translateY(-10px); }
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 15px;
+        }
+        label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        input[type="text"], select {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        button {
+            display: inline-flex;
+            align-items: center;
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background-color: #ff7e5f;
+            color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: scale(1.05);
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        audio {
+            width: 100%;
+            margin-top: 10px;
+        }
+        #recordingsList {
+            margin-top: 10px;
+        }
+        .status {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .emoji {
+            margin-right: 8px;
+        }
+        .hidden {
+            display: none;
+        }
+        .flex {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .flex-col {
+            flex-direction: column;
+        }
+        .flex-row {
+            flex-direction: row;
+        }
+        .reset-btn {
+            background-color: #6C5B7B;
+        }
+        .upload-btn {
+            background-color: #00BFA6;
+        }
+        .classroom-btn {
+            background-color: #2e7d32;
+        }
+        .download-btn {
+            background-color: #ffa600;
+        }
+        .signout-btn {
+            background-color: #444;
+        }
+        /* Animate icons */
+        .animated-icon {
+            display: inline-block;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
     </style>
-  </head>
-  <body>
-    <link rel="stylesheet" href="./style.css" />
-    <div>
-      <link href="./index.css" rel="stylesheet" />
-
-      <div class="home-container">
-        <header
-          data-role="Header"
-          class="navigation-header navigation-root-class-name"
-        >
-          <img
-            alt="image"
-            src="public/schmidt-education-200h.png"
-            class="navigation-image"
-          />
-          <div class="navigation-max-width">
-            <span class="navigation-text"><span>Schmidt Education</span></span>
-            <div class="navigation-nav">
-              <nav
-                class="navigation-links-nav navigation-links-root-class-name17"
-              >
-                <span class="navigation-links-text Navigation-Link">
-                  <span>Home</span>
-                </span>
-                <a
-                  href="elementary-music.html"
-                  class="navigation-links-navlink Navigation-Link"
-                >
-                  <span>Elementary Music</span>
-                </a>
-                <a
-                  href="choir.html"
-                  class="navigation-links-navlink1 Navigation-Link"
-                >
-                  <span>Choir</span>
-                </a>
-                <a
-                  href="bees.html"
-                  class="navigation-links-navlink2 Navigation-Link"
-                >
-                  <span>Bees</span>
-                </a>
-              </nav>
-              <a
-                href="contact.html"
-                class="navigation-register button-secondary button button-md"
-              >
-                <span>Get in touch</span>
-              </a>
-            </div>
-            <div data-role="BurgerMenu" class="navigation-burger-menu">
-              <svg viewBox="0 0 1024 1024" class="navigation-icon">
-                <path
-                  d="M128 554.667h768c23.552 0 42.667-19.115 42.667-42.667s-19.115-42.667-42.667-42.667h-768c-23.552 0-42.667 19.115-42.667 42.667s19.115 42.667 42.667 42.667zM128 298.667h768c23.552 0 42.667-19.115 42.667-42.667s-19.115-42.667-42.667-42.667h-768c-23.552 0-42.667 19.115-42.667 42.667s19.115 42.667 42.667 42.667zM128 810.667h768c23.552 0 42.667-19.115 42.667-42.667s-19.115-42.667-42.667-42.667h-768c-23.552 0-42.667 19.115-42.667 42.667s19.115 42.667 42.667 42.667z"
-                ></path>
-              </svg>
-            </div>
-            <div data-role="MobileMenu" class="mobile-menu">
-              <div class="navigation-nav1">
-                <div class="navigation-container">
-                  <img alt="image" src="public/logo1-1500h.png" />
-                  <div
-                    data-role="CloseMobileMenu"
-                    class="navigation-close-mobile-menu"
-                  >
-                    <svg viewBox="0 0 1024 1024" class="navigation-icon2">
-                      <path
-                        d="M810 274l-238 238 238 238-60 60-238-238-238 238-60-60 238-238-238-238 60-60 238 238 238-238z"
-                      ></path>
-                    </svg>
-                  </div>
-                </div>
-                <nav
-                  class="navigation-links-nav navigation-links-root-class-name18"
-                >
-                  <span class="navigation-links-text Navigation-Link">
-                    <span>Home</span>
-                  </span>
-                  <a
-                    href="elementary-music.html"
-                    class="navigation-links-navlink Navigation-Link"
-                  >
-                    <span>Elementary Music</span>
-                  </a>
-                  <a
-                    href="choir.html"
-                    class="navigation-links-navlink1 Navigation-Link"
-                  >
-                    <span>Choir</span>
-                  </a>
-                  <a
-                    href="bees.html"
-                    class="navigation-links-navlink2 Navigation-Link"
-                  >
-                    <span>Bees</span>
-                  </a>
-                </nav>
-                <button class="button-secondary button button-md">
-                  <span>Get in touch</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </header>
-        <main class="home-main">
-          <div class="home-hero section-container">
-            <div class="home-max-width max-content-container">
-              <div class="home-heading-container">
-                <h1 class="home-text">Learn More About...</h1>
-                <span class="home-text01">
-                  Elementary Music, Choir, Bees &amp; More!
-                </span>
-              </div>
-            </div>
-          </div>
-          <div class="home-services section-container">
-            <div class="home-max-width1 max-content-container">
-              <div class="home-cards-container">
-                <div class="services-card">
-                  <span class="services-card-text">
-                    <span>Elementary Music</span>
-                  </span>
-                  <span class="services-card-text1">
-                    <span>
-                      Ukuleles, dancing, recorders oh my! So many great ideas
-                      for you to get inspired by.
-                    </span>
-                  </span>
-                  <span class="services-card-text2">
-                    <span>Learn more</span>
-                  </span>
-                </div>
-                <div class="services-card">
-                  <span class="services-card-text"><span>Choir</span></span>
-                  <span class="services-card-text1">
-                    <span>
-                      From warm-ups to playlists and classroom hacks. A lot is
-                      focused on middle school content but there is something in
-                      here for everyone.
-                    </span>
-                  </span>
-                  <span class="services-card-text2">
-                    <span>Learn more</span>
-                  </span>
-                </div>
-                <div class="services-card">
-                  <span class="services-card-text">
-                    <span>Beekeeping</span>
-                  </span>
-                  <span class="services-card-text1">
-                    <span>
-                      We are local beekeepers in Wisconsin. We get asked a lot
-                      if we are able to provide any resources to local schools
-                      and communities. Although there is a lot already out
-                      there, we figured some people prefer to learn from a more
-                      local resource
-                    </span>
-                  </span>
-                  <span class="services-card-text2">
-                    <span>Learn more</span>
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="home-about section-container">
-            <div class="home-max-width2 max-content-container">
-              <div class="home-text-container">
-                <span class="home-text02">about us</span>
-                <h2 class="home-text03 Heading2">The Schmidts</h2>
-                <span class="home-text04">
-                  We are Joshua &amp; Caitlin Schmidt. We have a strong passion
-                  for music education and are so happy to share these resources
-                  with you.
-                </span>
-                <div class="home-checklist">
-                  <div class="home-check-item">
-                    <svg viewBox="0 0 1024 1024" class="home-icon">
-                      <path
-                        d="M384 690l452-452 60 60-512 512-238-238 60-60z"
-                      ></path>
-                    </svg>
-                    <span class="home-text05">
-                      8 years of teaching in Wisconsin
-                    </span>
-                  </div>
-                  <div class="home-check-item1">
-                    <svg viewBox="0 0 1024 1024" class="home-icon2">
-                      <path
-                        d="M384 690l452-452 60 60-512 512-238-238 60-60z"
-                      ></path>
-                    </svg>
-                    <span class="home-text06">Beekeepers for 4 years</span>
-                  </div>
-                  <div class="home-check-item2">
-                    <svg viewBox="0 0 1024 1024" class="home-icon4">
-                      <path
-                        d="M384 690l452-452 60 60-512 512-238-238 60-60z"
-                      ></path>
-                    </svg>
-                    <span class="home-text07">
-                      Involved in community choirs
-                    </span>
-                  </div>
-                  <div class="home-check-item3">
-                    <svg viewBox="0 0 1024 1024" class="home-icon6">
-                      <path
-                        d="M384 690l452-452 60 60-512 512-238-238 60-60z"
-                      ></path>
-                    </svg>
-                    <span class="home-text08">
-                      Part of nonprofit for music education
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div class="home-image-container">
-                <img
-                  alt="image"
-                  src="public/schmidt-family-500w.jpg"
-                  class="home-image"
-                />
-              </div>
-            </div>
-          </div>
-        </main>
-        <div class="home-footer section-container">
-          <div class="home-separator"></div>
-          <footer class="home-max-width3 max-content-container">
-            <div class="home-container1">
-              <img
-                alt="image"
-                src="public/schmidt-education-200h.png"
-                class="home-image1"
-              />
-            </div>
-            <span class="home-text09">
-              All rights reserved Schmidt-Education
-            </span>
-          </footer>
+</head>
+<body>
+    <h1>🎤 Sing & Record Your Track 🎶</h1>
+    <div class="container">
+        <div class="input-group">
+            <label for="songSelect">Select a song:</label>
+            <select id="songSelect">
+                <!-- Options will be populated dynamically -->
+            </select>
         </div>
-      </div>
+        <div class="flex flex-row">
+            <button id="recordButton"><span class="emoji">▶️</span>Record</button>
+            <button id="stopButton" disabled><span class="emoji">⏹️</span>Stop</button>
+            <button id="resetButton" class="reset-btn"><span class="emoji">🧹</span>Reset</button>
+        </div>
+        <audio id="audio" controls class="hidden"></audio>
+        <div id="recordingsList"></div>
+
+        <div id="filenameSection" class="hidden input-group">
+            <label for="filenameInput">Filename:</label>
+            <input type="text" id="filenameInput" placeholder="Filename"/>
+        </div>
+        <div class="flex flex-row">
+            <button id="downloadButton" class="download-btn hidden"><span class="emoji">📥</span>Download</button>
+            <button id="uploadButton" class="upload-btn hidden"><span class="emoji">☁️</span>Upload to Drive</button>
+            <button id="classroomButton" class="classroom-btn hidden"><span class="emoji">📚</span>Submit to Classroom</button>
+        </div>
+        <div id="classroomSection" class="hidden">
+            <div class="input-group">
+                <label for="courseSelect">Choose Course:</label>
+                <select id="courseSelect"></select>
+            </div>
+            <div class="input-group">
+                <label for="assignmentSelect">Choose Assignment:</label>
+                <select id="assignmentSelect"></select>
+            </div>
+        </div>
+        <button id="authorizeButton"><span class="emoji">🔐</span>Sign in with Google</button>
+        <button id="signoutButton" class="signout-btn hidden"><span class="emoji">🚪</span>Sign out</button>
+        <div id="status" class="status"></div>
     </div>
-    <script
-      defer=""
-      src="https://unpkg.com/@teleporthq/teleport-custom-scripts"
-    ></script>
-    <script defer="">
-      window.onload = () => {
-        const runAllScripts = () => {
-          initializeAllSliders();
-        };
 
-        const listenForUrlChanges = () => {
-          let url = location.href;
-          document.body.addEventListener(
-            "click",
-            () => {
-              requestAnimationFrame(() => {
-                if (url !== location.href) {
-                  runAllScripts();
-                  url = location.href;
+    <script>
+        // ======= Configuration =======
+        // Paste up to 10 share links here (replace empty strings with your links)
+        const prefilledLinks = [
+            "", // Link 1
+            "", // Link 2
+            "", // Link 3
+            "", // Link 4
+            "", // Link 5
+            "", // Link 6
+            "", // Link 7
+            "", // Link 8
+            "", // Link 9
+            ""  // Link 10
+        ];
+
+        // Google API configuration (replace with your real client ID)
+        const CLIENT_ID = 'YOUR_CLIENT_ID_HERE';
+        const API_KEY = ''; // Optional: only needed for unauthenticated Classroom requests
+        const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/classroom.coursework.me';
+        const DISCOVERY_DOCS = [
+            'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
+            'https://classroom.googleapis.com/$discovery/rest?version=v1'
+        ];
+
+        // ======= Global variables =======
+        let mediaRecorder;
+        let recordedChunks = [];
+        let currentTrackName = '';
+        let driveFileId = '';
+        let isAuthorized = false;
+
+        // ======= Utility functions =======
+        function convertToDirect(link) {
+            const match = link.match(/\/d\/(.*?)\//);
+            return match ? `https://drive.google.com/uc?export=download&id=${match[1]}` : '';
+        }
+
+        function populateSongOptions() {
+            const select = document.getElementById('songSelect');
+            select.innerHTML = '';
+            // Populate from prefilled links
+            let added = false;
+            prefilledLinks.forEach((link, index) => {
+                if (link.trim() !== '') {
+                    const direct = convertToDirect(link);
+                    const option = document.createElement('option');
+                    option.value = direct;
+                    option.textContent = `Song ${index + 1}`;
+                    option.dataset.trackName = `Song${index + 1}`;
+                    select.appendChild(option);
+                    added = true;
                 }
-              });
-            },
-            true
-          );
-        };
+            });
+            // Custom URL option
+            const customOption = document.createElement('option');
+            customOption.value = 'custom';
+            customOption.textContent = 'Custom URL';
+            select.appendChild(customOption);
+            // If no prefilled links, set selection to custom
+            if (!added) select.value = 'custom';
+        }
 
-        const initializeAllSliders = () => {
-          const allSliders = document.querySelectorAll('[data-type="slider"]');
-          allSliders.forEach((slider) => {
-            initializeSlider(slider);
-          });
-        };
+        function resetUI() {
+            recordedChunks = [];
+            document.getElementById('audio').classList.add('hidden');
+            document.getElementById('recordingsList').innerHTML = '';
+            document.getElementById('filenameSection').classList.add('hidden');
+            document.getElementById('downloadButton').classList.add('hidden');
+            document.getElementById('uploadButton').classList.add('hidden');
+            document.getElementById('classroomButton').classList.add('hidden');
+            document.getElementById('classroomSection').classList.add('hidden');
+            document.getElementById('status').textContent = '';
+        }
 
-        const initializeSlider = (slider) => {
-          const slides = slider.querySelectorAll('[data-type="slide"]');
-          const middle = Math.ceil(slides.length / 2);
-          let currentSlide = middle;
-
-          const nextSlideBtns = document.querySelectorAll(
-            '[data-action="nextSlide"]'
-          );
-          const previousSlideBtns = document.querySelectorAll(
-            '[data-action="previousSlide"]'
-          );
-
-          const changeSlide = (slideIndex, action) => {
-            currentSlide = slideIndex;
-
-            switch (action) {
-              case "next":
-                slideIndex === slides.length
-                  ? (currentSlide = 1)
-                  : currentSlide++;
-                break;
-              case "previous":
-                slideIndex === 1
-                  ? (currentSlide = slides.length)
-                  : currentSlide--;
+        // ======= Recording functions =======
+        async function startRecording() {
+            const selectedValue = document.getElementById('songSelect').value;
+            let audioSrc = '';
+            if (selectedValue === 'custom') {
+                const url = prompt('Enter a Google Drive share link:');
+                if (!url) return;
+                audioSrc = convertToDirect(url);
+                currentTrackName = `Custom`;
+            } else {
+                audioSrc = selectedValue;
+                const option = document.getElementById('songSelect').selectedOptions[0];
+                currentTrackName = option.dataset.trackName;
             }
-
-            const slide = slides[0];
-            if (!slide) {
-              console.error("No slides present");
-              return;
+            if (!audioSrc) {
+                alert('Invalid audio source');
+                return;
             }
-            const style = window.getComputedStyle(slide);
-            slideWidth =
-              parseInt(style.width) +
-              parseInt(style.marginLeft) +
-              parseInt(style.marginRight);
-            const transformValue = -slideWidth * (currentSlide - middle);
+            resetUI();
+            // Play the track
+            const audio = document.getElementById('audio');
+            audio.src = audioSrc;
+            audio.classList.remove('hidden');
+            audio.play();
+            // Prepare recorder
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = e => {
+                if (e.data.size > 0) recordedChunks.push(e.data);
+            };
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+                const url = URL.createObjectURL(blob);
+                const list = document.getElementById('recordingsList');
+                const audioEl = document.createElement('audio');
+                audioEl.controls = true;
+                audioEl.src = url;
+                list.appendChild(audioEl);
+                // Show filename section
+                const filenameInput = document.getElementById('filenameInput');
+                const dateStr = new Date().toISOString().split('T')[0];
+                filenameInput.value = `${currentTrackName}_${dateStr}.webm`;
+                document.getElementById('filenameSection').classList.remove('hidden');
+                document.getElementById('downloadButton').classList.remove('hidden');
+                document.getElementById('uploadButton').classList.remove('hidden');
+                if (isAuthorized) document.getElementById('classroomButton').classList.remove('hidden');
+            };
+            mediaRecorder.start();
+            document.getElementById('recordButton').disabled = true;
+            document.getElementById('stopButton').disabled = false;
+        }
 
-            slider.style.transform = `translateX(${transformValue}px)`;
-          };
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+            document.getElementById('recordButton').disabled = false;
+            document.getElementById('stopButton').disabled = true;
+        }
 
-          previousSlideBtns.forEach((btn) => {
-            btn.addEventListener("click", () =>
-              changeSlide(currentSlide, "previous")
-            );
-          });
+        function downloadRecording() {
+            const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const filename = document.getElementById('filenameInput').value || 'recording.webm';
+            a.style.display = 'none';
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
 
-          nextSlideBtns.forEach((btn) => {
-            btn.addEventListener("click", () =>
-              changeSlide(currentSlide, "next")
-            );
-          });
-        };
+        // ======= Google API functions =======
+        function updateSigninStatus(isSignedIn) {
+            isAuthorized = isSignedIn;
+            document.getElementById('authorizeButton').classList.toggle('hidden', isSignedIn);
+            document.getElementById('signoutButton').classList.toggle('hidden', !isSignedIn);
+            if (isSignedIn) {
+                document.getElementById('status').textContent = 'Signed in!';
+                // If there is a recording ready, show classroom button
+                if (recordedChunks.length) document.getElementById('classroomButton').classList.remove('hidden');
+                listCourses();
+            } else {
+                document.getElementById('status').textContent = '';
+            }
+        }
 
-        runAllScripts();
-      };
+        function initClient() {
+            gapi.client.init({
+                apiKey: API_KEY,
+                clientId: CLIENT_ID,
+                discoveryDocs: DISCOVERY_DOCS,
+                scope: SCOPES
+            }).then(() => {
+                // Listen for sign-in state changes.
+                gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus);
+                // Handle the initial sign-in state.
+                updateSigninStatus(gapi.auth2.getAuthInstance().isSignedIn.get());
+            }, error => {
+                console.error(JSON.stringify(error, null, 2));
+            });
+        }
+
+        function handleAuthClick() {
+            gapi.auth2.getAuthInstance().signIn();
+        }
+
+        function handleSignoutClick() {
+            gapi.auth2.getAuthInstance().signOut();
+        }
+
+        async function uploadToDrive() {
+            const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+            const filename = document.getElementById('filenameInput').value || 'recording.webm';
+            const fileMetadata = {
+                'name': filename
+            };
+            const form = new FormData();
+            form.append('metadata', new Blob([JSON.stringify(fileMetadata)], { type: 'application/json' }));
+            form.append('file', blob);
+            try {
+                const token = gapi.auth.getToken().access_token;
+                const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                    method: 'POST',
+                    headers: new Headers({ 'Authorization': 'Bearer ' + token }),
+                    body: form
+                });
+                const result = await response.json();
+                driveFileId = result.id;
+                document.getElementById('status').textContent = '✅ Uploaded to Drive!';
+                // Show classroom section if authorized
+                if (isAuthorized) document.getElementById('classroomButton').classList.remove('hidden');
+            } catch (err) {
+                console.error(err);
+                document.getElementById('status').textContent = 'Upload failed';
+            }
+        }
+
+        async function listCourses() {
+            try {
+                const response = await gapi.client.classroom.courses.list({
+                    courseStates: ['ACTIVE']
+                });
+                const courses = response.result.courses || [];
+                const courseSelect = document.getElementById('courseSelect');
+                courseSelect.innerHTML = '';
+                courses.forEach(course => {
+                    const option = document.createElement('option');
+                    option.value = course.id;
+                    option.textContent = course.name;
+                    courseSelect.appendChild(option);
+                });
+                // Trigger listing assignments for first course
+                if (courses.length) listAssignments();
+            } catch (err) {
+                console.error('Error listing courses: ', err);
+            }
+        }
+
+        async function listAssignments() {
+            const courseId = document.getElementById('courseSelect').value;
+            try {
+                const response = await gapi.client.classroom.courses.courseWork.list({
+                    courseId: courseId,
+                    orderBy: 'dueDate asc',
+                    pageSize: 20
+                });
+                const assignments = response.result.courseWork || [];
+                const assignmentSelect = document.getElementById('assignmentSelect');
+                assignmentSelect.innerHTML = '';
+                assignments.forEach(assign => {
+                    const option = document.createElement('option');
+                    option.value = assign.id;
+                    option.textContent = assign.title;
+                    assignmentSelect.appendChild(option);
+                });
+            } catch (err) {
+                console.error('Error listing assignments: ', err);
+            }
+        }
+
+        async function submitToClassroom() {
+            const courseId = document.getElementById('courseSelect').value;
+            const assignmentId = document.getElementById('assignmentSelect').value;
+            try {
+                // Get the submission id for the student
+                const submissionResponse = await gapi.client.classroom.courses.courseWork.studentSubmissions.list({
+                    courseId: courseId,
+                    courseWorkId: assignmentId,
+                    userId: 'me'
+                });
+                const submission = submissionResponse.result.studentSubmissions[0];
+                const submissionId = submission.id;
+                // Modify the submission with the Drive file
+                const updateResponse = await gapi.client.classroom.courses.courseWork.studentSubmissions.patch({
+                    courseId: courseId,
+                    courseWorkId: assignmentId,
+                    id: submissionId,
+                    updateMask: 'attachments',
+                    resource: {
+                        attachments: [
+                            {
+                                driveFile: {
+                                    id: driveFileId
+                                }
+                            }
+                        ]
+                    }
+                });
+                // Turn in the submission
+                await gapi.client.classroom.courses.courseWork.studentSubmissions.turnIn({
+                    courseId: courseId,
+                    courseWorkId: assignmentId,
+                    id: submissionId
+                });
+                document.getElementById('status').textContent = '✅ Submitted to Google Classroom successfully!';
+            } catch (err) {
+                console.error(err);
+                document.getElementById('status').textContent = 'Classroom submission failed';
+            }
+        }
+
+        // ======= Event listeners =======
+        document.addEventListener('DOMContentLoaded', () => {
+            populateSongOptions();
+            document.getElementById('recordButton').addEventListener('click', startRecording);
+            document.getElementById('stopButton').addEventListener('click', stopRecording);
+            document.getElementById('downloadButton').addEventListener('click', downloadRecording);
+            document.getElementById('uploadButton').addEventListener('click', uploadToDrive);
+            document.getElementById('classroomButton').addEventListener('click', () => {
+                document.getElementById('classroomSection').classList.remove('hidden');
+                listCourses();
+            });
+            document.getElementById('courseSelect').addEventListener('change', listAssignments);
+            document.getElementById('assignmentSelect').addEventListener('change', () => {});
+            document.getElementById('authorizeButton').addEventListener('click', handleAuthClick);
+            document.getElementById('signoutButton').addEventListener('click', handleSignoutClick);
+            document.getElementById('classroomButton').addEventListener('click', submitToClassroom);
+            document.getElementById('resetButton').addEventListener('click', () => {
+                stopRecording();
+                resetUI();
+            });
+        });
+
+        gapi.load('client:auth2', initClient);
     </script>
-  </body>
+</body>
 </html>
