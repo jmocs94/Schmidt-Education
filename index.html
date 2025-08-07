@@ -138,15 +138,15 @@
       customInput.style.display = 'block';
       audio.src = '';
     } else {
-      const match = value.match(/\/d\/([^/]+)\//);
-        if (match) {
-          const fileId = match[1];
-          audio.src = `https://drive.google.com/uc?export=download&id=${fileId}`;
-        } else {
-          audio.src = '';
-          console.error('Invalid Google Drive link');
-}
-
+      customInput.style.display = 'none';
+      const match = value.match(/\/d\/([^/]+)(?:\/|$)/);
+      if (match) {
+        const fileId = match[1];
+        audio.src = `https://drive.google.com/uc?export=download&id=${fileId}`;
+      } else {
+        audio.src = '';
+        console.error('Invalid Google Drive link');
+      }
     }
   }
 
