@@ -109,6 +109,15 @@
 
     startBtn.onclick = async () => {
       countdown.textContent = "3";
+      if (canvas.requestFullscreen) {
+            canvas.requestFullscreen();
+          } else if (canvas.webkitRequestFullscreen) {
+            canvas.webkitRequestFullscreen();
+          } else if (canvas.mozRequestFullScreen) {
+            canvas.mozRequestFullScreen();
+          } else if (canvas.msRequestFullscreen) {
+            canvas.msRequestFullscreen();
+          }
       let count = 3;
       const interval = setInterval(() => {
         count--;
