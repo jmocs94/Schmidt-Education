@@ -25,10 +25,22 @@
     canvas {
       display: block;
       margin: 1em auto;
+      width: 75%;
+      height: 100px;
     }
     .controls img {
       cursor: pointer;
       width: 60px;
+    }
+    #song {
+      width: 80%;
+    }
+    #song::-webkit-media-controls-play-button,
+    #song::-webkit-media-controls-pause-button,
+    #song::-webkit-media-controls-seek-back-button,
+    #song::-webkit-media-controls-seek-forward-button,
+    #song::-webkit-media-controls-timeline {
+      display: none !important;
     }
   </style>
 </head>
@@ -56,7 +68,7 @@
   <canvas id="visualizer" width="600" height="100"></canvas>
   <p id="timer">Recording Length: 0:00</p>
 
-  <audio id="song" crossorigin="anonymous"></audio>
+  <audio id="song" controls crossorigin="anonymous"></audio>
   <audio id="playback" controls></audio>
 
   <br/>
@@ -107,6 +119,8 @@
       mediaRecorder.ondataavailable = e => chunks.push(e.data);
       mediaRecorder.onstop = () => {
         clearInterval(timerInterval);
+        song.pause();
+        song.currentTime = 0;
         const blob = new Blob(chunks, { type: 'audio/webm' });
         const url = URL.createObjectURL(blob);
         playback.src = url;
@@ -129,8 +143,10 @@
         const dataArray = new Uint8Array(bufferLength);
         analyser.getByteFrequencyData(dataArray);
         canvasCtx.clearRect(0, 0, visualizer.width, visualizer.height);
-        canvasCtx.fillStyle = '#4caf50';
+
         for (let i = 0; i < bufferLength; i++) {
+          const hue = (i / bufferLength) * 360;
+          canvasCtx.fillStyle = `hsl(${hue}, 100%, 50%)`;
           const barHeight = dataArray[i];
           canvasCtx.fillRect(i * 3, visualizer.height - barHeight, 2, barHeight);
         }
@@ -177,6 +193,8 @@
         startRecording();
       } else {
         mediaRecorder.stop();
+        song.pause();
+        song.currentTime = 0;
       }
     });
 
