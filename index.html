@@ -97,12 +97,16 @@
   <div id="recordingLength"></div>
   <canvas id="waveform"></canvas>
 
-  <div id="playbackContainer" style="display:none">
-    <h3>Your Recording</h3>
+  $1
+    <p style="max-width: 600px; margin: 0 auto; font-size: 1em; color: #555;">
+      After downloading your recording, you can upload it to Google Classroom.
+      To do this, open your assignment, click “Add or Create,” then select “File.”
+      Upload your recording and be sure to click “Turn In” when you're done!
+    </p>
     <audio id="playback" controls></audio>
     <br>
     <input type="text" id="filename" placeholder="Enter filename">
-        <button id="mp3Btn">Download as MP3</button>
+        <button id="downloadBtn">Download</button>
     <button id="resetBtn">Reset</button>
   </div>
 
@@ -210,20 +214,12 @@
           const dateStr = new Date().toISOString().slice(2, 10);
           filenameInput.value = `${songName.replace(/\s+/g, '_')}_${dateStr}`;
 
-                    mp3Btn.onclick = async () => {
-            const { createFFmpeg, fetchFile } = FFmpeg;
-            const ffmpeg = createFFmpeg({ log: true });
-            await ffmpeg.load();
-            ffmpeg.FS('writeFile', 'input.webm', await fetchFile(blob));
-            await ffmpeg.run('-i', 'input.webm', 'output.mp3');
-            const data = ffmpeg.FS('readFile', 'output.mp3');
-            const mp3Blob = new Blob([data.buffer], { type: 'audio/mp3' });
-            const mp3Url = URL.createObjectURL(mp3Blob);
-            const a = document.createElement('a');
-            a.href = mp3Url;
-            a.download = `${filenameInput.value || 'recording'}.mp3`;
-            a.click();
-          };
+                    downloadBtn.onclick = () => {
+  const a = document.createElement('a');
+  a.href = playback.src;
+  a.download = `${filenameInput.value || 'recording'}.webm`;
+  a.click();
+};
 
           resetBtn.onclick = () => {
             if (confirm('This will reset the page and delete your recording. Continue?')) {
