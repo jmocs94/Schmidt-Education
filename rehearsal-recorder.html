@@ -134,16 +134,38 @@
         }
       });
 
-      const combinedAudio = new MediaStream([
-        ...screenStream.getAudioTracks(),
-        ...micStream.getAudioTracks()
-      ]);
+    const audioCtx = new AudioContext();
+const destination = audioCtx.createMediaStreamDestination();
 
-      const combinedStream = new MediaStream([
-        ...screenStream.getVideoTracks(),
-        ...combinedAudio.getTracks()
-      ]);
+const micStream = await navigator.mediaDevices.getUserMedia({
+  audio: {
+    echoCancellation: false,
+    noiseSuppression: false,
+    autoGainControl: false
+  }
+});
 
+const micSource = audioCtx.createMediaStreamSource(micStream);
+micSource.connect(destination);
+
+// Attempt to get system audio + screen
+const screenStream = await navigator.mediaDevices.getDisplayMedia({
+  video: true,
+  audio: true // system audio
+});
+
+const systemAudioTrack = screenStream.getAudioTracks()[0];
+if (systemAudioTrack) {
+  const sysSource = audioCtx.createMediaStreamSource(new MediaStream([systemAudioTrack]));
+  sysSource.connect(destination);
+}
+
+// Combine screen video + mixed audio
+const finalStream = new MediaStream([
+  ...screenStream.getVideoTracks(),
+  ...destination.stream.getAudioTracks()
+]);
+      
       recordedChunks = [];
       mediaRecorder = new MediaRecorder(combinedStream);
       mediaRecorder.ondataavailable = e => {
