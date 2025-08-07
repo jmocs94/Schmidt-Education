@@ -98,7 +98,75 @@
 <body>
   <div class="neon-box" id="neonTitle">🎤 Sing & Record Your Track 🎶</div>
 
-  <!-- ... rest of the content remains unchanged ... -->
+  <!-- Dropdown for backing tracks -->
+<!--
+  To customize the 10 preset songs, replace each TRACK_ID_x with a valid Google Drive share link like:
+  https://drive.google.com/file/d/1xQA2KQEWAwmiTSClV1q5rwz_Ec2_xdF7/view?usp=drive_link
+  The app will automatically convert it to a downloadable audio source.
+-->
+<div>
+  <label for="trackSelect">Select a song:</label>
+  <select id="trackSelect" onchange="handleTrackChange(this.value)">
+    <option value="">-- Choose a track --</option>
+    <option value="custom">Custom URL</option>
+    <option value="https://drive.google.com/file/d/TRACK_ID_$1/view">Song $1</option>
+    <option value="https://drive.google.com/file/d/TRACK_ID_$1/view">Song $1</option>
+    <option value="https://drive.google.com/file/d/TRACK_ID_$1/view">Song $1</option>
+    <option value="https://drive.google.com/file/d/TRACK_ID_$1/view">Song $1</option>
+    <option value="https://drive.google.com/file/d/TRACK_ID_$1/view">Song $1</option>
+    <option value="https://drive.google.com/file/d/TRACK_ID_$1/view">Song $1</option>
+    <option value="https://drive.google.com/file/d/TRACK_ID_$1/view">Song $1</option>
+    <option value="https://drive.google.com/file/d/TRACK_ID_$1/view">Song $1</option>
+    <option value="https://drive.google.com/file/d/TRACK_ID_$1/view">Song $1</option>
+    <option value="https://drive.google.com/file/d/TRACK_ID_$1/view">Song $1</option>
+  </select>
+</div>
+
+<div id="customUrlInput" style="display: none;">
+  <label for="customUrl">Paste Google Drive share link (e.g. https://drive.google.com/file/d/FILE_ID/view):</label>
+  <input type="text" id="customUrl" oninput="validateCustomUrl(this.value)">
+  <div id="errorMsg"></div>
+</div>
+
+<audio id="backingTrack" controls></audio>
+
+<script>
+  function handleTrackChange(value) {
+    const customInput = document.getElementById('customUrlInput');
+    const audio = document.getElementById('backingTrack');
+    const error = document.getElementById('errorMsg');
+    error.textContent = '';
+
+    if (value === 'custom') {
+      customInput.style.display = 'block';
+      audio.src = '';
+    } else {
+      customInput.style.display = 'none';
+      const match = value.match(/https:\/\/drive\.google\.com\/file\/d\/(.+?)\/view/);
+    if (match) {
+      const fileId = match[1];
+      audio.src = `https://drive.google.com/uc?export=download&id=${fileId}`;
+    } else {
+      audio.src = '';
+    }
+    }
+  }
+
+  function validateCustomUrl(link) {
+    const error = document.getElementById('errorMsg');
+    const audio = document.getElementById('backingTrack');
+    const match = link.match(/https:\/\/drive\.google\.com\/file\/d\/(.+?)\/view/);
+    if (!match) {
+      error.textContent = 'Only Google Drive links are supported at this time';
+      audio.src = '';
+      return;
+    }
+    const fileId = match[1];
+    const directLink = `https://drive.google.com/uc?export=download&id=${fileId}`;
+    error.textContent = '';
+    audio.src = directLink;
+  }
+</script>
 <script>
   let GoogleAuth;
 
