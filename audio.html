@@ -81,115 +81,20 @@
   <p>After downloading, go to Google Classroom, open the assignment, click “Add or Create,” choose “File,” and upload your saved recording!</p>
 
   <script>
-    let isRecording = false;
-    let mediaRecorder;
-    let animationId;
-    const song = document.getElementById("song");
-    const recordButton = document.getElementById("recordButton");
-    const canvas = document.getElementById("visualizer");
-    const ctx = canvas.getContext("2d");
+    const songSelect = document.getElementById("songSelect");
+    const filenameInput = document.getElementById("filename");
 
-    async function startRecording() {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false
-        }
-      });
-
-      const chunks = [];
-      mediaRecorder = new MediaRecorder(stream);
-
-      const audioCtx = new AudioContext();
-      const source = audioCtx.createMediaStreamSource(stream);
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 256;
-      source.connect(analyser);
-
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-
-      function draw() {
-        animationId = requestAnimationFrame(draw);
-        analyser.getByteFrequencyData(dataArray);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        const barWidth = (canvas.width / bufferLength) * 2.5;
-        let x = 0;
-
-        for (let i = 0; i < bufferLength; i++) {
-          const barHeight = dataArray[i];
-          const hue = (i / bufferLength) * 360;
-          ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
-          ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
-          x += barWidth + 1;
-        }
-      }
-
-      draw();
-
-      mediaRecorder.ondataavailable = e => chunks.push(e.data);
-
-      mediaRecorder.onstop = () => {
-        cancelAnimationFrame(animationId);
-        const blob = new Blob(chunks, { type: 'audio/webm' });
-        const url = URL.createObjectURL(blob);
-        const playback = document.getElementById('playback');
-        playback.src = url;
-        document.getElementById("downloadBtn").onclick = () => {
-          const link = document.createElement('a');
-          const filename = document.getElementById('filename').value || `recording_${new Date().toISOString()}`;
-          link.href = url;
-          link.download = `${filename}.webm`;
-          link.click();
-        };
-        recordButton.src = "https://raw.githubusercontent.com/jmocs94/Schmidt-Education/c33a36b59f094ddec45d159cd38467f5cfaa081a/Record.png";
-      };
-
-      song.src = document.getElementById("songSelect").value;
-      song.load();
-
-      document.getElementById("countdown").textContent = "3";
-      setTimeout(() => document.getElementById("countdown").textContent = "2", 1000);
-      setTimeout(() => document.getElementById("countdown").textContent = "1", 2000);
-
-      setTimeout(() => {
-        document.getElementById("countdown").textContent = "";
-        mediaRecorder.start();
-        song.play();
-        const timer = document.getElementById("timer");
-        let seconds = 0;
-        const interval = setInterval(() => {
-          if (!isRecording) return clearInterval(interval);
-          seconds++;
-          const min = Math.floor(seconds / 60).toString();
-          const sec = (seconds % 60).toString().padStart(2, '0');
-          timer.textContent = `Recording Length: ${min}:${sec}`;
-        }, 1000);
-
-        song.onended = () => {
-          if (mediaRecorder.state === "recording") mediaRecorder.stop();
-          isRecording = false;
-        };
-      }, 3000);
-    }
-
-    recordButton.addEventListener("click", () => {
-      if (!isRecording) {
-        isRecording = true;
-        recordButton.src = "https://raw.githubusercontent.com/jmocs94/Schmidt-Education/c33a36b59f094ddec45d159cd38467f5cfaa081a/Stop.png";
-        startRecording();
-      } else {
-        isRecording = false;
-        if (mediaRecorder && mediaRecorder.state === "recording") {
-          mediaRecorder.stop();
-        }
-        song.pause();
-        song.currentTime = 0;
-        recordButton.src = "https://raw.githubusercontent.com/jmocs94/Schmidt-Education/c33a36b59f094ddec45d159cd38467f5cfaa081a/Record.png";
-      }
+    songSelect.addEventListener("change", () => {
+      const selectedText = songSelect.options[songSelect.selectedIndex].textContent;
+      const today = new Date();
+      const yyyy = today.getFullYear().toString().slice(2);
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      filenameInput.value = `${selectedText.replace(/\s+/g, '_')}_${yyyy}-${mm}-${dd}`;
     });
+
+    // Trigger initial population
+    songSelect.dispatchEvent(new Event("change"));
   </script>
 </body>
 </html>
