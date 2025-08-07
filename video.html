@@ -18,10 +18,14 @@
     nav {
       margin: 1em 0;
     }
-    video {
-      margin-top: 1em;
-      width: 80%;
-      max-width: 600px;
+    #preview {
+      width: 300px;
+    }
+    #yt-container iframe {
+      width: 90%;
+      max-width: 960px;
+      height: 540px;
+      margin-bottom: 1em;
     }
     button {
       font-size: 1em;
@@ -47,6 +51,17 @@
   <h1>Crescendos 25-26 - Video Recorder</h1>
   <p>Please use headphones! This helps keep your backing track audio out of the recording and gives your video a clean sound.</p>
   <nav><a href="index.html">⬅ Back to Recording Hub</a></nav>
+
+  <label for="videoSelect">Choose a video:</label>
+  <select id="videoSelect">
+    <option value="MICKOhxFeBw">Seize the Day</option>
+    <option value="D_X-nliPjCw">Life is a Highway</option>
+    <option value="pfDbLbEKdbU">I Lived</option>
+  </select>
+
+  <div id="yt-container">
+    <iframe id="ytplayer" src="https://www.youtube.com/embed/MICKOhxFeBw?enablejsapi=1" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+  </div>
 
   <div>
     <video id="preview" autoplay muted playsinline></video>
@@ -75,23 +90,58 @@
     const countdown = document.getElementById("countdown");
     const videoFilename = document.getElementById("videoFilename");
     const downloadBtn = document.getElementById("downloadVideo");
+    const videoSelect = document.getElementById("videoSelect");
+    const ytplayer = document.getElementById("ytplayer");
 
     let mediaRecorder;
     let recordedChunks = [];
-
-    async function setupCamera() {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      preview.srcObject = stream;
-      return stream;
-    }
+    let stream;
+    let currentVideoId = videoSelect.value;
 
     function getFormattedDate() {
       const date = new Date();
-      return date.toISOString().split("T")[0];
+      const yy = String(date.getFullYear()).slice(2);
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const dd = String(date.getDate()).padStart(2, '0');
+      return `${yy}-${mm}-${dd}`;
     }
 
-    setupCamera().then(stream => {
+    function updateFilename() {
+      const selectedText = videoSelect.options[videoSelect.selectedIndex].textContent;
+      videoFilename.value = `${selectedText.replace(/\s+/g, '_')}_${getFormattedDate()}`;
+    }
+
+    videoSelect.addEventListener("change", () => {
+      currentVideoId = videoSelect.value;
+      ytplayer.src = `https://www.youtube.com/embed/${currentVideoId}?enablejsapi=1`;
+      updateFilename();
+    });
+
+    updateFilename();
+
+    async function setupCamera() {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false
+        }
+      });
+      preview.srcObject = stream;
+    }
+
+    function playYouTubeVideo() {
+      ytplayer.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+    }
+
+    function pauseYouTubeVideo() {
+      ytplayer.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+    }
+
+    setupCamera().then(() => {
       startBtn.onclick = () => {
+        videoSelect.disabled = true;
         countdown.textContent = "3";
         let count = 3;
         const interval = setInterval(() => {
@@ -117,8 +167,14 @@
               };
             };
             mediaRecorder.start();
+            playYouTubeVideo();
             startBtn.disabled = true;
             stopBtn.disabled = false;
+
+            // Ask for fullscreen
+            if (window.innerWidth > 768 && document.fullscreenEnabled) {
+              ytplayer.requestFullscreen?.();
+            }
           } else {
             countdown.textContent = count;
           }
@@ -127,8 +183,10 @@
 
       stopBtn.onclick = () => {
         mediaRecorder.stop();
+        pauseYouTubeVideo();
         startBtn.disabled = false;
         stopBtn.disabled = true;
+        videoSelect.disabled = false;
       };
     });
   </script>
