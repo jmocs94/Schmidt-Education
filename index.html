@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sing and Record</title>
+  <script src="https://apis.google.com/js/api.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -14,7 +15,6 @@
       align-items: center;
       padding: 20px;
     }
-
     .neon-box {
       border: 4px solid #00ffff;
       border-radius: 20px;
@@ -24,41 +24,23 @@
       position: relative;
       overflow: hidden;
     }
-
     .neon-box h1 {
       font-size: 2.5em;
       margin: 0;
     }
-
-    .neon-anim {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-    }
-
-    canvas#neonCanvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-    }
-
     .controls {
       display: flex;
       justify-content: center;
-      gap: 20px;
+      gap: 10px;
       margin-top: 10px;
     }
-
     .control-icon {
       font-size: 1.5em;
       cursor: pointer;
     }
-
     .color-picker {
       display: none;
     }
-
     select, input[type="text"] {
       padding: 10px;
       margin: 10px;
@@ -67,11 +49,9 @@
       border: none;
       font-size: 1em;
     }
-
     audio, button {
       margin: 10px;
     }
-
     button {
       padding: 10px 20px;
       font-size: 1em;
@@ -81,25 +61,15 @@
       color: white;
       cursor: pointer;
     }
+    #recordingsList audio {
+      display: block;
+      margin-top: 5px;
+    }
   </style>
 </head>
 <body>
-
-<script>
-  const API_KEY = 'AIzaSyBsr1jRZElMibwMiRMek8Z3d204-7uF254';
-  const CLIENT_ID = '898010171923-45uc2mbusq1r3p845tl0au0h95lc9r7s.apps.googleusercontent.com';
-  const SCOPES = 'https://www.googleapis.com/auth/classroom.coursework.me https://www.googleapis.com/auth/drive.file';
-</script>
-
-<div class="neon-box" id="neonBox">
+<div class="neon-box">
   <h1>Sing and Record</h1>
-  <canvas id="neonCanvas" width="400" height="150"></canvas>
-  <div class="controls">
-    <div class="control-icon" onclick="toggleAnimation()">💡</div>
-    <div class="control-icon" onclick="cycleSpeed()">⏩</div>
-    <div class="control-icon" onclick="document.getElementById('colorPicker').click()">🎨</div>
-    <input type="color" id="colorPicker" class="color-picker" onchange="changeColor(this.value)">
-  </div>
 </div>
 
 <select id="trackSelect" onchange="handleTrackChange(this.value)">
@@ -118,24 +88,106 @@
 
 <audio id="backingTrack" controls></audio>
 
-<div>
-  <input type="text" id="filenameInput" placeholder="Enter filename...">
-  <button onclick="startRecording()">Record</button>
-  <button onclick="stopRecording()">Stop</button>
-  <audio id="recordedAudio" controls></audio>
-  <button id="downloadBtn" onclick="downloadRecording()">Download</button>
-  <button onclick="submitToClassroom(document.getElementById('downloadBtn').dataset.blob, getFilename())">Submit to Classroom</button>
-  <button onclick="uploadToDrive(document.getElementById('downloadBtn').dataset.blob, getFilename())">Upload to Drive</button>
+<div class="controls">
+  <button onclick="startRecording()">🎤 Record</button>
+  <button onclick="stopRecording()">🛑 Stop</button>
+  <button onclick="resetRecording()">🔄 Reset</button>
 </div>
 
+<div>
+  <input type="text" id="filename" placeholder="Filename (optional)">
+  <button onclick="downloadRecording()">⬇️ Download</button>
+  <button onclick="submitToClassroomBlob()">📘 Submit to Classroom</button>
+  <button onclick="uploadToDriveBlob()">📤 Upload to Drive</button>
+</div>
+
+<div id="recordingsList"></div>
+
 <script>
-  const audio = document.getElementById('backingTrack');
-  const customInput = document.getElementById('customUrlInput');
-  const error = document.getElementById('errorMsg');
-  let mediaRecorder, audioChunks = [];
+  const API_KEY = 'AIzaSyBsr1jRZElMibwMiRMek8Z3d204-7uF254';
+  const CLIENT_ID = '898010171923-45uc2mbusq1r3p845tl0au0h95lc9r7s.apps.googleusercontent.com';
+  const SCOPES = 'https://www.googleapis.com/auth/classroom.coursework.me https://www.googleapis.com/auth/drive.file';
+
+  let mediaRecorder;
+  let recordedChunks = [];
+  let recordedBlob;
+
+  function gapiInit() {
+    gapi.load('client:auth2', () => {
+      gapi.client.init({
+        apiKey: API_KEY,
+        clientId: CLIENT_ID,
+        scope: SCOPES
+      });
+    });
+  }
+
+  async function authenticateUser() {
+    const authInstance = gapi.auth2.getAuthInstance();
+    if (!authInstance.isSignedIn.get()) {
+      await authInstance.signIn();
+    }
+  }
+
+  function startRecording() {
+    const backingTrack = document.getElementById("backingTrack");
+    backingTrack.play();
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.start();
+      recordedChunks = [];
+      mediaRecorder.ondataavailable = e => recordedChunks.push(e.data);
+      mediaRecorder.onstop = () => {
+        recordedBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+        const audioURL = URL.createObjectURL(recordedBlob);
+        document.getElementById("recordingsList").innerHTML = `<audio controls src="${audioURL}"></audio>`;
+      };
+    });
+  }
+
+  function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+    }
+  }
+
+  function resetRecording() {
+    document.getElementById("recordingsList").innerHTML = '';
+    recordedChunks = [];
+    recordedBlob = null;
+  }
+
+  function downloadRecording() {
+    if (!recordedBlob) return alert("No recording to download.");
+    const a = document.createElement("a");
+    const url = URL.createObjectURL(recordedBlob);
+    const filenameInput = document.getElementById("filename").value.trim();
+    const defaultName = (document.getElementById("trackSelect").selectedOptions[0]?.text || 'recording') + '-' + new Date().toISOString().slice(0,10);
+    a.href = url;
+    a.download = filenameInput || defaultName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  function uploadToDriveBlob() {
+    if (!recordedBlob) return alert("No recording to upload.");
+    const filename = document.getElementById("filename").value.trim() || 'recording-' + new Date().toISOString().slice(0,10);
+    uploadToDrive(recordedBlob, filename);
+  }
+
+  function submitToClassroomBlob() {
+    if (!recordedBlob) return alert("No recording to submit.");
+    const filename = document.getElementById("filename").value.trim() || 'recording-' + new Date().toISOString().slice(0,10);
+    submitToClassroom(recordedBlob, filename);
+  }
 
   function handleTrackChange(value) {
+    const audio = document.getElementById('backingTrack');
+    const customInput = document.getElementById('customUrlInput');
+    const error = document.getElementById('errorMsg');
     error.textContent = '';
+
     if (value === 'custom') {
       customInput.style.display = 'block';
       audio.src = '';
@@ -154,6 +206,9 @@
 
   function validateCustomUrl(link) {
     const match = link.match(/https:\/\/drive\.google\.com\/file\/d\/(.+?)\/view/);
+    const audio = document.getElementById('backingTrack');
+    const error = document.getElementById('errorMsg');
+
     if (!match) {
       error.textContent = 'Only Google Drive links are supported at this time';
       audio.src = '';
@@ -169,52 +224,17 @@
       .then(res => res.blob())
       .then(blob => {
         const url = URL.createObjectURL(blob);
+        const audio = document.getElementById('backingTrack');
         audio.src = url;
         audio.load();
       })
       .catch(err => {
         console.error('Error loading audio:', err);
+        const error = document.getElementById('errorMsg');
         error.textContent = 'Failed to load audio from Google Drive.';
       });
   }
-
-  function startRecording() {
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-      audio.play();
-      mediaRecorder = new MediaRecorder(stream);
-      audioChunks = [];
-      mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(audioChunks, { type: 'audio/webm' });
-        const url = URL.createObjectURL(blob);
-        const recorded = document.getElementById('recordedAudio');
-        recorded.src = url;
-        document.getElementById('downloadBtn').dataset.blob = blob;
-      };
-      mediaRecorder.start();
-    });
-  }
-
-  function stopRecording() {
-    if (mediaRecorder) {
-      mediaRecorder.stop();
-    }
-  }
-
-  function getFilename() {
-    const input = document.getElementById('filenameInput').value;
-    const fallback = 'recording-' + new Date().toISOString().split('T')[0] + '.webm';
-    return input ? input : fallback;
-  }
-
-  function downloadRecording() {
-    const blob = document.getElementById('downloadBtn').dataset.blob;
-    if (!blob) return;
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = getFilename();
-    a.click();
-  }
 </script>
+<script async defer src="https://apis.google.com/js/api.js" onload="gapiInit()"></script>
 </body>
 </html>
