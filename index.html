@@ -34,7 +34,12 @@
       animation: neonPulse 6s linear infinite;
     }
     @keyframes neonPulse {
-      0% { box-shadow: 0 0 10px #00f0ff inset, 0 0 10px #00f0ff; }
+  0% { box-shadow: 0 0 20px #00f0ff inset, 0 0 20px #00f0ff; border-color: #00f0ff; }
+  25% { box-shadow: 0 0 20px #ff00ff inset, 0 0 20px #ff00ff; border-color: #ff00ff; }
+  50% { box-shadow: 0 0 20px #00ff99 inset, 0 0 20px #00ff99; border-color: #00ff99; }
+  75% { box-shadow: 0 0 20px #ffcc00 inset, 0 0 20px #ffcc00; border-color: #ffcc00; }
+  100% { box-shadow: 0 0 20px #00f0ff inset, 0 0 20px #00f0ff; border-color: #00f0ff; }
+}
       50% { box-shadow: 0 0 25px #00f0ff inset, 0 0 25px #00f0ff; }
       100% { box-shadow: 0 0 10px #00f0ff inset, 0 0 10px #00f0ff; }
     }
@@ -96,7 +101,14 @@
   </style>
 </head>
 <body>
-  <div class="neon-box" id="neonTitle">🎤 Sing & Record Your Track 🎶</div>
+  <div class="neon-box" id="neonTitle">
+  <h1 style="font-size: 3em; margin: 0;">🎤 Sing & Record Your Track 🎶</h1>
+  <div class="controls">
+    <div class="control-icon" onclick="toggleNeon()" title="Toggle Animation">⏹️</div>
+    <div class="control-icon" onclick="changeSpeed()" title="Change Speed">⏩</div>
+    <div class="control-icon" onclick="changeColor()" title="Change Color">🎨</div>
+  </div>
+</div>
 
   <!-- Dropdown for backing tracks -->
 <!--
@@ -109,7 +121,7 @@
   <select id="trackSelect" onchange="handleTrackChange(this.value)">
     <option value="">-- Choose a track --</option>
     <option value="custom">Custom URL</option>
-    <option value="https://drive.google.com/file/d/TRACK_ID_$1/view">Song $1</option>
+    <option value="https://drive.google.com/file/d/1xQA2KQEWAwmiTSClV1q5rwz_Ec2_xdF7/view?usp=drive_link">Seize the Day</option>
     <option value="https://drive.google.com/file/d/TRACK_ID_$1/view">Song $1</option>
     <option value="https://drive.google.com/file/d/TRACK_ID_$1/view">Song $1</option>
     <option value="https://drive.google.com/file/d/TRACK_ID_$1/view">Song $1</option>
@@ -250,6 +262,36 @@
   }
 
   window.onload = startGapiClient;
+</script>
+<script>
+  let animationRunning = true;
+  let currentSpeed = 6;
+  let currentColorIndex = 0;
+  const colors = ['#00f0ff', '#ff00ff', '#00ff99', '#ffcc00'];
+
+  function toggleNeon() {
+    const box = document.getElementById('neonTitle');
+    animationRunning = !animationRunning;
+    box.style.animation = animationRunning ? `neonPulse ${currentSpeed}s linear infinite` : 'none';
+  }
+
+  function changeSpeed() {
+    currentSpeed = currentSpeed === 6 ? 3 : currentSpeed === 3 ? 1.5 : 6;
+    const box = document.getElementById('neonTitle');
+    if (animationRunning) {
+      box.style.animation = `neonPulse ${currentSpeed}s linear infinite`;
+    }
+  }
+
+  function changeColor() {
+    currentColorIndex = (currentColorIndex + 1) % colors.length;
+    const box = document.getElementById('neonTitle');
+    const newColor = colors[currentColorIndex];
+    box.style.borderColor = newColor;
+    box.style.color = newColor;
+    box.style.textShadow = `0 0 5px ${newColor}, 0 0 10px ${newColor}`;
+    box.style.boxShadow = `0 0 20px ${newColor} inset, 0 0 20px ${newColor}`;
+  }
 </script>
 </body>
 </html>
