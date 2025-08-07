@@ -4,169 +4,147 @@
   const CLIENT_ID = '898010171923-45uc2mbusq1r3p845tl0au0h95lc9r7s.apps.googleusercontent.com';
   const SCOPES = 'https://www.googleapis.com/auth/classroom.coursework.me https://www.googleapis.com/auth/drive.file';
 </script>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Record with Backing Track</title>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="https://apis.google.com/js/api.js"></script>
+  <title>Sing and Record</title>
   <style>
     body {
-      font-family: 'Comic Sans MS', cursive, sans-serif;
-      text-align: center;
-      padding: 2em;
-      background: linear-gradient(135deg, #f0f8ff, #ffe4e1);
-      background-attachment: fixed;
-      color: #333;
+      font-family: Arial, sans-serif;
+      background-color: #111;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
     }
+
     .neon-box {
-      display: inline-block;
-      padding: 1em 2em;
-      margin-bottom: 1em;
-      border: 4px solid #00f0ff;
-      border-radius: 12px;
-      color: #00f0ff;
-      text-shadow: 0 0 5px #00f0ff, 0 0 10px #00f0ff;
-      box-shadow: 0 0 20px #00f0ff inset, 0 0 20px #00f0ff;
-      animation: neonPulse 6s linear infinite;
+      border: 4px solid #00ffff;
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 10px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
     }
-    @keyframes neonPulse {
-  0% { box-shadow: 0 0 20px #00f0ff inset, 0 0 20px #00f0ff; border-color: #00f0ff; }
-  25% { box-shadow: 0 0 20px #ff00ff inset, 0 0 20px #ff00ff; border-color: #ff00ff; }
-  50% { box-shadow: 0 0 20px #00ff99 inset, 0 0 20px #00ff99; border-color: #00ff99; }
-  75% { box-shadow: 0 0 20px #ffcc00 inset, 0 0 20px #ffcc00; border-color: #ffcc00; }
-  100% { box-shadow: 0 0 20px #00f0ff inset, 0 0 20px #00f0ff; border-color: #00f0ff; }
-}
-      50% { box-shadow: 0 0 25px #00f0ff inset, 0 0 25px #00f0ff; }
-      100% { box-shadow: 0 0 10px #00f0ff inset, 0 0 10px #00f0ff; }
+
+    .neon-box h1 {
+      font-size: 2.5em;
+      margin: 0;
     }
+
+    .neon-anim {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    canvas#neonCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
     .controls {
       display: flex;
       justify-content: center;
-      gap: 10px;
-      margin: 1em auto;
-    }
-    .control-icon {
-      font-size: 1.5em;
-      background: #fff8dc;
-      border: 2px solid #aaa;
-      border-radius: 10px;
-      padding: 0.5em;
-      cursor: pointer;
-      box-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-    }
-    .control-panel {
-      display: none;
+      gap: 20px;
       margin-top: 10px;
     }
-    .control-icon:hover {
-      background-color: #ffefd5;
-      transform: scale(1.05);
+
+    .control-icon {
+      font-size: 1.5em;
+      cursor: pointer;
     }
-    button, input, select {
-      margin: 0.5em;
-      padding: 1em;
+
+    .color-picker {
+      display: none;
+    }
+
+    select, input[type="text"] {
+      padding: 10px;
+      margin: 10px;
+      width: 300px;
+      border-radius: 8px;
+      border: none;
       font-size: 1em;
-      border-radius: 10px;
-      border: 2px solid #aaa;
-      background: #fff8dc;
-      box-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-      transition: transform 0.2s ease-in-out;
     }
-    audio {
-      margin-top: 1em;
-      width: 100%;
-      max-width: 600px;
+
+    audio, button {
+      margin: 10px;
     }
-    input, select {
-      width: 90%;
-      max-width: 600px;
-    }
-    #authStatus {
-      color: green;
-      font-weight: bold;
-    }
-    #confirmation {
-      color: green;
-      font-weight: bold;
-      margin-top: 1em;
-    }
-    #errorMsg {
-      color: red;
-      font-weight: bold;
+
+    button {
+      padding: 10px 20px;
+      font-size: 1em;
+      border-radius: 8px;
+      border: none;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <div class="neon-box" id="neonTitle">
-  <h1 style="font-size: 3em; margin: 0;">🎤 Sing & Record Your Track 🎶</h1>
+
+<div class="neon-box" id="neonBox">
+  <h1>Sing and Record</h1>
+  <canvas id="neonCanvas" width="400" height="150"></canvas>
   <div class="controls">
-    <div class="control-icon" onclick="toggleNeon()" title="Toggle Animation">⏹️</div>
-    <div class="control-icon" onclick="changeSpeed()" title="Change Speed">⏩</div>
-    <div class="control-icon" onclick="changeColor()" title="Change Color">🎨</div>
+    <div class="control-icon" onclick="toggleAnimation()">💡</div>
+    <div class="control-icon" onclick="cycleSpeed()">⏩</div>
+    <div class="control-icon" onclick="document.getElementById('colorPicker').click()">🎨</div>
+    <input type="color" id="colorPicker" class="color-picker" onchange="changeColor(this.value)">
   </div>
 </div>
 
-  <!-- Dropdown for backing tracks -->
-<!--
-  To customize the 10 preset songs, replace each TRACK_ID_x with a valid Google Drive share link like:
-  https://drive.google.com/file/d/1xQA2KQEWAwmiTSClV1q5rwz_Ec2_xdF7/view?usp=drive_link
-  The app will automatically convert it to a downloadable audio source.
--->
-<div>
-  <label for="trackSelect">Select a song:</label>
-  <select id="trackSelect" onchange="handleTrackChange(this.value)">
-    <option value="">-- Choose a track --</option>
-    <option value="custom">Custom URL</option>
-    <option value="https://drive.google.com/file/d/1xQA2KQEWAwmiTSClV1q5rwz_Ec2_xdF7/view?usp=drive_link">Seize the Day</option>
-    <option value="https://drive.google.com/file/d/TRACK_ID_$1/view">Song $1</option>
-    <option value="https://drive.google.com/file/d/TRACK_ID_$1/view">Song $1</option>
-    <option value="https://drive.google.com/file/d/TRACK_ID_$1/view">Song $1</option>
-    <option value="https://drive.google.com/file/d/TRACK_ID_$1/view">Song $1</option>
-    <option value="https://drive.google.com/file/d/TRACK_ID_$1/view">Song $1</option>
-    <option value="https://drive.google.com/file/d/TRACK_ID_$1/view">Song $1</option>
-    <option value="https://drive.google.com/file/d/TRACK_ID_$1/view">Song $1</option>
-    <option value="https://drive.google.com/file/d/TRACK_ID_$1/view">Song $1</option>
-    <option value="https://drive.google.com/file/d/TRACK_ID_$1/view">Song $1</option>
-  </select>
-</div>
+<select id="trackSelect" onchange="handleTrackChange(this.value)">
+  <option value="">-- Choose a track --</option>
+  <option value="custom">Custom URL</option>
+  <option value="https://drive.google.com/file/d/1xQA2KQEWAwmiTSClV1q5rwz_Ec2_xdF7/view">Seize the Day</option>
+  <option value="https://drive.google.com/file/d/1NaVCLIkSP9nsuGdhVdjHbSl_IIouNreA/view">Go the Distance</option>
+  <option value="https://drive.google.com/file/d/1w2JUTr7RWYoDpE8j3qRQfzyFFIYmrTob/view">Life is a Highway</option>
+  <option value="https://drive.google.com/file/d/1Q1ZVQnSXfQAktbcOWcTGefp0RwRpJLVD/view">I Lived</option>
+</select>
 
 <div id="customUrlInput" style="display: none;">
-  <label for="customUrl">Paste Google Drive share link (e.g. https://drive.google.com/file/d/FILE_ID/view):</label>
-  <input type="text" id="customUrl" oninput="validateCustomUrl(this.value)">
+  <input type="text" id="customUrl" placeholder="Paste Google Drive share link" oninput="validateCustomUrl(this.value)">
   <div id="errorMsg"></div>
 </div>
 
 <audio id="backingTrack" controls></audio>
 
-<script>
-  function handleTrackChange(value) {
-    const customInput = document.getElementById('customUrlInput');
-    const audio = document.getElementById('backingTrack');
-    const error = document.getElementById('errorMsg');
-    error.textContent = '';
+<div>
+  <button onclick="startRecording()">Record</button>
+  <button onclick="stopRecording()">Stop</button>
+  <audio id="recordedAudio" controls></audio>
+  <button id="downloadBtn" onclick="downloadRecording()">Download</button>
+  <button onclick="submitToClassroom(document.getElementById('downloadBtn').dataset.blob, 'recording-' + new Date().toISOString().split('T')[0] + '.webm')">Submit to Classroom</button>
+  <button onclick="uploadToDrive(document.getElementById('downloadBtn').dataset.blob, 'recording-' + new Date().toISOString().split('T')[0] + '.webm')">Upload to Drive</button>
+</div>
 
+<script>
+  const audio = document.getElementById('backingTrack');
+  const customInput = document.getElementById('customUrlInput');
+  const error = document.getElementById('errorMsg');
+
+  function handleTrackChange(value) {
+    error.textContent = '';
     if (value === 'custom') {
       customInput.style.display = 'block';
       audio.src = '';
     } else {
       customInput.style.display = 'none';
-      const match = value.match(/https:\/\/drive\.google\.com\/file\/d\/(.+?)\/view/);
-    if (match) {
-      const fileId = match[1];
-      audio.src = `https://drive.google.com/uc?export=download&id=${fileId}`;
-    } else {
-      audio.src = '';
-    }
+      const fileId = value.match(/\/d\/(.*)\//);
+      audio.src = `https://drive.google.com/uc?export=download&id=${fileId[1]}`;
     }
   }
 
   function validateCustomUrl(link) {
-    const error = document.getElementById('errorMsg');
-    const audio = document.getElementById('backingTrack');
     const match = link.match(/https:\/\/drive\.google\.com\/file\/d\/(.+?)\/view/);
     if (!match) {
       error.textContent = 'Only Google Drive links are supported at this time';
@@ -174,124 +152,140 @@
       return;
     }
     const fileId = match[1];
-    const directLink = `https://drive.google.com/uc?export=download&id=${fileId}`;
     error.textContent = '';
-    audio.src = directLink;
+    audio.src = `https://drive.google.com/uc?export=download&id=${fileId}`;
+  }
+
+  let mediaRecorder, recordedChunks = [];
+  async function startRecording() {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    recordedChunks = [];
+    mediaRecorder.ondataavailable = e => recordedChunks.push(e.data);
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+      document.getElementById('recordedAudio').src = URL.createObjectURL(blob);
+      document.getElementById('downloadBtn').dataset.blob = blob;
+    };
+    mediaRecorder.start();
+  }
+
+  function stopRecording() {
+    mediaRecorder?.stop();
+  }
+
+  function downloadRecording() {
+    const blob = document.getElementById('downloadBtn').dataset.blob;
+    if (!blob) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `recording-${new Date().toISOString().split('T')[0]}.webm`;
+    a.click();
+  }
+
+  // Neon animation
+  const canvas = document.getElementById('neonCanvas');
+  const ctx = canvas.getContext('2d');
+  let hue = 0, speed = 1, animOn = true;
+
+  function drawNeon() {
+    if (!animOn) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.beginPath();
+    ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+    ctx.lineWidth = 4;
+    ctx.moveTo(20, 20);
+    ctx.lineTo(380, 20);
+    ctx.lineTo(380, 130);
+    ctx.lineTo(20, 130);
+    ctx.lineTo(20, 20);
+    ctx.stroke();
+    hue = (hue + speed) % 360;
+    requestAnimationFrame(drawNeon);
+  }
+
+  drawNeon();
+
+  function toggleAnimation() {
+    animOn = !animOn;
+    if (animOn) drawNeon();
+  }
+
+  function cycleSpeed() {
+    speed = speed === 0 ? 1 : speed === 1 ? 3 : speed === 3 ? 0 : 1;
+  }
+
+  function changeColor(color) {
+    hue = parseInt(color.replace('#', ''), 16) % 360;
   }
 </script>
+
+<!-- Google APIs -->
+<script src="https://apis.google.com/js/api.js"></script>
 <script>
-  let GoogleAuth;
+  const CLIENT_ID = '898010171923-45uc2mbusq1r3p845tl0au0h95lc9r7s.apps.googleusercontent.com';
+  const API_KEY = 'AIzaSyBsr1jRZElMibwMiRMek8Z3d204-7uF254';
+  const DISCOVERY_DOCS = [
+    'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
+    'https://classroom.googleapis.com/$discovery/rest?version=v1'
+  ];
+  const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/classroom.coursework.students.readonly https://www.googleapis.com/auth/classroom.courses.readonly';
+
+  function handleClientLoad() {
+    gapi.load('client:auth2', initClient);
+  }
 
   function initClient() {
     gapi.client.init({
       apiKey: API_KEY,
       clientId: CLIENT_ID,
-      scope: SCOPES,
-      discoveryDocs: [
-        'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
-        'https://www.googleapis.com/discovery/v1/apis/classroom/v1/rest'
-      ]
+      discoveryDocs: DISCOVERY_DOCS,
+      scope: SCOPES
     }).then(() => {
-      GoogleAuth = gapi.auth2.getAuthInstance();
-      if (GoogleAuth.isSignedIn.get()) {
-        updateSigninStatus(true);
-      }
-    });
-  }
-
-  function handleAuthClick() {
-    GoogleAuth.signIn().then(() => {
-      updateSigninStatus(true);
+      const isSignedIn = gapi.auth2.getAuthInstance().isSignedIn.get();
+      updateSigninStatus(isSignedIn);
+      gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus);
     });
   }
 
   function updateSigninStatus(isSignedIn) {
-    const authStatus = document.getElementById("authStatus");
     if (isSignedIn) {
-      const user = GoogleAuth.currentUser.get();
-      authStatus.innerText = "Signed in as " + user.getBasicProfile().getName();
+      console.log('Signed in');
     } else {
-      authStatus.innerText = "Not signed in.";
+      gapi.auth2.getAuthInstance().signIn();
     }
   }
 
-  function uploadToDrive(fileBlob, fileName) {
-    const accessToken = GoogleAuth.currentUser.get().getAuthResponse().access_token;
+  function uploadToDrive(blob, filename) {
+    const file = new Blob([blob], { type: blob.type });
     const metadata = {
-      name: fileName,
-      mimeType: fileBlob.type
+      name: filename,
+      mimeType: blob.type
     };
 
+    const accessToken = gapi.auth.getToken().access_token;
     const form = new FormData();
-    form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
-    form.append("file", fileBlob);
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    form.append('file', file);
 
-    return fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
-      method: "POST",
-      headers: new Headers({ Authorization: "Bearer " + accessToken }),
+    fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+      method: 'POST',
+      headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
       body: form
-    })
-    .then(response => response.json())
-    .then(data => {
-      console.log("File uploaded to Drive:", data);
-      return data.id;
+    }).then(res => res.json()).then(val => {
+      alert('Uploaded to Google Drive: File ID ' + val.id);
     });
   }
 
-  function submitToClassroom(courseId, assignmentId, driveFileId) {
-    const request = {
-      courseId: courseId,
-      id: assignmentId,
-      resource: {
-        addAttachments: [{
-          driveFile: {
-            id: driveFileId
-          }
-        }]
-      }
-    };
-
-    return gapi.client.classroom.courses.courseWork.studentSubmissions.patch(request)
-      .then(response => {
-        console.log("Submitted to Classroom:", response);
-      });
-  }
-
-  function startGapiClient() {
-    gapi.load('client:auth2', initClient);
-  }
-
-  window.onload = startGapiClient;
-</script>
-<script>
-  let animationRunning = true;
-  let currentSpeed = 6;
-  let currentColorIndex = 0;
-  const colors = ['#00f0ff', '#ff00ff', '#00ff99', '#ffcc00'];
-
-  function toggleNeon() {
-    const box = document.getElementById('neonTitle');
-    animationRunning = !animationRunning;
-    box.style.animation = animationRunning ? `neonPulse ${currentSpeed}s linear infinite` : 'none';
-  }
-
-  function changeSpeed() {
-    currentSpeed = currentSpeed === 6 ? 3 : currentSpeed === 3 ? 1.5 : 6;
-    const box = document.getElementById('neonTitle');
-    if (animationRunning) {
-      box.style.animation = `neonPulse ${currentSpeed}s linear infinite`;
-    }
-  }
-
-  function changeColor() {
-    currentColorIndex = (currentColorIndex + 1) % colors.length;
-    const box = document.getElementById('neonTitle');
-    const newColor = colors[currentColorIndex];
-    box.style.borderColor = newColor;
-    box.style.color = newColor;
-    box.style.textShadow = `0 0 5px ${newColor}, 0 0 10px ${newColor}`;
-    box.style.boxShadow = `0 0 20px ${newColor} inset, 0 0 20px ${newColor}`;
+  function submitToClassroom(blob, filename) {
+    gapi.client.classroom.courses.list().then(response => {
+      const courses = response.result.courses || [];
+      const courseId = prompt('Enter Course ID to submit to:');
+      if (!courseId) return;
+      uploadToDrive(blob, filename); // Can extend to attach to coursework later
+    });
   }
 </script>
+<script async defer onload="handleClientLoad()"></script>
 </body>
 </html>
