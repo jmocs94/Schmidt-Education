@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Rehearsal Recorder</title>
+  <style>
+    body {
+      font-family: Helvetica, Arial, sans-serif;
+      background: #f0f8ff;
+      text-align: center;
+      padding: 2em;
+      color: #333;
+    }
+    video {
+      width: 80%;
+      max-width: 960px;
+      margin-top: 1em;
+      transform: scaleX(-1); /* mirror horizontally */
+      border-radius: 10px;
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.3);
+    }
+    button {
+      font-size: 1.1em;
+      padding: 0.6em 1.5em;
+      margin: 1em;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background-color: #00796b;
+      color: white;
+    }
+    button:hover {
+      background-color: #004d40;
+    }
+    #countdown {
+      font-size: 2em;
+      color: #d32f2f;
+      margin: 1em 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Rehearsal Recorder</h1>
+  <p>Use this tool to record yourself with your screen's audio and your microphone. Make sure to wear headphones for the best sound quality!</p>
+  <div id="countdown"></div>
+  <video id="recordingPreview" autoplay muted playsinline></video>
+  <br/>
+  <button id="startRecording">Start Recording</button>
+  <button id="stopRecording" disabled>Stop Recording</button>
+  <br/>
+  <video id="playback" controls></video>
+  <br/>
+  <label for="filename">Filename:</label>
+  <input type="text" id="filename" />
+  <button id="downloadBtn">Download</button>
+
+  <script>
+    const preview = document.getElementById('recordingPreview');
+    const playback = document.getElementById('playback');
+    const startBtn = document.getElementById('startRecording');
+    const stopBtn = document.getElementById('stopRecording');
+    const countdown = document.getElementById('countdown');
+    const filenameInput = document.getElementById('filename');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    let mediaRecorder;
+    let recordedChunks = [];
+    let combinedStream;
+
+    function getFormattedDate() {
+      const d = new Date();
+      return `${String(d.getFullYear()).slice(2)}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+
+    startBtn.onclick = async () => {
+      countdown.textContent = "3";
+      let count = 3;
+      const interval = setInterval(() => {
+        count--;
+        countdown.textContent = count > 0 ? count : "";
+        if (count <= 0) {
+          clearInterval(interval);
+          startRecording();
+        }
+      }, 1000);
+    };
+
+    async function startRecording() {
+      try {
+        const displayStream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: true
+        });
+
+        const micStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false
+          },
+          video: true
+        });
+
+        const mixedTracks = [
+          ...displayStream.getVideoTracks(),
+          ...micStream.getAudioTracks(),
+          ...displayStream.getAudioTracks()
+        ];
+
+        combinedStream = new MediaStream(mixedTracks);
+
+        preview.srcObject = combinedStream;
+
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(combinedStream);
+
+        mediaRecorder.ondataavailable = e => {
+          if (e.data.size > 0) recordedChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: 'video/webm' });
+          const url = URL.createObjectURL(blob);
+          playback.src = url;
+
+          downloadBtn.onclick = () => {
+            const a = document.createElement('a');
+            a.href = url;
+            const name = filenameInput.value.trim() || `rehearsal_${getFormattedDate()}`;
+            a.download = name + '.webm';
+            a.click();
+          };
+        };
+
+        mediaRecorder.start();
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+      } catch (err) {
+        alert('Error accessing screen or mic: ' + err.message);
+        console.error(err);
+      }
+    }
+
+    stopBtn.onclick = () => {
+      mediaRecorder.stop();
+      combinedStream.getTracks().forEach(t => t.stop());
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+    };
+  </script>
+</body>
+</html>
