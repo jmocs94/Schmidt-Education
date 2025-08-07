@@ -3,266 +3,58 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Crescendos 25-26</title>
+  <title>Crescendos Recording Hub</title>
   <style>
     body {
       font-family: 'Comic Sans MS', cursive, sans-serif;
-      background: linear-gradient(to bottom right, #fef6e4, #e0f7fa);
+      background: linear-gradient(to bottom right, #fff3e0, #e0f7fa);
       text-align: center;
-      padding: 2em;
+      padding: 3em;
       color: #333;
     }
     h1 {
       font-size: 2.5em;
-      color: #2e7d32;
-      margin: 0.5em 0;
+      color: #00796b;
+      margin-bottom: 0.5em;
+    }
+    p {
+      font-size: 1.2em;
+      max-width: 600px;
+      margin: 0 auto 2em;
     }
     #logo {
       width: 200px;
       margin-bottom: 1em;
     }
-    select, input[type="text"] {
-      font-size: 1em;
-      margin: 1em 0;
-      padding: 0.5em;
-      border-radius: 10px;
-      border: 1px solid #ccc;
+    .nav-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 1em;
+      align-items: center;
     }
-    #recordButton {
-      background: none;
-      border: none;
-      cursor: pointer;
-      margin: 1em;
-    }
-    #recordButton img {
-      width: 80px;
-    }
-    #waveform {
-      width: 100%;
-      height: 100px;
-      background: #fff;
-      border: 2px dashed #4db6ac;
-      margin-top: 1em;
-    }
-    audio {
-      margin-top: 1em;
-    }
-    button, #downloadBtn, #resetBtn, #mp3Btn {
-      background-color: #4db6ac;
+    a.button {
+      background-color: #00796b;
       color: white;
-      border: none;
-      padding: 0.5em 1em;
-      margin: 0.5em;
-      font-size: 1em;
-      border-radius: 10px;
-      cursor: pointer;
+      text-decoration: none;
+      padding: 1em 2em;
+      border-radius: 12px;
+      font-size: 1.2em;
+      width: 250px;
+      text-align: center;
+      transition: background-color 0.3s;
     }
-    #playbackContainer {
-      background: #fff3e0;
-      border-radius: 10px;
-      padding: 1em;
-      margin-top: 1em;
-      display: inline-block;
-    }
-    #countdown {
-      font-size: 2em;
-      color: #e65100;
-      margin-top: 1em;
+    a.button:hover {
+      background-color: #004d40;
     }
   </style>
 </head>
 <body>
   <img id="logo" src="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/360c0fde872bd41d319af96a3e55bc9df7df3a54/Crescendos_w_trans.png" alt="Crescendos Logo">
-  <p style="max-width: 600px; margin: 0 auto; font-size: 1.1em; color: #444;">
-    For best results, please use headphones while recording. This helps keep the background track out of your microphone,
-    so we can clearly hear your voice without any extra noise. Plus, it makes your final recording sound way more professional!
-  </p>
-  <label for="songSelect">Choose a song:</label>
-  <select id="songSelect">
-    <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/01%20Seize%20the%20Day%20-%20Performance.mp3">Seize the Day</option>
-    <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-1-Soprano.mp3">Go the Distance Soprano</option>
-    <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-2-Alto.mp3">Go the Distance Alto</option>
-    <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-3-Tenor.mp3">Go the Distance Tenor</option>
-    <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/4-LifeIsAHighway-Full.mp3">Life is a Highway</option>
-    <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/5-I%20Lived%20-%20SATB%20(Faster).mp3">I Lived</option>
-  </select>
-
-  <audio id="trackPlayer" controls style="margin-top: 1em; pointer-events: none;"></audio>
-
-  <button id="recordButton">
-    <img id="recordIcon" src="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/c33a36b59f094ddec45d159cd38467f5cfaa081a/Record.png" alt="Record">
-  </button>
-  <div id="countdown"></div>
-  <div id="recordingLength"></div>
-  <canvas id="waveform"></canvas>
-    <p style="max-width: 600px; margin: 0 auto; font-size: 1em; color: #555;">
-      After downloading your recording, you can upload it to Google Classroom.
-      To do this, open your assignment, click “Add or Create,” then select “File.”
-      Upload your recording and be sure to click “Turn In” when you're done!
-    </p>
-    <audio id="playback" controls></audio>
-    <br>
-    <input type="text" id="filename" placeholder="Enter filename">
-        <button id="downloadBtn">Download</button>
-    <button id="resetBtn">Reset</button>
+  <h1>Welcome to the Recording Hub</h1>
+  <p>Select a recording activity below. You can choose to record just your voice or a full video performance. Don’t forget to upload your recording to Google Classroom when you’re done!</p>
+  <div class="nav-buttons">
+    <a href="audio.html" class="button">🎤 Audio Recorder</a>
+    <a href="video.html" class="button">📹 Video Recorder</a>
   </div>
-
-  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
-  <script>
-    const recordButton = document.getElementById('recordButton');
-    const recordIcon = document.getElementById('recordIcon');
-    const songSelect = document.getElementById('songSelect');
-    const trackPlayer = document.getElementById('trackPlayer');
-    const playback = document.getElementById('playback');
-    const filenameInput = document.getElementById('filename');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const mp3Btn = document.getElementById('mp3Btn');
-    const resetBtn = document.getElementById('resetBtn');
-    const recordingLength = document.getElementById('recordingLength');
-    const countdownEl = document.getElementById('countdown');
-    const waveformCanvas = document.getElementById('waveform');
-    const ctx = waveformCanvas.getContext('2d');
-
-    let mediaRecorder;
-    let audioChunks = [];
-    let isRecording = false;
-    let audioContext, analyser, dataArray, animationId;
-    let startTime;
-    let songAudio = new Audio();
-    songAudio.crossOrigin = "anonymous";
-
-    songSelect.addEventListener('change', () => {
-      trackPlayer.src = songSelect.value;
-    });
-    trackPlayer.src = songSelect.value;
-
-    function updateRecordIcon(state) {
-      recordIcon.src = state ? 
-        'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/c33a36b59f094ddec45d159cd38467f5cfaa081a/Stop.png' : 
-        'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/c33a36b59f094ddec45d159cd38467f5cfaa081a/Record.png';
-    }
-
-    function drawWaveform() {
-      animationId = requestAnimationFrame(drawWaveform);
-      analyser.getByteTimeDomainData(dataArray);
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(0, 0, waveformCanvas.width, waveformCanvas.height);
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = '#00f';
-      ctx.beginPath();
-      const sliceWidth = waveformCanvas.width / dataArray.length;
-      let x = 0;
-      for (let i = 0; i < dataArray.length; i++) {
-        const v = dataArray[i] / 128.0;
-        const y = v * waveformCanvas.height / 2;
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-        x += sliceWidth;
-      }
-      ctx.lineTo(waveformCanvas.width, waveformCanvas.height / 2);
-      ctx.stroke();
-    }
-
-    function formatTime(seconds) {
-      const mins = Math.floor(seconds / 60);
-      const secs = Math.floor(seconds % 60).toString().padStart(2, '0');
-      return `${mins}:${secs}`;
-    }
-
-    function startCountdown(seconds, callback) {
-      countdownEl.textContent = seconds;
-      if (seconds > 0) {
-        setTimeout(() => startCountdown(seconds - 1, callback), 1000);
-      } else {
-        countdownEl.textContent = '';
-        callback();
-      }
-    }
-
-    async function startRecording() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: false,
-            noiseSuppression: false,
-            autoGainControl: false
-          }
-        });
-
-        mediaRecorder = new MediaRecorder(stream);
-        audioChunks = [];
-
-        audioContext = new AudioContext();
-        analyser = audioContext.createAnalyser();
-        const source = audioContext.createMediaStreamSource(stream);
-        source.connect(analyser);
-        analyser.fftSize = 2048;
-        dataArray = new Uint8Array(analyser.fftSize);
-
-        drawWaveform();
-
-        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-        mediaRecorder.onstop = async () => {
-          cancelAnimationFrame(animationId);
-          const blob = new Blob(audioChunks, { type: 'audio/webm' });
-          const url = URL.createObjectURL(blob);
-          playback.src = url;
-          document.getElementById('playbackContainer').style.display = 'block';
-          const songName = songSelect.options[songSelect.selectedIndex].text;
-          const dateStr = new Date().toISOString().slice(2, 10);
-          filenameInput.value = `${songName.replace(/\s+/g, '_')}_${dateStr}`;
-
-                    downloadBtn.onclick = () => {
-  const a = document.createElement('a');
-  a.href = playback.src;
-  a.download = `${filenameInput.value || 'recording'}.webm`;
-  a.click();
-};
-
-          resetBtn.onclick = () => {
-            if (confirm('This will reset the page and delete your recording. Continue?')) {
-              window.location.reload();
-            }
-          };
-        };
-
-        mediaRecorder.start();
-        startTime = Date.now();
-        setInterval(() => {
-          if (isRecording) {
-            const elapsed = (Date.now() - startTime) / 1000;
-            recordingLength.textContent = `Recording: ${formatTime(elapsed)}`;
-          }
-        }, 1000);
-
-        songAudio.src = songSelect.value;
-        songAudio.play();
-
-        songAudio.onended = () => {
-          if (isRecording) {
-            isRecording = false;
-            mediaRecorder.stop();
-            updateRecordIcon(false);
-          }
-        };
-
-      } catch (err) {
-        alert("Microphone access denied or error: " + err);
-      }
-    }
-
-    recordButton.addEventListener('click', () => {
-      if (!isRecording) {
-        isRecording = true;
-        updateRecordIcon(true);
-        startCountdown(3, startRecording);
-      } else {
-        isRecording = false;
-        updateRecordIcon(false);
-        mediaRecorder.stop();
-        songAudio.pause();
-        songAudio.currentTime = 0;
-      }
-    });
-  </script>
 </body>
 </html>
