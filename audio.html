@@ -70,7 +70,59 @@
   <script src="https://cdn.jsdelivr.net/npm/fflate/umd/index.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/wav-encoder@1.5.0/dist/wav-encoder.min.js"></script>
   <script>
-    // JavaScript logic for recording and playback will be inserted here...
+    const song = document.getElementById("song");
+    const songSelect = document.getElementById("songSelect");
+    const recordButton = document.getElementById("recordButton");
+    let mediaRecorder;
+    let chunks = [];
+
+    songSelect.addEventListener("change", () => {
+      song.src = songSelect.value;
+    });
+
+    async function startRecording() {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm',
+        audioBitsPerSecond: 128000
+      });
+
+      chunks = [];
+      mediaRecorder.ondataavailable = e => chunks.push(e.data);
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        const url = URL.createObjectURL(blob);
+        document.getElementById("playback").src = url;
+      };
+
+      // Play song only after mic permission is granted and countdown
+      let count = 3;
+      const countdownEl = document.getElementById("countdown");
+      countdownEl.textContent = count;
+      const interval = setInterval(() => {
+        count--;
+        if (count === 0) {
+          clearInterval(interval);
+          countdownEl.textContent = "";
+          song.play();
+          mediaRecorder.start();
+        } else {
+          countdownEl.textContent = count;
+        }
+      }, 1000);
+
+      // Automatically stop recording when song ends
+      song.onended = () => {
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+          mediaRecorder.stop();
+        }
+      };
+    }
+
+    recordButton.addEventListener("click", () => {
+      if (!song.src) song.src = songSelect.value;
+      startRecording();
+    });
   </script>
 </body>
 </html>
