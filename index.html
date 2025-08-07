@@ -138,9 +138,15 @@
       customInput.style.display = 'block';
       audio.src = '';
     } else {
-      customInput.style.display = 'none';
-      const fileId = value.match(/\/d\/(.*)\//);
-      audio.src = `https://drive.google.com/uc?export=download&id=${fileId[1]}`;
+      const match = value.match(/\/d\/([^/]+)\//);
+        if (match) {
+          const fileId = match[1];
+          audio.src = `https://drive.google.com/uc?export=download&id=${fileId}`;
+        } else {
+          audio.src = '';
+          console.error('Invalid Google Drive link');
+}
+
     }
   }
 
