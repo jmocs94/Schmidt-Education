@@ -72,14 +72,14 @@
   </style>
 </head>
 <body>
-  <iframe id="logo" src="https://drive.google.com/file/d/14cG1-zIMn_UBaQPkaK01dwlRqwUYTcN5/preview" allow="autoplay"></iframe>
+  <img id="logo" src="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/360c0fde872bd41d319af96a3e55bc9df7df3a54/Crescendos_w_trans.png" alt="Crescendos Logo">
   <h1>Crescendos 25-26</h1>
   <label for="songSelect">Choose a song:</label>
   <select id="songSelect">
     <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/01%20Seize%20the%20Day%20-%20Performance.mp3">Seize the Day</option>
-    <option value="https://github.com/jmocs94/Schmidt-Education/blob/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-1-Soprano.mp3">Go the Distance Soprano</option>
-    <option value="https://github.com/jmocs94/Schmidt-Education/blob/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-2-Alto.mp3">Go the Distance Alto</option>
-    <option value="https://github.com/jmocs94/Schmidt-Education/blob/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-3-Tenor.mp3">Go the Distance Tenor</option>
+    <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-1-Soprano.mp3">Go the Distance Soprano</option>
+    <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-2-Alto.mp3">Go the Distance Alto</option>
+    <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-3-Tenor.mp3">Go the Distance Tenor</option>
     <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/4-LifeIsAHighway-Full.mp3">Life is a Highway</option>
     <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/5-I%20Lived%20-%20SATB%20(Faster).mp3">I Lived</option>
   </select>
@@ -87,7 +87,7 @@
   <audio id="trackPlayer" controls style="margin-top: 1em; pointer-events: none;"></audio>
 
   <button id="recordButton">
-    <img id="recordIcon" src="https://cdn-icons-png.flaticon.com/512/634/634761.png" alt="Record">
+    <img id="recordIcon" src="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/c33a36b59f094ddec45d159cd38467f5cfaa081a/Record.png" alt="Record">
   </button>
   <div id="countdown"></div>
   <div id="recordingLength"></div>
@@ -103,171 +103,13 @@
     <button id="resetBtn">Reset</button>
   </div>
 
-  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
   <script>
-    const recordButton = document.getElementById('recordButton');
     const recordIcon = document.getElementById('recordIcon');
-    const songSelect = document.getElementById('songSelect');
-    const trackPlayer = document.getElementById('trackPlayer');
-    const playback = document.getElementById('playback');
-    const filenameInput = document.getElementById('filename');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const mp3Btn = document.getElementById('mp3Btn');
-    const resetBtn = document.getElementById('resetBtn');
-    const recordingLength = document.getElementById('recordingLength');
-    const countdownEl = document.getElementById('countdown');
-    const waveformCanvas = document.getElementById('waveform');
-    const ctx = waveformCanvas.getContext('2d');
-
-    let mediaRecorder;
-    let audioChunks = [];
-    let isRecording = false;
-    let audioContext, analyser, dataArray, animationId;
-    let startTime;
-    let songAudio = new Audio();
-    songAudio.crossOrigin = "anonymous";
-
-    songSelect.addEventListener('change', () => {
-      trackPlayer.src = songSelect.value;
-    });
-    trackPlayer.src = songSelect.value;
-
-    function drawWaveform() {
-      animationId = requestAnimationFrame(drawWaveform);
-      analyser.getByteTimeDomainData(dataArray);
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(0, 0, waveformCanvas.width, waveformCanvas.height);
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = '#00f';
-      ctx.beginPath();
-      const sliceWidth = waveformCanvas.width / dataArray.length;
-      let x = 0;
-      for (let i = 0; i < dataArray.length; i++) {
-        const v = dataArray[i] / 128.0;
-        const y = v * waveformCanvas.height / 2;
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-        x += sliceWidth;
-      }
-      ctx.lineTo(waveformCanvas.width, waveformCanvas.height / 2);
-      ctx.stroke();
+    function updateRecordIcon(isRecording) {
+      recordIcon.src = isRecording
+        ? 'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/c33a36b59f094ddec45d159cd38467f5cfaa081a/Stop.png'
+        : 'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/c33a36b59f094ddec45d159cd38467f5cfaa081a/Record.png';
     }
-
-    function formatTime(seconds) {
-      const mins = Math.floor(seconds / 60);
-      const secs = Math.floor(seconds % 60).toString().padStart(2, '0');
-      return `${mins}:${secs}`;
-    }
-
-    function startCountdown(seconds, callback) {
-      countdownEl.textContent = seconds;
-      if (seconds > 0) {
-        setTimeout(() => startCountdown(seconds - 1, callback), 1000);
-      } else {
-        countdownEl.textContent = '';
-        callback();
-      }
-    }
-
-    async function startRecording() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: false,
-            noiseSuppression: false,
-            autoGainControl: false
-          }
-        });
-
-        mediaRecorder = new MediaRecorder(stream);
-        audioChunks = [];
-
-        audioContext = new AudioContext();
-        analyser = audioContext.createAnalyser();
-        const source = audioContext.createMediaStreamSource(stream);
-        source.connect(analyser);
-        analyser.fftSize = 2048;
-        dataArray = new Uint8Array(analyser.fftSize);
-
-        drawWaveform();
-
-        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-        mediaRecorder.onstop = async () => {
-          cancelAnimationFrame(animationId);
-          const blob = new Blob(audioChunks, { type: 'audio/webm' });
-          const url = URL.createObjectURL(blob);
-          playback.src = url;
-          document.getElementById('playbackContainer').style.display = 'block';
-          const songName = songSelect.options[songSelect.selectedIndex].text;
-          const dateStr = new Date().toISOString().slice(2, 10);
-          filenameInput.value = `${songName.replace(/\s+/g, '_')}_${dateStr}`;
-
-          downloadBtn.onclick = () => {
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${filenameInput.value || 'recording'}.webm`;
-            a.click();
-          };
-
-          mp3Btn.onclick = async () => {
-            const { createFFmpeg, fetchFile } = FFmpeg;
-            const ffmpeg = createFFmpeg({ log: true });
-            await ffmpeg.load();
-            ffmpeg.FS('writeFile', 'input.webm', await fetchFile(blob));
-            await ffmpeg.run('-i', 'input.webm', 'output.mp3');
-            const data = ffmpeg.FS('readFile', 'output.mp3');
-            const mp3Blob = new Blob([data.buffer], { type: 'audio/mp3' });
-            const mp3Url = URL.createObjectURL(mp3Blob);
-            const a = document.createElement('a');
-            a.href = mp3Url;
-            a.download = `${filenameInput.value || 'recording'}.mp3`;
-            a.click();
-          };
-
-          resetBtn.onclick = () => {
-            if (confirm('This will reset the page and delete your recording. Continue?')) {
-              window.location.reload();
-            }
-          };
-        };
-
-        mediaRecorder.start();
-        startTime = Date.now();
-        setInterval(() => {
-          if (isRecording) {
-            const elapsed = (Date.now() - startTime) / 1000;
-            recordingLength.textContent = `Recording: ${formatTime(elapsed)}`;
-          }
-        }, 1000);
-
-        songAudio.src = songSelect.value;
-        songAudio.play();
-
-        songAudio.onended = () => {
-          if (isRecording) {
-            isRecording = false;
-            mediaRecorder.stop();
-            recordIcon.src = 'https://cdn-icons-png.flaticon.com/512/634/634761.png';
-          }
-        };
-
-      } catch (err) {
-        alert("Microphone access denied or error: " + err);
-      }
-    }
-
-    recordButton.addEventListener('click', () => {
-      if (!isRecording) {
-        isRecording = true;
-        recordIcon.src = 'https://cdn-icons-png.flaticon.com/512/1828/1828665.png';
-        startCountdown(3, startRecording);
-      } else {
-        isRecording = false;
-        recordIcon.src = 'https://cdn-icons-png.flaticon.com/512/634/634761.png';
-        mediaRecorder.stop();
-        songAudio.pause();
-        songAudio.currentTime = 0;
-      }
-    });
   </script>
 </body>
 </html>
