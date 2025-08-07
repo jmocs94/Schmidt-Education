@@ -1,491 +1,168 @@
+<!-- Insert your Google API Key below if needed for additional Classroom requests (currently not used) -->
+<!-- const API_KEY = 'YOUR_API_KEY_HERE'; -->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Singing Recorder with Google Classroom</title>
-    <script src="https://apis.google.com/js/api.js"></script>
-    <style>
-        /* Fun music-themed styles */
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
-            color: #333;
-        }
-        h1 {
-            text-align: center;
-            margin-top: 20px;
-            font-size: 2.5rem;
-            animation: bounce 2s infinite;
-        }
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-            40% { transform: translateY(-20px); }
-            60% { transform: translateY(-10px); }
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background: rgba(255,255,255,0.9);
-            border-radius: 15px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-        }
-        .input-group {
-            display: flex;
-            flex-direction: column;
-            margin-bottom: 15px;
-        }
-        label {
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        input[type="text"], select {
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            font-size: 1rem;
-        }
-        button {
-            display: inline-flex;
-            align-items: center;
-            padding: 10px 20px;
-            margin: 5px;
-            font-size: 1rem;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            background-color: #ff7e5f;
-            color: #fff;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            transition: transform 0.2s;
-        }
-        button:hover {
-            transform: scale(1.05);
-        }
-        button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
-        audio {
-            width: 100%;
-            margin-top: 10px;
-        }
-        #recordingsList {
-            margin-top: 10px;
-        }
-        .status {
-            margin-top: 10px;
-            font-weight: bold;
-        }
-        .emoji {
-            margin-right: 8px;
-        }
-        .hidden {
-            display: none;
-        }
-        .flex {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-        .flex-col {
-            flex-direction: column;
-        }
-        .flex-row {
-            flex-direction: row;
-        }
-        .reset-btn {
-            background-color: #6C5B7B;
-        }
-        .upload-btn {
-            background-color: #00BFA6;
-        }
-        .classroom-btn {
-            background-color: #2e7d32;
-        }
-        .download-btn {
-            background-color: #ffa600;
-        }
-        .signout-btn {
-            background-color: #444;
-        }
-        /* Animate icons */
-        .animated-icon {
-            display: inline-block;
-            animation: pulse 1.5s infinite;
-        }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.2); }
-            100% { transform: scale(1); }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Record with Backing Track</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js"></script>
+  <style>
+    body {
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      text-align: center;
+      padding: 2em;
+      background: linear-gradient(135deg, #f0f8ff, #ffe4e1);
+      background-attachment: fixed;
+      color: #333;
+    }
+    .neon-box {
+      display: inline-block;
+      padding: 1em 2em;
+      margin-bottom: 1em;
+      border: 4px solid #00f0ff;
+      border-radius: 12px;
+      color: #00f0ff;
+      text-shadow: 0 0 5px #00f0ff, 0 0 10px #00f0ff;
+      box-shadow: 0 0 20px #00f0ff inset, 0 0 20px #00f0ff;
+      animation: neonPulse 4s linear infinite;
+    }
+    @keyframes neonPulse {
+      0% { box-shadow: 0 0 10px #00f0ff inset, 0 0 10px #00f0ff; }
+      50% { box-shadow: 0 0 20px #00f0ff inset, 0 0 20px #00f0ff; }
+      100% { box-shadow: 0 0 10px #00f0ff inset, 0 0 10px #00f0ff; }
+    }
+    .controls {
+      margin: 1em auto;
+    }
+    button, input, select {
+      margin: 0.5em;
+      padding: 1em;
+      font-size: 1em;
+      border-radius: 10px;
+      border: 2px solid #aaa;
+      background: #fff8dc;
+      box-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+      transition: transform 0.2s ease-in-out;
+    }
+    button:hover {
+      background-color: #ffefd5;
+      cursor: pointer;
+      transform: scale(1.05);
+    }
+    audio {
+      margin-top: 1em;
+      width: 100%;
+      max-width: 600px;
+    }
+    input, select {
+      width: 90%;
+      max-width: 600px;
+    }
+    #authStatus {
+      color: green;
+      font-weight: bold;
+    }
+    #confirmation {
+      color: green;
+      font-weight: bold;
+      margin-top: 1em;
+    }
+    #errorMsg {
+      color: red;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
-    <h1>🎤 Sing & Record Your Track 🎶</h1>
-    <div class="container">
-        <div class="input-group">
-            <label for="songSelect">Select a song:</label>
-            <select id="songSelect">
-                <!-- Options will be populated dynamically -->
-            </select>
-        </div>
-        <div class="flex flex-row">
-            <button id="recordButton"><span class="emoji">▶️</span>Record</button>
-            <button id="stopButton" disabled><span class="emoji">⏹️</span>Stop</button>
-            <button id="resetButton" class="reset-btn"><span class="emoji">🧹</span>Reset</button>
-        </div>
-        <audio id="audio" controls class="hidden"></audio>
-        <div id="recordingsList"></div>
+  <div class="neon-box" id="neonTitle">🎤 Sing & Record Your Track 🎶</div>
 
-        <div id="filenameSection" class="hidden input-group">
-            <label for="filenameInput">Filename:</label>
-            <input type="text" id="filenameInput" placeholder="Filename"/>
-        </div>
-        <div class="flex flex-row">
-            <button id="downloadButton" class="download-btn hidden"><span class="emoji">📥</span>Download</button>
-            <button id="uploadButton" class="upload-btn hidden"><span class="emoji">☁️</span>Upload to Drive</button>
-            <button id="classroomButton" class="classroom-btn hidden"><span class="emoji">📚</span>Submit to Classroom</button>
-        </div>
-        <div id="classroomSection" class="hidden">
-            <div class="input-group">
-                <label for="courseSelect">Choose Course:</label>
-                <select id="courseSelect"></select>
-            </div>
-            <div class="input-group">
-                <label for="assignmentSelect">Choose Assignment:</label>
-                <select id="assignmentSelect"></select>
-            </div>
-        </div>
-        <button id="authorizeButton"><span class="emoji">🔐</span>Sign in with Google</button>
-        <button id="signoutButton" class="signout-btn hidden"><span class="emoji">🚪</span>Sign out</button>
-        <div id="status" class="status"></div>
-    </div>
+  <div class="controls">
+    <button onclick="toggleAnimation()">🛑 Toggle Animation</button>
+    <label>Speed:
+      <input type="range" min="1" max="10" value="4" onchange="changeSpeed(this.value)">
+    </label>
+    <label>Color:
+      <input type="color" value="#00f0ff" onchange="changeColor(this.value)">
+    </label>
+  </div>
 
-    <script>
-        // ======= Configuration =======
-        // Paste up to 10 share links here (replace empty strings with your links)
-        const prefilledLinks = [
-            "", // Link 1
-            "", // Link 2
-            "", // Link 3
-            "", // Link 4
-            "", // Link 5
-            "", // Link 6
-            "", // Link 7
-            "", // Link 8
-            "", // Link 9
-            ""  // Link 10
-        ];
+  <div id="authSection">
+    <button onclick="handleAuthClick()">🔐 Sign in with Google</button>
+    <p id="authStatus"></p>
+  </div>
 
-        // Google API configuration (replace with your real client ID)
-        const CLIENT_ID = 'YOUR_CLIENT_ID_HERE';
-        const API_KEY = ''; // Optional: only needed for unauthenticated Classroom requests
-        const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/classroom.coursework.me';
-        const DISCOVERY_DOCS = [
-            'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
-            'https://classroom.googleapis.com/$discovery/rest?version=v1'
-        ];
+  <p>🎼 Paste your Google Drive song links below (up to 10):</p>
+  <div id="linkInputs">
+    <input type="text" placeholder="Paste song 1 Google Drive link here">
+    <input type="text" placeholder="Paste song 2 Google Drive link here">
+    <input type="text" placeholder="Paste song 3 Google Drive link here">
+    <input type="text" placeholder="Paste song 4 Google Drive link here">
+    <input type="text" placeholder="Paste song 5 Google Drive link here">
+    <input type="text" placeholder="Paste song 6 Google Drive link here">
+    <input type="text" placeholder="Paste song 7 Google Drive link here">
+    <input type="text" placeholder="Paste song 8 Google Drive link here">
+    <input type="text" placeholder="Paste song 9 Google Drive link here">
+    <input type="text" placeholder="Paste song 10 Google Drive link here">
+  </div>
+  <button onclick="populateDropdown()">🎵 Load Songs</button>
 
-        // ======= Global variables =======
-        let mediaRecorder;
-        let recordedChunks = [];
-        let currentTrackName = '';
-        let driveFileId = '';
-        let isAuthorized = false;
+  <div id="dropdownContainer" style="display: none;">
+    <label for="songSelect">🎧 Choose a song:</label>
+    <select id="songSelect" onchange="handleSongSelection()">
+      <option value="">-- Select a Song --</option>
+      <option value="custom">Custom URL</option>
+    </select>
+    <input type="text" id="customUrl" placeholder="Example: https://drive.google.com/file/d/FILE_ID/view" style="display: none;">
+    <p id="errorMsg"></p>
+    <button onclick="updateAudioSource()">🎼 Load Track</button>
+  </div>
 
-        // ======= Utility functions =======
-        function convertToDirect(link) {
-            const match = link.match(/\/d\/(.*?)\//);
-            return match ? `https://drive.google.com/uc?export=download&id=${match[1]}` : '';
+  <script>
+    let neon = document.getElementById("neonTitle");
+    let styleSheet = document.styleSheets[0];
+
+    function toggleAnimation() {
+      neon.style.animation = neon.style.animation ? "" : "neonPulse 4s linear infinite";
+    }
+
+    function changeSpeed(speed) {
+      neon.style.animationDuration = speed + "s";
+    }
+
+    function changeColor(hex) {
+      neon.style.color = hex;
+      neon.style.borderColor = hex;
+      neon.style.textShadow = `0 0 5px ${hex}, 0 0 10px ${hex}`;
+      neon.style.boxShadow = `0 0 20px ${hex} inset, 0 0 20px ${hex}`;
+    }
+
+    function handleSongSelection() {
+      const custom = document.getElementById("customUrl");
+      custom.style.display = songSelect.value === "custom" ? 'inline' : 'none';
+    }
+
+    function updateAudioSource() {
+      const customUrl = document.getElementById("customUrl").value.trim();
+      const errorMsg = document.getElementById("errorMsg");
+      if (songSelect.value === "custom") {
+        if (!customUrl.includes("drive.google.com")) {
+          errorMsg.innerText = "Only Google Drive links are supported at this time";
+          return;
         }
-
-        function populateSongOptions() {
-            const select = document.getElementById('songSelect');
-            select.innerHTML = '';
-            // Populate from prefilled links
-            let added = false;
-            prefilledLinks.forEach((link, index) => {
-                if (link.trim() !== '') {
-                    const direct = convertToDirect(link);
-                    const option = document.createElement('option');
-                    option.value = direct;
-                    option.textContent = `Song ${index + 1}`;
-                    option.dataset.trackName = `Song${index + 1}`;
-                    select.appendChild(option);
-                    added = true;
-                }
-            });
-            // Custom URL option
-            const customOption = document.createElement('option');
-            customOption.value = 'custom';
-            customOption.textContent = 'Custom URL';
-            select.appendChild(customOption);
-            // If no prefilled links, set selection to custom
-            if (!added) select.value = 'custom';
+        const match = customUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (match && match[1]) {
+          backingTrack.src = `https://drive.google.com/uc?export=download&id=${match[1]}`;
+          backingTrack.style.display = 'block';
+          startBtn.disabled = false;
+          errorMsg.innerText = "";
+        } else {
+          errorMsg.innerText = "Only Google Drive links are supported at this time";
         }
-
-        function resetUI() {
-            recordedChunks = [];
-            document.getElementById('audio').classList.add('hidden');
-            document.getElementById('recordingsList').innerHTML = '';
-            document.getElementById('filenameSection').classList.add('hidden');
-            document.getElementById('downloadButton').classList.add('hidden');
-            document.getElementById('uploadButton').classList.add('hidden');
-            document.getElementById('classroomButton').classList.add('hidden');
-            document.getElementById('classroomSection').classList.add('hidden');
-            document.getElementById('status').textContent = '';
-        }
-
-        // ======= Recording functions =======
-        async function startRecording() {
-            const selectedValue = document.getElementById('songSelect').value;
-            let audioSrc = '';
-            if (selectedValue === 'custom') {
-                const url = prompt('Enter a Google Drive share link:');
-                if (!url) return;
-                audioSrc = convertToDirect(url);
-                currentTrackName = `Custom`;
-            } else {
-                audioSrc = selectedValue;
-                const option = document.getElementById('songSelect').selectedOptions[0];
-                currentTrackName = option.dataset.trackName;
-            }
-            if (!audioSrc) {
-                alert('Invalid audio source');
-                return;
-            }
-            resetUI();
-            // Play the track
-            const audio = document.getElementById('audio');
-            audio.src = audioSrc;
-            audio.classList.remove('hidden');
-            audio.play();
-            // Prepare recorder
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-            mediaRecorder.ondataavailable = e => {
-                if (e.data.size > 0) recordedChunks.push(e.data);
-            };
-            mediaRecorder.onstop = () => {
-                const blob = new Blob(recordedChunks, { type: 'audio/webm' });
-                const url = URL.createObjectURL(blob);
-                const list = document.getElementById('recordingsList');
-                const audioEl = document.createElement('audio');
-                audioEl.controls = true;
-                audioEl.src = url;
-                list.appendChild(audioEl);
-                // Show filename section
-                const filenameInput = document.getElementById('filenameInput');
-                const dateStr = new Date().toISOString().split('T')[0];
-                filenameInput.value = `${currentTrackName}_${dateStr}.webm`;
-                document.getElementById('filenameSection').classList.remove('hidden');
-                document.getElementById('downloadButton').classList.remove('hidden');
-                document.getElementById('uploadButton').classList.remove('hidden');
-                if (isAuthorized) document.getElementById('classroomButton').classList.remove('hidden');
-            };
-            mediaRecorder.start();
-            document.getElementById('recordButton').disabled = true;
-            document.getElementById('stopButton').disabled = false;
-        }
-
-        function stopRecording() {
-            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                mediaRecorder.stop();
-            }
-            document.getElementById('recordButton').disabled = false;
-            document.getElementById('stopButton').disabled = true;
-        }
-
-        function downloadRecording() {
-            const blob = new Blob(recordedChunks, { type: 'audio/webm' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            const filename = document.getElementById('filenameInput').value || 'recording.webm';
-            a.style.display = 'none';
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }
-
-        // ======= Google API functions =======
-        function updateSigninStatus(isSignedIn) {
-            isAuthorized = isSignedIn;
-            document.getElementById('authorizeButton').classList.toggle('hidden', isSignedIn);
-            document.getElementById('signoutButton').classList.toggle('hidden', !isSignedIn);
-            if (isSignedIn) {
-                document.getElementById('status').textContent = 'Signed in!';
-                // If there is a recording ready, show classroom button
-                if (recordedChunks.length) document.getElementById('classroomButton').classList.remove('hidden');
-                listCourses();
-            } else {
-                document.getElementById('status').textContent = '';
-            }
-        }
-
-        function initClient() {
-            gapi.client.init({
-                apiKey: API_KEY,
-                clientId: CLIENT_ID,
-                discoveryDocs: DISCOVERY_DOCS,
-                scope: SCOPES
-            }).then(() => {
-                // Listen for sign-in state changes.
-                gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus);
-                // Handle the initial sign-in state.
-                updateSigninStatus(gapi.auth2.getAuthInstance().isSignedIn.get());
-            }, error => {
-                console.error(JSON.stringify(error, null, 2));
-            });
-        }
-
-        function handleAuthClick() {
-            gapi.auth2.getAuthInstance().signIn();
-        }
-
-        function handleSignoutClick() {
-            gapi.auth2.getAuthInstance().signOut();
-        }
-
-        async function uploadToDrive() {
-            const blob = new Blob(recordedChunks, { type: 'audio/webm' });
-            const filename = document.getElementById('filenameInput').value || 'recording.webm';
-            const fileMetadata = {
-                'name': filename
-            };
-            const form = new FormData();
-            form.append('metadata', new Blob([JSON.stringify(fileMetadata)], { type: 'application/json' }));
-            form.append('file', blob);
-            try {
-                const token = gapi.auth.getToken().access_token;
-                const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                    method: 'POST',
-                    headers: new Headers({ 'Authorization': 'Bearer ' + token }),
-                    body: form
-                });
-                const result = await response.json();
-                driveFileId = result.id;
-                document.getElementById('status').textContent = '✅ Uploaded to Drive!';
-                // Show classroom section if authorized
-                if (isAuthorized) document.getElementById('classroomButton').classList.remove('hidden');
-            } catch (err) {
-                console.error(err);
-                document.getElementById('status').textContent = 'Upload failed';
-            }
-        }
-
-        async function listCourses() {
-            try {
-                const response = await gapi.client.classroom.courses.list({
-                    courseStates: ['ACTIVE']
-                });
-                const courses = response.result.courses || [];
-                const courseSelect = document.getElementById('courseSelect');
-                courseSelect.innerHTML = '';
-                courses.forEach(course => {
-                    const option = document.createElement('option');
-                    option.value = course.id;
-                    option.textContent = course.name;
-                    courseSelect.appendChild(option);
-                });
-                // Trigger listing assignments for first course
-                if (courses.length) listAssignments();
-            } catch (err) {
-                console.error('Error listing courses: ', err);
-            }
-        }
-
-        async function listAssignments() {
-            const courseId = document.getElementById('courseSelect').value;
-            try {
-                const response = await gapi.client.classroom.courses.courseWork.list({
-                    courseId: courseId,
-                    orderBy: 'dueDate asc',
-                    pageSize: 20
-                });
-                const assignments = response.result.courseWork || [];
-                const assignmentSelect = document.getElementById('assignmentSelect');
-                assignmentSelect.innerHTML = '';
-                assignments.forEach(assign => {
-                    const option = document.createElement('option');
-                    option.value = assign.id;
-                    option.textContent = assign.title;
-                    assignmentSelect.appendChild(option);
-                });
-            } catch (err) {
-                console.error('Error listing assignments: ', err);
-            }
-        }
-
-        async function submitToClassroom() {
-            const courseId = document.getElementById('courseSelect').value;
-            const assignmentId = document.getElementById('assignmentSelect').value;
-            try {
-                // Get the submission id for the student
-                const submissionResponse = await gapi.client.classroom.courses.courseWork.studentSubmissions.list({
-                    courseId: courseId,
-                    courseWorkId: assignmentId,
-                    userId: 'me'
-                });
-                const submission = submissionResponse.result.studentSubmissions[0];
-                const submissionId = submission.id;
-                // Modify the submission with the Drive file
-                const updateResponse = await gapi.client.classroom.courses.courseWork.studentSubmissions.patch({
-                    courseId: courseId,
-                    courseWorkId: assignmentId,
-                    id: submissionId,
-                    updateMask: 'attachments',
-                    resource: {
-                        attachments: [
-                            {
-                                driveFile: {
-                                    id: driveFileId
-                                }
-                            }
-                        ]
-                    }
-                });
-                // Turn in the submission
-                await gapi.client.classroom.courses.courseWork.studentSubmissions.turnIn({
-                    courseId: courseId,
-                    courseWorkId: assignmentId,
-                    id: submissionId
-                });
-                document.getElementById('status').textContent = '✅ Submitted to Google Classroom successfully!';
-            } catch (err) {
-                console.error(err);
-                document.getElementById('status').textContent = 'Classroom submission failed';
-            }
-        }
-
-        // ======= Event listeners =======
-        document.addEventListener('DOMContentLoaded', () => {
-            populateSongOptions();
-            document.getElementById('recordButton').addEventListener('click', startRecording);
-            document.getElementById('stopButton').addEventListener('click', stopRecording);
-            document.getElementById('downloadButton').addEventListener('click', downloadRecording);
-            document.getElementById('uploadButton').addEventListener('click', uploadToDrive);
-            document.getElementById('classroomButton').addEventListener('click', () => {
-                document.getElementById('classroomSection').classList.remove('hidden');
-                listCourses();
-            });
-            document.getElementById('courseSelect').addEventListener('change', listAssignments);
-            document.getElementById('assignmentSelect').addEventListener('change', () => {});
-            document.getElementById('authorizeButton').addEventListener('click', handleAuthClick);
-            document.getElementById('signoutButton').addEventListener('click', handleSignoutClick);
-            document.getElementById('classroomButton').addEventListener('click', submitToClassroom);
-            document.getElementById('resetButton').addEventListener('click', () => {
-                stopRecording();
-                resetUI();
-            });
-        });
-
-        gapi.load('client:auth2', initClient);
-    </script>
+      }
+    }
+  </script>
 </body>
 </html>
