@@ -1,0 +1,24 @@
+name: Inject Google API Key and Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Replace placeholder with API key
+        run: |
+          mkdir dist
+          sed "s/__GOOGLE_API_KEY__/${{ secrets.GOOGLE_API_KEY }}/g" index.html > dist/index.html
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
