@@ -41,9 +41,9 @@
   <label for="songSelect">Choose a song:</label>
   <select id="songSelect">
     <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/01%20Seize%20the%20Day%20-%20Performance.mp3">Seize the Day</option>
-    <option value="https://github.com/jmocs94/Schmidt-Education/blob/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-1-Soprano.mp3?raw=true">Go the Distance Soprano</option>
-    <option value="https://github.com/jmocs94/Schmidt-Education/blob/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-2-Alto.mp3?raw=true">Go the Distance Alto</option>
-    <option value="https://github.com/jmocs94/Schmidt-Education/blob/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-3-Tenor.mp3?raw=true">Go the Distance Tenor</option>
+    <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-1-Soprano.mp3">Go the Distance Soprano</option>
+    <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-2-Alto.mp3">Go the Distance Alto</option>
+    <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-3-Tenor.mp3">Go the Distance Tenor</option>
     <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/4-LifeIsAHighway-Full.mp3">Life is a Highway</option>
     <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/5-I%20Lived%20-%20SATB%20(Faster).mp3">I Lived</option>
   </select>
@@ -67,14 +67,18 @@
   <button id="resetBtn">Reset</button>
   <p>After downloading, go to Google Classroom, open the assignment, click “Add or Create,” choose “File,” and upload your saved recording!</p>
 
-  <script src="https://cdn.jsdelivr.net/npm/fflate/umd/index.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/wav-encoder@1.5.0/dist/wav-encoder.min.js"></script>
   <script>
     const song = document.getElementById("song");
     const songSelect = document.getElementById("songSelect");
     const recordButton = document.getElementById("recordButton");
+    const countdownEl = document.getElementById("countdown");
+    const playback = document.getElementById("playback");
+
     let mediaRecorder;
     let chunks = [];
+
+    // Always preload the first song
+    song.src = songSelect.value;
 
     songSelect.addEventListener("change", () => {
       song.src = songSelect.value;
@@ -83,8 +87,7 @@
     async function startRecording() {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm',
-        audioBitsPerSecond: 128000
+        mimeType: 'audio/webm'
       });
 
       chunks = [];
@@ -92,26 +95,29 @@
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunks, { type: 'audio/webm' });
         const url = URL.createObjectURL(blob);
-        document.getElementById("playback").src = url;
+        playback.src = url;
       };
 
-      // Play song only after mic permission is granted and countdown
-      let count = 3;
-      const countdownEl = document.getElementById("countdown");
-      countdownEl.textContent = count;
-      const interval = setInterval(() => {
-        count--;
-        if (count === 0) {
-          clearInterval(interval);
-          countdownEl.textContent = "";
-          song.play();
-          mediaRecorder.start();
-        } else {
-          countdownEl.textContent = count;
-        }
-      }, 1000);
+      // Wait until the song is ready to play before countdown
+      song.oncanplaythrough = () => {
+        let count = 3;
+        countdownEl.textContent = count;
+        const interval = setInterval(() => {
+          count--;
+          if (count === 0) {
+            clearInterval(interval);
+            countdownEl.textContent = "";
+            song.play();
+            mediaRecorder.start();
+          } else {
+            countdownEl.textContent = count;
+          }
+        }, 1000);
+      };
 
-      // Automatically stop recording when song ends
+      // Trigger load and readiness check
+      song.load();
+
       song.onended = () => {
         if (mediaRecorder && mediaRecorder.state === "recording") {
           mediaRecorder.stop();
@@ -120,7 +126,6 @@
     }
 
     recordButton.addEventListener("click", () => {
-      if (!song.src) song.src = songSelect.value;
       startRecording();
     });
   </script>
