@@ -86,8 +86,11 @@
   <script>
     let isRecording = false;
     let mediaRecorder;
+    let animationId;
     const song = document.getElementById("song");
     const recordButton = document.getElementById("recordButton");
+    const canvas = document.getElementById("visualizer");
+    const ctx = canvas.getContext("2d");
 
     async function startRecording() {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -101,9 +104,38 @@
       const chunks = [];
       mediaRecorder = new MediaRecorder(stream);
 
+      const audioCtx = new AudioContext();
+      const source = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      function draw() {
+        animationId = requestAnimationFrame(draw);
+        analyser.getByteFrequencyData(dataArray);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const barWidth = (canvas.width / bufferLength) * 2.5;
+        let x = 0;
+
+        for (let i = 0; i < bufferLength; i++) {
+          const barHeight = dataArray[i];
+          const hue = (i / bufferLength) * 360;
+          ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+          ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+          x += barWidth + 1;
+        }
+      }
+
+      draw();
+
       mediaRecorder.ondataavailable = e => chunks.push(e.data);
 
       mediaRecorder.onstop = () => {
+        cancelAnimationFrame(animationId);
         const blob = new Blob(chunks, { type: 'audio/webm' });
         const url = URL.createObjectURL(blob);
         const playback = document.getElementById('playback');
@@ -115,6 +147,7 @@
           link.download = `${filename}.webm`;
           link.click();
         };
+        recordButton.src = "https://raw.githubusercontent.com/jmocs94/Schmidt-Education/c33a36b59f094ddec45d159cd38467f5cfaa081a/Record.png";
       };
 
       song.src = document.getElementById("songSelect").value;
@@ -133,7 +166,7 @@
         const interval = setInterval(() => {
           if (!isRecording) return clearInterval(interval);
           seconds++;
-          const min = Math.floor(seconds / 60).toString().padStart(1, '0');
+          const min = Math.floor(seconds / 60).toString();
           const sec = (seconds % 60).toString().padStart(2, '0');
           timer.textContent = `Recording Length: ${min}:${sec}`;
         }, 1000);
@@ -148,6 +181,7 @@
     recordButton.addEventListener("click", () => {
       if (!isRecording) {
         isRecording = true;
+        recordButton.src = "https://raw.githubusercontent.com/jmocs94/Schmidt-Education/c33a36b59f094ddec45d159cd38467f5cfaa081a/Stop.png";
         startRecording();
       } else {
         isRecording = false;
@@ -156,6 +190,7 @@
         }
         song.pause();
         song.currentTime = 0;
+        recordButton.src = "https://raw.githubusercontent.com/jmocs94/Schmidt-Education/c33a36b59f094ddec45d159cd38467f5cfaa081a/Record.png";
       }
     });
   </script>
