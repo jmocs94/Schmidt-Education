@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Video Recorder - Crescendos 25-26</title>
+  <style>
+    body {
+      font-family: 'Comic Sans MS', cursive;
+      background: #e3f2fd;
+      color: #333;
+      text-align: center;
+      padding: 2em;
+    }
+    h1 {
+      color: #00796b;
+    }
+    nav {
+      margin: 1em 0;
+    }
+    video {
+      margin-top: 1em;
+      width: 80%;
+      max-width: 600px;
+    }
+    button {
+      font-size: 1em;
+      margin: 1em;
+      padding: 0.5em 1.5em;
+      background-color: #00796b;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #004d40;
+    }
+    #countdown {
+      font-size: 2em;
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <img src="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/360c0fde872bd41d319af96a3e55bc9df7df3a54/Crescendos_w_trans.png" alt="Crescendos Logo" width="200"/>
+  <h1>Crescendos 25-26 - Video Recorder</h1>
+  <p>Please use headphones! This helps keep your backing track audio out of the recording and gives your video a clean sound.</p>
+  <nav><a href="index.html">⬅ Back to Recording Hub</a></nav>
+
+  <div>
+    <video id="preview" autoplay muted playsinline></video>
+    <div id="countdown"></div>
+    <br />
+    <button id="startBtn">Start Recording</button>
+    <button id="stopBtn" disabled>Stop Recording</button>
+  </div>
+
+  <div>
+    <h3>Playback</h3>
+    <video id="recordedVideo" controls></video>
+    <br />
+    <label for="videoFilename">File Name:</label>
+    <input type="text" id="videoFilename" />
+    <button id="downloadVideo">Download</button>
+  </div>
+
+  <p>After downloading, go to Google Classroom, open the assignment, click “Add or Create,” choose “File,” and upload your saved video!</p>
+
+  <script>
+    const preview = document.getElementById("preview");
+    const recordedVideo = document.getElementById("recordedVideo");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const countdown = document.getElementById("countdown");
+    const videoFilename = document.getElementById("videoFilename");
+    const downloadBtn = document.getElementById("downloadVideo");
+
+    let mediaRecorder;
+    let recordedChunks = [];
+
+    async function setupCamera() {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      preview.srcObject = stream;
+      return stream;
+    }
+
+    function getFormattedDate() {
+      const date = new Date();
+      return date.toISOString().split("T")[0];
+    }
+
+    setupCamera().then(stream => {
+      startBtn.onclick = () => {
+        countdown.textContent = "3";
+        let count = 3;
+        const interval = setInterval(() => {
+          count--;
+          if (count === 0) {
+            clearInterval(interval);
+            countdown.textContent = "";
+            recordedChunks = [];
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = (e) => {
+              if (e.data.size > 0) recordedChunks.push(e.data);
+            };
+            mediaRecorder.onstop = () => {
+              const blob = new Blob(recordedChunks, { type: "video/webm" });
+              const url = URL.createObjectURL(blob);
+              recordedVideo.src = url;
+              downloadBtn.onclick = () => {
+                const a = document.createElement("a");
+                a.href = url;
+                const name = videoFilename.value.trim() || "Crescendos-Video-" + getFormattedDate();
+                a.download = name + ".webm";
+                a.click();
+              };
+            };
+            mediaRecorder.start();
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+          } else {
+            countdown.textContent = count;
+          }
+        }, 1000);
+      };
+
+      stopBtn.onclick = () => {
+        mediaRecorder.stop();
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+      };
+    });
+  </script>
+</body>
+</html>

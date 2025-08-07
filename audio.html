@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Audio Recorder - Crescendos 25-26</title>
+  <style>
+    body {
+      font-family: 'Comic Sans MS', cursive;
+      background: #f0f8ff;
+      color: #333;
+      text-align: center;
+      padding: 2em;
+    }
+    h1 {
+      color: #00796b;
+    }
+    nav {
+      margin: 1em 0;
+    }
+    select, input, button {
+      margin: 0.5em;
+      font-size: 1em;
+    }
+    canvas {
+      display: block;
+      margin: 1em auto;
+    }
+    .controls img {
+      cursor: pointer;
+      width: 60px;
+    }
+  </style>
+</head>
+<body>
+  <img src="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/360c0fde872bd41d319af96a3e55bc9df7df3a54/Crescendos_w_trans.png" alt="Crescendos Logo" width="200"/>
+  <h1>Crescendos 25-26 - Audio Recorder</h1>
+  <p>Please use headphones! This helps avoid your microphone picking up the backing track and makes your recording clearer.</p>
+  <nav><a href="index.html">⬅ Back to Recording Hub</a></nav>
+
+  <label for="songSelect">Choose a song:</label>
+  <select id="songSelect">
+    <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/01%20Seize%20the%20Day%20-%20Performance.mp3">Seize the Day</option>
+    <option value="https://github.com/jmocs94/Schmidt-Education/blob/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-1-Soprano.mp3?raw=true">Go the Distance Soprano</option>
+    <option value="https://github.com/jmocs94/Schmidt-Education/blob/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-2-Alto.mp3?raw=true">Go the Distance Alto</option>
+    <option value="https://github.com/jmocs94/Schmidt-Education/blob/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-3-Tenor.mp3?raw=true">Go the Distance Tenor</option>
+    <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/4-LifeIsAHighway-Full.mp3">Life is a Highway</option>
+    <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/5-I%20Lived%20-%20SATB%20(Faster).mp3">I Lived</option>
+  </select>
+
+  <br />
+  <div class="controls">
+    <img id="recordButton" src="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/c33a36b59f094ddec45d159cd38467f5cfaa081a/Record.png" alt="Record Button">
+  </div>
+  <p id="countdown" style="font-size: 2em; color: red;"></p>
+  <canvas id="visualizer" width="600" height="100"></canvas>
+  <p id="timer">Recording Length: 0:00</p>
+
+  <audio id="song" crossorigin="anonymous"></audio>
+  <audio id="playback" controls></audio>
+
+  <br/>
+  <label for="filename">File Name:</label>
+  <input type="text" id="filename" />
+
+  <button id="downloadBtn">Download</button>
+  <button id="resetBtn">Reset</button>
+  <p>After downloading, go to Google Classroom, open the assignment, click “Add or Create,” choose “File,” and upload your saved recording!</p>
+
+  <script src="https://cdn.jsdelivr.net/npm/fflate/umd/index.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/wav-encoder@1.5.0/dist/wav-encoder.min.js"></script>
+  <script>
+    // JavaScript logic for recording and playback will be inserted here...
+  </script>
+</body>
+</html>
