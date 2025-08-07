@@ -196,7 +196,9 @@
       const match = value.match(/\/d\/([^/]+)/);
       if (match) {
         const fileId = match[1];
-        fetchAndPlay(fileId);
+        const previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+        audio.src = previewUrl;
+        audio.load();
       } else {
         audio.src = '';
         console.error('Invalid Google Drive link');
@@ -216,23 +218,9 @@
     }
     const fileId = match[1];
     error.textContent = '';
-    fetchAndPlay(fileId);
-  }
-
-  function fetchAndPlay(fileId) {
-    fetch(`https://docs.google.com/uc?export=download&id=${fileId}`)
-      .then(res => res.blob())
-      .then(blob => {
-        const url = URL.createObjectURL(blob);
-        const audio = document.getElementById('backingTrack');
-        audio.src = url;
-        audio.load();
-      })
-      .catch(err => {
-        console.error('Error loading audio:', err);
-        const error = document.getElementById('errorMsg');
-        error.textContent = 'Failed to load audio from Google Drive.';
-      });
+    const previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+    audio.src = previewUrl;
+    audio.load();
   }
 </script>
 <script async defer src="https://apis.google.com/js/api.js" onload="gapiInit()"></script>
