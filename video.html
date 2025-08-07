@@ -60,7 +60,7 @@
 <body>
   <img src="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/360c0fde872bd41d319af96a3e55bc9df7df3a54/Crescendos_w_trans.png" alt="Crescendos Logo" width="200"/>
   <h1>Crescendos 25-26 - Video Recorder</h1>
-  <p>Please use headphones! This helps keep your backing track audio out of the recording and gives your video a clean sound.</p>
+  <p>If using a phone, record in landscape mode and esure you're visible from head to toe.</p>
   <nav><a href="index.html">⬅ Back to Recording Hub</a></nav>
 
   <div id="rotate-warning">
@@ -150,13 +150,8 @@
     updateFilename();
 
     async function setupCamera() {
-      const isMobile = window.innerWidth < 768;
       stream = await navigator.mediaDevices.getUserMedia({
-        video: isMobile ? {
-          width: { ideal: 720 },
-          height: { ideal: 1280 },
-          aspectRatio: 9 / 16
-        } : {
+        video: {
           width: { ideal: 1920 },
           height: { ideal: 1080 },
           aspectRatio: 16 / 9
