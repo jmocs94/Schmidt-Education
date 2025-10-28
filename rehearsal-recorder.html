@@ -29,6 +29,7 @@
       cursor: pointer;
       background-color: #00796b;
       color: white;
+      transition: background 0.2s;
     }
     button:hover {
       background-color: #004d40;
@@ -38,23 +39,12 @@
       color: #d32f2f;
       margin: 1em 0;
     }
-    #floatingPreview {
-      position: fixed;
-      top: 100px;
-      right: 40px;
-      width: 300px;
-      border: 4px solid #9a4dff;
-      border-radius: 12px;
-      box-shadow: 0 0 20px #9a4dff;
-      z-index: 999;
-      cursor: move;
-      background-color: #000;
-    }
   </style>
 </head>
 <body>
   <h1>🎬 Rehearsal Recorder</h1>
-  <p>This captures your mirrored webcam, microphone, and system audio.<br>Recording starts after countdown and fullscreen begins.</p>
+  <p>This captures your mirrored webcam, microphone, and system audio.<br>
+     Recording starts after countdown and fullscreen begins.</p>
 
   <div id="countdown"></div>
   <canvas id="webcamCanvas" width="1920" height="1080"></canvas>
@@ -63,13 +53,13 @@
   <button id="startRecording">Start Recording</button>
   <button id="stopRecording" disabled>Stop Recording</button>
   <br />
+  <button id="pipBtn">📺 Pop Out Preview</button>
+  <br />
   <video id="playback" controls></video>
   <br />
   <label for="filename">Filename:</label>
-  <input type="text" id="filename" />
+  <input type="text" id="filename" placeholder="Optional filename" />
   <button id="downloadBtn">Download</button>
-
-  <video id="floatingPreview" autoplay muted></video>
 
   <script>
     const canvas = document.getElementById("webcamCanvas");
@@ -81,12 +71,13 @@
     const filenameInput = document.getElementById("filename");
     const downloadBtn = document.getElementById("downloadBtn");
     const playback = document.getElementById("playback");
-    const floatingPreview = document.getElementById("floatingPreview");
+    const pipBtn = document.getElementById("pipBtn");
 
     let mediaRecorder;
     let recordedChunks = [];
     let webcamStream;
     let animationFrameId;
+    let videoEl;
 
     function getFormattedDate() {
       const d = new Date();
@@ -95,17 +86,12 @@
 
     async function setupWebcam() {
       webcamStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 3840 },
-          height: { ideal: 2160 },
-          aspectRatio: 16 / 9
-        },
+        video: { width: { ideal: 3840 }, height: { ideal: 2160 }, aspectRatio: 16 / 9 },
         audio: false
       });
 
-      const videoEl = document.createElement("video");
+      videoEl = document.createElement("video");
       videoEl.srcObject = webcamStream;
-      floatingPreview.srcObject = webcamStream;
       videoEl.play();
 
       function drawFrame() {
@@ -115,13 +101,10 @@
         ctx.restore();
         animationFrameId = requestAnimationFrame(drawFrame);
       }
-
       drawFrame();
     }
 
-    fullscreenBtn.onclick = () => {
-      canvas.requestFullscreen?.();
-    };
+    fullscreenBtn.onclick = () => canvas.requestFullscreen?.();
 
     startBtn.onclick = () => {
       let count = 1;
@@ -143,11 +126,7 @@
       const destination = audioCtx.createMediaStreamDestination();
 
       const micStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false
-        }
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
       });
       const micSource = audioCtx.createMediaStreamSource(micStream);
       micSource.connect(destination);
@@ -167,9 +146,7 @@
 
       recordedChunks = [];
       mediaRecorder = new MediaRecorder(finalStream);
-      mediaRecorder.ondataavailable = e => {
-        if (e.data.size > 0) recordedChunks.push(e.data);
-      };
+      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
       mediaRecorder.onstop = () => {
         const blob = new Blob(recordedChunks, { type: "video/webm" });
         const url = URL.createObjectURL(blob);
@@ -196,31 +173,22 @@
       cancelAnimationFrame(animationFrameId);
     };
 
-    // Dragging logic for floating preview
-    floatingPreview.addEventListener('mousedown', dragMouseDown);
-
-    function dragMouseDown(e) {
-      e.preventDefault();
-      let pos3 = e.clientX;
-      let pos4 = e.clientY;
-      document.onmouseup = closeDragElement;
-      document.onmousemove = elementDrag;
-
-      function elementDrag(e) {
-        e.preventDefault();
-        const dx = pos3 - e.clientX;
-        const dy = pos4 - e.clientY;
-        pos3 = e.clientX;
-        pos4 = e.clientY;
-        floatingPreview.style.top = (floatingPreview.offsetTop - dy) + "px";
-        floatingPreview.style.left = (floatingPreview.offsetLeft - dx) + "px";
+    pipBtn.onclick = async () => {
+      try {
+        if (document.pictureInPictureElement) {
+          await document.exitPictureInPicture();
+        } else {
+          if (!videoEl) {
+            alert("Webcam not initialized yet.");
+            return;
+          }
+          await videoEl.requestPictureInPicture();
+        }
+      } catch (err) {
+        console.error("PiP failed:", err);
+        alert("Picture-in-Picture not supported or permission denied.");
       }
-
-      function closeDragElement() {
-        document.onmouseup = null;
-        document.onmousemove = null;
-      }
-    }
+    };
 
     setupWebcam();
   </script>
