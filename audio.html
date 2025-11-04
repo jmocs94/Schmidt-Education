@@ -25,8 +25,34 @@
       border-radius: 10px;
       background: #fff;
     }
-    .controls img { cursor: pointer; width: 60px; }
-    #song::-webkit-media-controls-timeline { display: none !important; }
+    .record-btn {
+      border: none;
+      border-radius: 50%;
+      width: 90px;
+      height: 90px;
+      font-size: 1.1em;
+      font-weight: bold;
+      color: white;
+      background-color: #2ecc71; /* green */
+      cursor: pointer;
+      transition: background 0.3s, transform 0.1s;
+    }
+    .record-btn:hover { transform: scale(1.05); }
+    .record-btn.recording { background-color: #e74c3c; } /* red */
+    #countdownOverlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      font-size: 4em;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      flex-direction: column;
+    }
   </style>
 </head>
 <body>
@@ -38,6 +64,7 @@
   <label for="songSelect">Choose a song:</label>
   <select id="songSelect">
     <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/01%20Seize%20the%20Day%20-%20Performance.mp3">Seize the Day</option>
+    <option value="https://github.com/jmocs94/Schmidt-Education/blob/6d134ed22b1a8073cc49be9452da9d45d3ad0dd0/Crescendos%2025-26/02-CouldHaveBeenMe-Performance.mp3">Could Have Been Me</option>
     <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-1-Soprano.mp3">Go the Distance Soprano</option>
     <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-2-Alto.mp3">Go the Distance Alto</option>
     <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-3-Tenor.mp3">Go the Distance Tenor</option>
@@ -46,10 +73,14 @@
   </select>
 
   <div class="controls">
-    <img id="recordButton" src="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/c33a36b59f094ddec45d159cd38467f5cfaa081a/Record.png" alt="Record Button">
+    <button id="recordButton" class="record-btn">Record</button>
   </div>
 
-  <p id="countdown" style="font-size:2em;color:red;"></p>
+  <div id="countdownOverlay">
+    <p>Get Ready...</p>
+    <div id="countdownNumber">3</div>
+  </div>
+
   <canvas id="visualizer" width="800" height="150"></canvas>
   <p id="timer">Recording Length: 0:00</p>
 
@@ -74,8 +105,10 @@
     const filenameInput = document.getElementById("filename");
     const downloadBtn = document.getElementById("downloadBtn");
     const resetBtn = document.getElementById("resetBtn");
+    const countdownOverlay = document.getElementById("countdownOverlay");
+    const countdownNumber = document.getElementById("countdownNumber");
 
-    let micStream, recorder, audioChunks = [], animationId, startTime, timerInterval;
+    let micStream, recorder, audioChunks = [], animationId, startTime, timerInterval, recording = false;
 
     // Populate song and filename
     function updateFilename() {
@@ -93,14 +126,15 @@
     async function startRecording() {
       audioChunks = [];
       micStream = await navigator.mediaDevices.getUserMedia({
-  audio: {
-    echoCancellation: false,
-    noiseSuppression: false,
-    autoGainControl: false,
-    channelCount: 2,
-    sampleRate: 48000
-  }
-});
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          channelCount: 2,
+          sampleRate: 48000
+        }
+      });
+
       recorder = new MediaRecorder(micStream);
       const audioCtx = new AudioContext();
       const source = audioCtx.createMediaStreamSource(micStream);
@@ -129,15 +163,24 @@
       recorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
       recorder.onstop = saveRecording;
       recorder.start();
+      song.currentTime = 0;
       song.play();
       startTimer();
+      recordButton.textContent = "Stop";
+      recordButton.classList.add("recording");
+      recording = true;
     }
 
     function stopRecording() {
+      if (!recording) return;
       recorder.stop();
       micStream.getTracks().forEach(t => t.stop());
       cancelAnimationFrame(animationId);
       clearInterval(timerInterval);
+      song.pause();
+      recordButton.textContent = "Record";
+      recordButton.classList.remove("recording");
+      recording = false;
     }
 
     function startTimer() {
@@ -163,8 +206,24 @@
       };
     }
 
+    function showCountdownAndStart() {
+      let count = 3;
+      countdownOverlay.style.display = "flex";
+      countdownNumber.textContent = count;
+      const interval = setInterval(() => {
+        count--;
+        if (count > 0) {
+          countdownNumber.textContent = count;
+        } else {
+          clearInterval(interval);
+          countdownOverlay.style.display = "none";
+          startRecording();
+        }
+      }, 1000);
+    }
+
     recordButton.addEventListener("click", () => {
-      if (!recorder || recorder.state === "inactive") startRecording();
+      if (!recording) showCountdownAndStart();
       else stopRecording();
     });
     resetBtn.addEventListener("click", () => location.reload());
