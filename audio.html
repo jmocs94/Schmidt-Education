@@ -12,16 +12,9 @@
       text-align: center;
       padding: 2em;
     }
-    h1 {
-      color: #00796b;
-    }
-    nav {
-      margin: 1em 0;
-    }
-    select, input, button {
-      margin: 0.5em;
-      font-size: 1em;
-    }
+    h1 { color: #00796b; }
+    nav { margin: 1em 0; }
+    select, input, button { margin: 0.5em; font-size: 1em; }
     canvas {
       display: block;
       margin: 1em auto;
@@ -32,17 +25,8 @@
       border-radius: 10px;
       background: #fff;
     }
-    .controls img {
-      cursor: pointer;
-      width: 60px;
-    }
-    #song::-webkit-media-controls-play-button,
-    #song::-webkit-media-controls-pause-button,
-    #song::-webkit-media-controls-seek-back-button,
-    #song::-webkit-media-controls-seek-forward-button,
-    #song::-webkit-media-controls-timeline {
-      display: none !important;
-    }
+    .controls img { cursor: pointer; width: 60px; }
+    #song::-webkit-media-controls-timeline { display: none !important; }
   </style>
 </head>
 <body>
@@ -61,40 +45,121 @@
     <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/5-I%20Lived%20-%20SATB%20(Faster).mp3">I Lived</option>
   </select>
 
-  <br />
   <div class="controls">
     <img id="recordButton" src="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/c33a36b59f094ddec45d159cd38467f5cfaa081a/Record.png" alt="Record Button">
   </div>
-  <p id="countdown" style="font-size: 2em; color: red;"></p>
+
+  <p id="countdown" style="font-size:2em;color:red;"></p>
   <canvas id="visualizer" width="800" height="150"></canvas>
   <p id="timer">Recording Length: 0:00</p>
 
   <audio id="song" controls crossorigin="anonymous"></audio>
   <audio id="playback" controls></audio>
 
-  <br/>
   <label for="filename">File Name:</label>
   <input type="text" id="filename" />
-
   <button id="downloadBtn">Download</button>
   <button id="resetBtn">Reset</button>
+
   <p>After downloading, go to Google Classroom, open the assignment, click “Add or Create,” choose “File,” and upload your saved recording!</p>
 
   <script>
     const songSelect = document.getElementById("songSelect");
+    const song = document.getElementById("song");
+    const recordButton = document.getElementById("recordButton");
+    const playback = document.getElementById("playback");
+    const visualizer = document.getElementById("visualizer");
+    const ctx = visualizer.getContext("2d");
+    const timer = document.getElementById("timer");
     const filenameInput = document.getElementById("filename");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const resetBtn = document.getElementById("resetBtn");
 
+    let micStream, recorder, audioChunks = [], animationId, startTime, timerInterval;
+
+    // Populate song and filename
+    function updateFilename() {
+      const text = songSelect.options[songSelect.selectedIndex].textContent;
+      const d = new Date();
+      const date = `${String(d.getFullYear()).slice(2)}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      filenameInput.value = text.replace(/\\s+/g,'_') + "_" + date;
+    }
     songSelect.addEventListener("change", () => {
-      const selectedText = songSelect.options[songSelect.selectedIndex].textContent;
-      const today = new Date();
-      const yyyy = today.getFullYear().toString().slice(2);
-      const mm = String(today.getMonth() + 1).padStart(2, '0');
-      const dd = String(today.getDate()).padStart(2, '0');
-      filenameInput.value = `${selectedText.replace(/\s+/g, '_')}_${yyyy}-${mm}-${dd}`;
+      song.src = songSelect.value;
+      updateFilename();
     });
+    song.src = songSelect.value; updateFilename();
 
-    // Trigger initial population
-    songSelect.dispatchEvent(new Event("change"));
+    async function startRecording() {
+      audioChunks = [];
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recorder = new MediaRecorder(micStream);
+      const audioCtx = new AudioContext();
+      const source = audioCtx.createMediaStreamSource(micStream);
+      const analyser = audioCtx.createAnalyser();
+      source.connect(analyser);
+      analyser.fftSize = 256;
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      function draw() {
+        animationId = requestAnimationFrame(draw);
+        analyser.getByteFrequencyData(dataArray);
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, visualizer.width, visualizer.height);
+        const barWidth = (visualizer.width / bufferLength) * 2.5;
+        let x = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          const barHeight = dataArray[i];
+          ctx.fillStyle = "#00796b";
+          ctx.fillRect(x, visualizer.height - barHeight / 2, barWidth, barHeight / 2);
+          x += barWidth + 1;
+        }
+      }
+      draw();
+
+      recorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+      recorder.onstop = saveRecording;
+      recorder.start();
+      song.play();
+      startTimer();
+    }
+
+    function stopRecording() {
+      recorder.stop();
+      micStream.getTracks().forEach(t => t.stop());
+      cancelAnimationFrame(animationId);
+      clearInterval(timerInterval);
+    }
+
+    function startTimer() {
+      startTime = Date.now();
+      timerInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const m = String(Math.floor(elapsed / 60));
+        const s = String(elapsed % 60).padStart(2, "0");
+        timer.textContent = `Recording Length: ${m}:${s}`;
+      }, 1000);
+    }
+
+    function saveRecording() {
+      const blob = new Blob(audioChunks, { type: "audio/webm" });
+      const url = URL.createObjectURL(blob);
+      playback.src = url;
+      downloadBtn.onclick = () => {
+        const name = filenameInput.value.trim() || "recording";
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = name + ".webm";
+        a.click();
+      };
+    }
+
+    recordButton.addEventListener("click", () => {
+      if (!recorder || recorder.state === "inactive") startRecording();
+      else stopRecording();
+    });
+    resetBtn.addEventListener("click", () => location.reload());
   </script>
 </body>
 </html>
