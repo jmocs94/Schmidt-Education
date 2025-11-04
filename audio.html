@@ -39,19 +39,24 @@
     }
     .record-btn:hover { transform: scale(1.05); }
     .record-btn.recording { background-color: #e74c3c; } /* red */
+
     #countdownOverlay {
-      display: none;
+      display: none; /* FIXED: Hidden by default */
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
       background: rgba(0,0,0,0.8);
       color: white;
       font-size: 4em;
-      display: flex;
       justify-content: center;
       align-items: center;
       z-index: 9999;
       flex-direction: column;
+      opacity: 1;
+      transition: opacity 0.5s ease;
+    }
+    #countdownOverlay.fade-out {
+      opacity: 0;
     }
   </style>
 </head>
@@ -64,7 +69,7 @@
   <label for="songSelect">Choose a song:</label>
   <select id="songSelect">
     <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/01%20Seize%20the%20Day%20-%20Performance.mp3">Seize the Day</option>
-    <option value="https://github.com/jmocs94/Schmidt-Education/blob/6d134ed22b1a8073cc49be9452da9d45d3ad0dd0/Crescendos%2025-26/02-CouldHaveBeenMe-Performance.mp3">Could Have Been Me</option>
+    <option value="https://github.com/jmocs94/Schmidt-Education/raw/refs/heads/main/Crescendos%2025-26/02-CouldHaveBeenMe-Performance.mp3">Could Have Been Me</option>
     <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-1-Soprano.mp3">Go the Distance Soprano</option>
     <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-2-Alto.mp3">Go the Distance Alto</option>
     <option value="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-3-Tenor.mp3">Go the Distance Tenor</option>
@@ -110,18 +115,19 @@
 
     let micStream, recorder, audioChunks = [], animationId, startTime, timerInterval, recording = false;
 
-    // Populate song and filename
     function updateFilename() {
       const text = songSelect.options[songSelect.selectedIndex].textContent;
       const d = new Date();
       const date = `${String(d.getFullYear()).slice(2)}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-      filenameInput.value = text.replace(/\\s+/g,'_') + "_" + date;
+      filenameInput.value = text.replace(/\s+/g,'_') + "_" + date;
     }
+
     songSelect.addEventListener("change", () => {
       song.src = songSelect.value;
       updateFilename();
     });
-    song.src = songSelect.value; updateFilename();
+    song.src = songSelect.value;
+    updateFilename();
 
     async function startRecording() {
       audioChunks = [];
@@ -209,6 +215,7 @@
     function showCountdownAndStart() {
       let count = 3;
       countdownOverlay.style.display = "flex";
+      countdownOverlay.classList.remove("fade-out");
       countdownNumber.textContent = count;
       const interval = setInterval(() => {
         count--;
@@ -216,8 +223,11 @@
           countdownNumber.textContent = count;
         } else {
           clearInterval(interval);
-          countdownOverlay.style.display = "none";
-          startRecording();
+          countdownOverlay.classList.add("fade-out");
+          setTimeout(() => {
+            countdownOverlay.style.display = "none";
+            startRecording();
+          }, 500);
         }
       }, 1000);
     }
