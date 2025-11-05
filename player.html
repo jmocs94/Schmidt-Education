@@ -1,38 +1,119 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Crescendos 25-26 — Playlist Player</title>
 <style>
-body{font-family:Helvetica,Arial,sans-serif;background:#f0f8ff;color:#333;padding:1.5rem;}
-header{text-align:center;margin-bottom:1rem;}
-h1{color:#00796b;margin:.25rem 0;}
-.app{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
-.card{background:#fff;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.08);padding:1rem;}
-h2{color:#00796b;font-size:1.1rem;margin:.25rem 0 .75rem 0;}
-.btn{appearance:none;border:none;border-radius:10px;padding:.5rem .85rem;cursor:pointer;background:#00796b;color:#fff;font-weight:600}
-.btn:hover{background:#004d40}
-.btn-muted{background:#d7e6ee;color:#234}
-.toolbar{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin:.75rem 0}
-.library-list,.playlist{list-style:none;margin:0;padding:0;max-height:400px;overflow:auto;border:1px solid #ccd;border-radius:10px}
-.library-item,.playlist-item{display:flex;align-items:center;gap:.6rem;padding:.65rem .8rem;border-bottom:1px solid #eef3f9}
-.active-track{background:#f2fbf8}
-.drag{cursor:grab;color:#889}
-.controls{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;padding:.6rem;background:#e7eef6;border-radius:10px;margin-top:.75rem}
-#waveWrap{margin-top:.9rem;background:#fff;border:1px solid #d4dde7;border-radius:10px;padding:.5rem}
-canvas{width:100%;height:140px;display:block}
-.fallback{height:10px;background:#ddd;border-radius:6px;overflow:hidden;margin-top:.5rem}
-.fallback>div{height:100%;width:0;background:#00796b}
-#helpBtn{position:fixed;bottom:20px;right:20px;width:44px;height:44px;border-radius:50%;background:#2ecc71;color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer}
-.help-panel{position:fixed;bottom:74px;right:18px;width:260px;background:#fff;border:1px solid #ccd;border-radius:12px;padding:.9rem;box-shadow:0 10px 26px rgba(0,0,0,.18);display:none}
+  body {
+    font-family: Helvetica, Arial, sans-serif;
+    background: #f0f8ff;
+    color: #333;
+    padding: 1.5rem;
+  }
+  header {
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+  h1 {
+    color: #00796b;
+    margin: 0.25rem 0;
+  }
+  .app {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    padding: 1rem;
+  }
+  h2 {
+    color: #00796b;
+    font-size: 1.1rem;
+    margin: 0.25rem 0 0.75rem 0;
+  }
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 0.75rem 0;
+  }
+  .btn {
+    appearance: none;
+    border: none;
+    border-radius: 10px;
+    padding: 0.5rem 0.85rem;
+    cursor: pointer;
+    background: #00796b;
+    color: #fff;
+    font-weight: 600;
+  }
+  .btn:hover { background: #004d40; }
+  .btn-muted { background: #d7e6ee; color: #234; }
+  .library-list, .playlist {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 400px;
+    overflow: auto;
+    border: 1px solid #ccd;
+    border-radius: 10px;
+  }
+  .library-item, .playlist-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.65rem 0.8rem;
+    border-bottom: 1px solid #eef3f9;
+  }
+  .active-track { background: #f2fbf8; }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.6rem;
+    background: #e7eef6;
+    border-radius: 10px;
+    margin-top: 0.75rem;
+  }
+  #waveWrap {
+    margin-top: 0.9rem;
+    background: #fff;
+    border: 1px solid #d4dde7;
+    border-radius: 10px;
+    padding: 0.5rem;
+  }
+  canvas {
+    width: 100%;
+    height: 140px;
+    display: block;
+  }
+  .fallback {
+    height: 10px;
+    background: #ddd;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+  }
+  .fallback > div {
+    height: 100%;
+    width: 0;
+    background: #00796b;
+  }
+  label { display: flex; align-items: center; gap: 0.4rem; }
+  input[type="range"] { width: 120px; }
 </style>
 </head>
 <body>
 <header>
   <img src="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/360c0fde872bd41d319af96a3e55bc9df7df3a54/Crescendos_w_trans.png" width="160" alt="Crescendos">
   <h1>Crescendos 25-26 — Playlist Player</h1>
-  <p>Create your playlist, then control playback. Use headphones for clean audio.</p>
+  <p>Create your playlist, control playback, and use headphones for clean audio.</p>
 </header>
 
 <div class="app">
@@ -41,7 +122,7 @@ canvas{width:100%;height:140px;display:block}
     <div class="toolbar">
       <button id="addSelected" class="btn">Add Selected →</button>
       <button id="addLocal" class="btn">➕ Add Local File</button>
-      <button id="clearPlaylist" class="btn btn-muted">Clear</button>
+      <button id="clearPlaylist" class="btn btn-muted">Clear Playlist</button>
     </div>
     <ul id="library" class="library-list"></ul>
   </section>
@@ -49,60 +130,33 @@ canvas{width:100%;height:140px;display:block}
   <section class="card">
     <h2>Your Playlist</h2>
     <div class="toolbar">
-      <button id="moveUp" class="btn btn-muted">Move Up</button>
-      <button id="moveDown" class="btn btn-muted">Move Down</button>
-      <button id="removeFromPlaylist" class="btn btn-muted">Remove</button>
+      <label><input type="checkbox" id="loopTrack"> Loop current</label>
+      <label><input type="checkbox" id="loopPlaylist"> Loop playlist</label>
+      <label>Speed <input id="speed" type="range" min="0.05" max="2.0" step="0.05" value="1"></label>
+      <span id="speedVal">1.00×</span>
     </div>
     <ul id="playlist" class="playlist"></ul>
 
     <div class="controls">
-      <button id="prev" class="btn">⏮</button>
+      <button id="prev" class="btn">⏮ Prev</button>
       <button id="playPause" class="btn">▶️ Play</button>
-      <button id="stop" class="btn btn-muted">⏹</button>
-      <button id="next" class="btn">⏭</button>
-      <label>Speed <select id="rate"><option value="0.75">0.75×</option><option value="1" selected>1.0×</option><option value="1.25">1.25×</option></select></label>
+      <button id="stop" class="btn btn-muted">⏹ Stop</button>
+      <button id="next" class="btn">⏭ Next</button>
+      <span id="time" style="margin-left:auto">0:00 / 0:00</span>
     </div>
 
     <div id="waveWrap">
-      <canvas id="waveCanvas"></canvas>
+      <canvas id="wave"></canvas>
       <div class="fallback"><div id="fallbackProg"></div></div>
     </div>
+
     <audio id="audio" crossorigin="anonymous"></audio>
   </section>
-</div>
-
-<div id="helpBtn">ℹ️</div>
-<div id="helpPanel" class="help-panel">
-  <strong>Shortcuts</strong>
-  <ul style="margin:.5rem 0 .25rem 1rem">
-    <li>Space — Play/Pause</li><li>← — Prev</li><li>→ — Next</li><li>S — Stop</li>
-  </ul>
 </div>
 
 <input id="filePicker" type="file" accept="audio/*" style="display:none"/>
 
 <script>
-/* === Setup === */
-const library=document.getElementById('library');
-const playlistEl=document.getElementById('playlist');
-const audio=document.getElementById('audio');
-const filePicker=document.getElementById('filePicker');
-const addLocal=document.getElementById('addLocal');
-const addSelected=document.getElementById('addSelected');
-const clearBtn=document.getElementById('clearPlaylist');
-const playPause=document.getElementById('playPause');
-const prev=document.getElementById('prev');
-const next=document.getElementById('next');
-const stopBtn=document.getElementById('stop');
-const rate=document.getElementById('rate');
-const wave=document.getElementById('waveCanvas');
-const ctx=wave.getContext('2d');
-const fallback=document.getElementById('fallbackProg');
-const helpBtn=document.getElementById('helpBtn');
-const helpPanel=document.getElementById('helpPanel');
-let playlist=[],current=0,waveform=null,raf=null;
-
-/* === Crescendos tracks === */
 const TRACKS=[
 {title:'Seize the Day',url:'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/01%20Seize%20the%20Day%20-%20Performance.mp3'},
 {title:'Go the Distance — Soprano',url:'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-1-Soprano.mp3'},
@@ -111,34 +165,40 @@ const TRACKS=[
 {title:'Life is a Highway',url:'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/4-LifeIsAHighway-Full.mp3'},
 {title:'I Lived',url:'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/5-I%20Lived%20-%20SATB%20(Faster).mp3'}
 ];
-document.addEventListener('DOMContentLoaded',()=>{TRACKS.forEach((t,i)=>{const li=document.createElement('li');li.className='library-item';const cb=document.createElement('input');cb.type='checkbox';cb.dataset.i=i;li.append(cb,document.createTextNode(' '+t.title));library.append(li);});});
-
-/* === Library add === */
-addSelected.onclick=()=>{const sel=[...library.querySelectorAll('input:checked')];sel.forEach(c=>playlist.push(TRACKS[c.dataset.i]));sel.forEach(c=>c.checked=false);render();if(!audio.src)set(0);}
-addLocal.onclick=()=>filePicker.click();
-filePicker.onchange=e=>{const f=e.target.files[0];if(!f)return;const o=URL.createObjectURL(f);playlist.push({title:f.name,url:o,local:true});render();if(!audio.src)set(0);};
-
-/* === Rendering === */
-function render(){playlistEl.innerHTML='';playlist.forEach((p,i)=>{const li=document.createElement('li');li.className='playlist-item'+(i===current?' active-track':'');li.textContent=p.title;playlistEl.append(li);});}
-function set(i){if(i<0||i>=playlist.length)return;current=i;audio.src=playlist[i].url;audio.playbackRate=parseFloat(rate.value);draw([],0);}
-function nextT(){if(current<playlist.length-1){current++;set(current);audio.play();}}
-function prevT(){if(current>0){current--;set(current);audio.play();}}
-
-/* === Controls === */
-playPause.onclick=()=>{if(!audio.src&&playlist.length)set(current);if(audio.paused){audio.play();playPause.textContent='⏸ Pause';}else{audio.pause();playPause.textContent='▶️ Play';}};
+const lib=document.getElementById('library'),playlistEl=document.getElementById('playlist');
+const addSel=document.getElementById('addSelected'),addLocal=document.getElementById('addLocal'),clearBtn=document.getElementById('clearPlaylist');
+const audio=document.getElementById('audio'),playPause=document.getElementById('playPause'),stopBtn=document.getElementById('stop');
+const prev=document.getElementById('prev'),next=document.getElementById('next'),time=document.getElementById('time');
+const loopTrack=document.getElementById('loopTrack'),loopPlaylist=document.getElementById('loopPlaylist');
+const speed=document.getElementById('speed'),speedVal=document.getElementById('speedVal');
+const wave=document.getElementById('wave'),ctx=wave.getContext('2d'),fallback=document.getElementById('fallbackProg');
+const picker=document.getElementById('filePicker');
+let playlist=[...TRACKS],current=0,waveData=null,raf=null,dragging=false;
+function fmt(s){s=Math.floor(s);return `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;}
+function renderLib(){lib.innerHTML='';TRACKS.forEach((t,i)=>{const li=document.createElement('li');li.className='library-item';const cb=document.createElement('input');cb.type='checkbox';cb.dataset.i=i;li.append(cb,document.createTextNode(' '+t.title));lib.append(li);});}
+function renderPL(){playlistEl.innerHTML='';playlist.forEach((t,i)=>{const li=document.createElement('li');li.className='playlist-item'+(i===current?' active-track':'');li.textContent=t.title;playlistEl.append(li);});}
+function setTrack(i){if(i<0||i>=playlist.length)return;current=i;audio.src=playlist[i].url;audio.playbackRate=parseFloat(speed.value);renderPL();buildWave(playlist[i].url);}
+function nextTrack(){if(loopTrack.checked){audio.currentTime=0;audio.play();return;}if(current<playlist.length-1){current++;setTrack(current);audio.play();}else if(loopPlaylist.checked){current=0;setTrack(0);audio.play();}}
+function prevTrack(){if(current>0){current--;setTrack(current);audio.play();}}
+playPause.onclick=()=>{if(!audio.src)setTrack(current);if(audio.paused){audio.play();playPause.textContent='⏸ Pause';}else{audio.pause();playPause.textContent='▶️ Play';}};
 stopBtn.onclick=()=>{audio.pause();audio.currentTime=0;playPause.textContent='▶️ Play';};
-prev.onclick=()=>prevT();
-next.onclick=()=>nextT();
-rate.onchange=()=>audio.playbackRate=parseFloat(rate.value);
-audio.onended=()=>nextT();
-
-/* === Waveform === */
-function draw(peaks,p=0){const w=wave.width=wave.clientWidth,h=wave.height=wave.clientHeight;const m=h/2;ctx.clearRect(0,0,w,h);ctx.fillStyle='#ccd';for(let i=0;i<peaks.length;i++){const x=i/w*peaks.length;ctx.fillRect(i,m-peaks[i]*m,w/peaks.length,peaks[i]*m*2);}ctx.beginPath();ctx.arc(p*w,m,7,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.25)';ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#fff';ctx.stroke();}
-audio.ontimeupdate=()=>{if(audio.duration)fallback.style.width=(audio.currentTime/audio.duration*100)+'%';};
-
-/* === Help === */
-helpBtn.onclick=()=>helpPanel.style.display=helpPanel.style.display==='block'?'none':'block';
-document.onkeydown=e=>{if(e.target.tagName==='INPUT')return;switch(e.key){case' ':e.preventDefault();playPause.click();break;case'ArrowLeft':prevT();break;case'ArrowRight':nextT();break;case's':case'S':stopBtn.click();break;}};
+prev.onclick=()=>prevTrack();next.onclick=()=>nextTrack();
+audio.onended=()=>nextTrack();
+audio.ontimeupdate=()=>{if(audio.duration)time.textContent=`${fmt(audio.currentTime)} / ${fmt(audio.duration)}`;if(!waveData)fallback.style.width=(audio.currentTime/audio.duration*100)+'%';drawWave();}
+speed.oninput=()=>{audio.playbackRate=parseFloat(speed.value);speedVal.textContent=parseFloat(speed.value).toFixed(2)+'×';};
+addSel.onclick=()=>{[...lib.querySelectorAll('input:checked')].forEach(c=>playlist.push(TRACKS[c.dataset.i]));renderPL();};
+addLocal.onclick=()=>picker.click();
+picker.onchange=e=>{const f=e.target.files[0];if(!f)return;const o=URL.createObjectURL(f);playlist.push({title:f.name,url:o,local:true});renderPL();if(!audio.src)setTrack(playlist.length-1);};
+clearBtn.onclick=()=>{playlist=[...TRACKS];current=0;setTrack(0);renderPL();};
+function drawWave(p=audio.currentTime/audio.duration){const w=wave.width=wave.clientWidth,h=wave.height=wave.clientHeight,m=h/2;ctx.clearRect(0,0,w,h);
+if(!waveData)return;ctx.fillStyle='#ccd';const len=waveData.length;for(let i=0;i<len;i++){const x=i/len*w,a=waveData[i]*m;ctx.fillRect(x,m-a,1,a*2);}
+const px=p*w;ctx.beginPath();ctx.arc(px,m,7,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.25)';ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#fff';ctx.stroke();}
+async function buildWave(url){waveData=null;try{const res=await fetch(url);const arr=await res.arrayBuffer();const ac=new AudioContext();const b=await ac.decodeAudioData(arr);const ch=b.getChannelData(0);const step=Math.floor(ch.length/1000);const peaks=new Float32Array(1000);for(let i=0;i<1000;i++){let sum=0;for(let j=0;j<step;j++)sum+=Math.abs(ch[i*step+j]);peaks[i]=sum/step;}waveData=peaks;drawWave();}catch(e){waveData=null;}}
+wave.addEventListener('pointerdown',e=>{if(!audio.duration)return;dragging=true;const r=wave.getBoundingClientRect();const x=(e.clientX-r.left)/r.width;audio.currentTime=x*audio.duration;drawWave(x);});
+wave.addEventListener('pointermove',e=>{if(!dragging||!audio.duration)return;const r=wave.getBoundingClientRect();const x=(e.clientX-r.left)/r.width;audio.currentTime=x*audio.duration;drawWave(x);});
+wave.addEventListener('pointerup',()=>dragging=false);
+document.onkeydown=e=>{if(e.target.tagName==='INPUT')return;switch(e.key){case' ':e.preventDefault();playPause.click();break;case'ArrowLeft':prevTrack();break;case'ArrowRight':nextTrack();break;case's':case'S':stopBtn.click();break;case'l':case'L':loopPlaylist.checked=!loopPlaylist.checked;break;case'c':case'C':loopTrack.checked=!loopTrack.checked;break;}};
+renderLib();renderPL();setTrack(0);
 </script>
 </body>
 </html>
