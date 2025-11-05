@@ -5,236 +5,460 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Crescendos 25-26 — Playlist Player</title>
 <style>
-  :root {
-    --teal: #00796b;
-    --teal-dark: #004d40;
-    --bg: #f0f8ff;
-    --ink: #333;
-    --panel: #ffffff;
-    --muted: #e7eef6;
-  }
-  body {
-    font-family: Helvetica, Arial, sans-serif;
-    background: var(--bg);
-    color: var(--ink);
-    padding: 1.75rem;
-  }
-  header {
-    text-align: center;
-    margin-bottom: 1rem;
-  }
-  header h1 {
-    color: var(--teal);
-    margin: .25rem 0;
-  }
-  .app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-  }
-  .card {
-    background: var(--panel);
-    border-radius: 12px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, .08);
-    padding: 1rem;
-  }
-  h2 {
-    margin: .25rem 0 .75rem 0;
-    font-size: 1.1rem;
-    color: var(--teal);
-  }
-  .library-list, .playlist {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    max-height: 380px;
-    overflow: auto;
-    border: 1px solid #d4dde7;
-    border-radius: 10px;
-    background: #fff;
-  }
-  .library-item, .playlist-item {
-    display: flex;
-    align-items: center;
-    gap: .5rem;
-    padding: .6rem .8rem;
-    border-bottom: 1px solid #eef3f9;
-  }
-  .title {
-    flex: 1;
-  }
-  .btn {
-    appearance: none;
-    border: none;
-    cursor: pointer;
-    padding: .5rem .8rem;
-    border-radius: 8px;
-    background: var(--teal);
-    color: #fff;
-    font-weight: 600;
-  }
-  .btn:hover { background: var(--teal-dark); }
-  .btn-muted {
-    background: #d7e6ee;
-    color: #234;
-  }
-  .controls {
-    display: flex;
-    gap: .5rem;
-    flex-wrap: wrap;
-    align-items: center;
-    padding: .5rem;
-    background: var(--muted);
-    border-radius: 10px;
-  }
-  canvas {
-    width: 100%;
-    height: 100px;
-    border-radius: 10px;
-    margin-top: .5rem;
-    background: #fff;
-  }
-  .scrub-handle {
-    fill: rgba(255, 255, 255, 0.3);
-    stroke: #fff;
-    stroke-width: 2;
-  }
-  .fallback-bar {
-    width: 100%;
-    height: 10px;
-    background: #ddd;
-    border-radius: 5px;
-    margin-top: .5rem;
-  }
-  .fallback-progress {
-    height: 10px;
-    background: var(--teal);
-    border-radius: 5px;
-    width: 0%;
-  }
+  :root{--teal:#00796b;--teal-dark:#004d40;--bg:#f0f8ff;--ink:#333;--panel:#fff;--muted:#e7eef6;}
+  body{font-family:Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);padding:1.75rem;}
+  header{text-align:center;margin-bottom:1rem;}
+  header h1{color:var(--teal);margin:.25rem 0;}
+  .app{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+  .card{background:var(--panel);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.08);padding:1rem;}
+  h2{margin:.25rem 0 .75rem 0;font-size:1.1rem;color:var(--teal);}
+  .library-list,.playlist{list-style:none;padding:0;margin:0;max-height:420px;overflow:auto;border:1px solid #d4dde7;border-radius:10px;background:#fff;}
+  .library-item,.playlist-item{display:flex;align-items:center;gap:.6rem;padding:.65rem .8rem;border-bottom:1px solid #eef3f9}
+  .library-item:last-child,.playlist-item:last-child{border-bottom:none}
+  .title{flex:1}
+  .small{font-size:.9rem;color:#456}
+  .btn{appearance:none;border:none;cursor:pointer;padding:.55rem .85rem;border-radius:10px;background:var(--teal);color:#fff;font-weight:600}
+  .btn:hover{background:var(--teal-dark)}
+  .btn-muted{background:#d7e6ee;color:#234}
+  .toolbar{display:flex;flex-wrap:wrap;gap:.5rem;margin:.75rem 0;align-items:center}
+  .controls{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;padding:.6rem;background:var(--muted);border-radius:10px}
+  .pill{padding:.45rem .8rem;border-radius:999px;background:#fff;border:1px solid #d4dde7}
+  .grow{flex:1}
+  .drag{user-select:none;font-size:1rem;color:#879;cursor:grab}
+  .drag:active{cursor:grabbing}
+  .active-track{background:#f2fbf8}
+  #gapValue{min-width:2.5rem;display:inline-block;text-align:right}
+  .floating-help{position:fixed;bottom:18px;right:18px;width:44px;height:44px;border-radius:50%;background:#2ecc71;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.15);cursor:pointer;font-weight:800}
+  .help-panel{position:fixed;bottom:74px;right:18px;width:260px;background:#fff;color:#234;border:1px solid #d4dde7;border-radius:12px;padding:.9rem;box-shadow:0 10px 26px rgba(0,0,0,.18);display:none}
+  .footer-note{margin-top:.75rem;font-size:.95rem;color:#456}
+  .file-badge{font-size:.8rem;color:#934}
+  /* Waveform area */
+  #waveWrap{margin-top:.9rem;background:#fff;border:1px solid #d4dde7;border-radius:10px;padding:.5rem .75rem}
+  #waveCanvas{width:100%;height:140px;display:block}
+  #waveStatus{display:flex;justify-content:space-between;align-items:center;margin-top:.35rem;font-size:.9rem;color:#456}
+  .fallback{height:10px;background:#ddd;border-radius:6px;overflow:hidden;margin-top:.5rem}
+  .fallback>div{height:100%;width:0;background:var(--teal)}
 </style>
 </head>
 <body>
 <header>
-  <a href="https://schmidt-education.com">
-  <img src="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/360c0fde872bd41d319af96a3e55bc9df7df3a54/Crescendos_w_trans.png" width="160" alt="Crescendos" style="border:0;">
-</a>
+  <img src="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/360c0fde872bd41d319af96a3e55bc9df7df3a54/Crescendos_w_trans.png" width="160" alt="Crescendos">
   <h1>Crescendos 25-26 — Playlist Player</h1>
   <p>Create your playlist, then control playback. Use headphones for clean audio.</p>
 </header>
-<div class="controls">
-  <button id="playPause" class="btn">▶️ Play</button>
-  <button id="stop" class="btn-muted">⏹ Stop</button>
-  <button id="prev" class="btn">⏮ Prev</button>
-  <button id="next" class="btn">⏭ Next</button>
-  <label>Speed <select id="rate"><option>0.75×</option><option>1.0×</option><option>1.25×</option></select></label>
+
+<div class="app">
+  <!-- Library -->
+  <section class="card">
+    <h2>Song Library</h2>
+    <div class="toolbar">
+      <button id="addSelected" class="btn">Add Selected →</button>
+      <button id="addLocal" class="btn">➕ Add Local File</button>
+      <button id="clearPlaylist" class="btn btn-muted">Clear Playlist</button>
+      <span class="small">Tip: Select multiple, then “Add Selected”.</span>
+    </div>
+    <ul id="library" class="library-list"></ul>
+  </section>
+
+  <!-- Playlist + Player -->
+  <section class="card">
+    <h2>Your Playlist</h2>
+
+    <div class="toolbar">
+      <div>
+        <button id="moveUp" class="btn btn-muted">Move Up</button>
+        <button id="moveDown" class="btn btn-muted">Move Down</button>
+        <button id="removeFromPlaylist" class="btn btn-muted">Remove</button>
+      </div>
+      <div class="grow"></div>
+      <label class="pill">Gap
+        <input id="gap" type="range" min="0" max="5" step="0.5" value="2">
+        <span id="gapValue">2.0s</span>
+      </label>
+      <label class="pill"><input type="checkbox" id="loopTrack"> Loop current</label>
+      <label class="pill"><input type="checkbox" id="loopPlaylist"> Loop playlist</label>
+      <label class="pill">Speed
+        <select id="rate">
+          <option value="0.75">0.75×</option>
+          <option value="0.9">0.90×</option>
+          <option value="1" selected>1.00×</option>
+          <option value="1.1">1.10×</option>
+          <option value="1.25">1.25×</option>
+          <option value="1.5">1.50×</option>
+        </select>
+      </label>
+    </div>
+
+    <ul id="playlist" class="playlist" aria-label="Playlist (drag to reorder)"></ul>
+
+    <div class="controls" style="margin-top:.85rem;">
+      <button id="prev" class="btn">⏮ Prev</button>
+      <button id="playPause" class="btn">▶️ Play</button>
+      <button id="stop" class="btn btn-muted">⏹ Stop</button>
+      <button id="next" class="btn">⏭ Next</button>
+      <span id="nowPlaying" class="pill small">No track selected</span>
+      <span id="time" class="small pill">0:00 / 0:00</span>
+    </div>
+
+    <!-- Waveform + fallback -->
+    <div id="waveWrap">
+      <canvas id="waveCanvas"></canvas>
+      <div class="fallback"><div id="fallbackProg"></div></div>
+      <div id="waveStatus">
+        <span id="waveMsg">Waveform: ready</span>
+        <span id="cursorTime">0:00</span>
+      </div>
+    </div>
+
+    <audio id="audio" preload="auto" crossorigin="anonymous"></audio>
+    <div class="footer-note">Drag items in the playlist to change the order. Click or drag on the waveform to seek.</div>
+  </section>
 </div>
-<canvas id="waveCanvas"></canvas>
-<div class="fallback-bar"><div class="fallback-progress" id="progress"></div></div>
-<p id="status">Waveform: loading...</p>
-<audio id="audio" crossorigin="anonymous"></audio>
+
+<!-- Keyboard shortcuts help -->
+<div id="helpBtn" class="floating-help" title="Keyboard Shortcuts">ℹ️</div>
+<div id="helpPanel" class="help-panel">
+  <strong>Keyboard Shortcuts</strong>
+  <ul style="margin:.5rem 0 .25rem 1rem; padding:0;">
+    <li>Space — Play/Pause</li>
+    <li>← — Previous</li>
+    <li>→ — Next</li>
+    <li>S — Stop</li>
+    <li>L — Toggle loop playlist</li>
+    <li>C — Toggle loop current track</li>
+  </ul>
+  <div class="small">Hover the ℹ️ button to preview; click to pin/unpin.</div>
+</div>
+
+<input id="filePicker" type="file" accept="audio/*" style="display:none"/>
+
 <script>
-const audio=document.getElementById('audio');
-const canvas=document.getElementById('waveCanvas');
-const ctx=canvas.getContext('2d');
-const progressBar=document.getElementById('progress');
-const status=document.getElementById('status');
-const playBtn=document.getElementById('playPause');
-const stopBtn=document.getElementById('stop');
-const rate=document.getElementById('rate');
-let waveformData=[],dragging=false,audioBuffer=null;
+/* ===== Data (Crescendos URLs) ===== */
+const CRESCENDOS = [
+  { title: "Seize the Day", url: "https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/01%20Seize%20the%20Day%20-%20Performance.mp3", type: "remote" },
+  { title: "Go the Distance — Soprano", url: "https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-1-Soprano.mp3", type: "remote" },
+  { title: "Go the Distance — Alto", url: "https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-2-Alto.mp3", type: "remote" },
+  { title: "Go the Distance — Tenor", url: "https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-3-Tenor.mp3", type: "remote" },
+  { title: "Life is a Highway", url: "https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/4-LifeIsAHighway-Full.mp3", type: "remote" },
+  { title: "I Lived", url: "https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/5-I%20Lived%20-%20SATB%20(Faster).mp3", type: "remote" },
+];
 
-function drawWaveform(progress=0){
-  const w=canvas.width,h=canvas.height;
-  ctx.clearRect(0,0,w,h);
-  const mid=h/2;
-  const step=Math.ceil(waveformData.length/w);
-  const barW=w/waveformData.length*step;
-  for(let i=0;i<waveformData.length;i+=step){
-    const x=(i/step)*barW;
-    const amp=waveformData[i]*mid;
-    ctx.strokeStyle=(i/waveformData.length)<progress?'#00796b':'#ccc';
-    ctx.beginPath();
-    ctx.moveTo(x,mid-amp);
-    ctx.lineTo(x,mid+amp);
-    ctx.stroke();
-  }
-  const handleX=progress*w;
-  ctx.beginPath();
-  ctx.arc(handleX,mid,7,0,Math.PI*2);
-  ctx.fillStyle='rgba(255,255,255,0.2)';
-  ctx.fill();
-  ctx.strokeStyle='#fff';
-  ctx.lineWidth=2;
-  ctx.stroke();
+/* ===== Elements ===== */
+const libEl = document.getElementById('library');
+const playlistEl = document.getElementById('playlist');
+const addSelectedBtn = document.getElementById('addSelected');
+const clearPlaylistBtn = document.getElementById('clearPlaylist');
+const addLocalBtn = document.getElementById('addLocal');
+const filePicker = document.getElementById('filePicker');
+
+const moveUpBtn = document.getElementById('moveUp');
+const moveDownBtn = document.getElementById('moveDown');
+const removeBtn = document.getElementById('removeFromPlaylist');
+
+const audio = document.getElementById('audio');
+const rate = document.getElementById('rate');
+const loopPlaylist = document.getElementById('loopPlaylist');
+const loopTrack = document.getElementById('loopTrack');
+const gapSlider = document.getElementById('gap');
+const gapValue = document.getElementById('gapValue');
+
+const playPause = document.getElementById('playPause');
+const stopBtn = document.getElementById('stop');
+const prevBtn = document.getElementById('prev');
+const nextBtn = document.getElementById('next');
+
+const nowPlaying = document.getElementById('nowPlaying');
+const timeLabel = document.getElementById('time');
+
+const helpBtn = document.getElementById('helpBtn');
+const helpPanel = document.getElementById('helpPanel');
+
+/* Waveform elements */
+const waveCanvas = document.getElementById('waveCanvas');
+const waveMsg = document.getElementById('waveMsg');
+const cursorTime = document.getElementById('cursorTime');
+const fallbackProg = document.getElementById('fallbackProg');
+const waveCtx = waveCanvas.getContext('2d', { alpha: false });
+
+/* ===== State ===== */
+let playlist = []; // entries: {title,url,type,handleId?,objectURL?,file?,peaks?,duration?}
+let currentIndex = -1;
+let selectedPlaylistIndex = -1;
+let gapTimer = null;
+let draggingIndex = null;
+let helpPinned = false;
+
+/* Waveform state */
+let waveformPeaks = null;   // Float32Array
+let draggingHandle = false;
+let rafWave = null;
+
+/* ===== Persistence ===== */
+const LS_KEY = 'cres_playlist_v4';
+let idbDB = null;
+async function idbInit(){
+  if(!('indexedDB' in window)) return;
+  return new Promise((resolve,reject)=>{
+    const req = indexedDB.open('cres_playlist_db',1);
+    req.onupgradeneeded = ()=>{ const db=req.result; if(!db.objectStoreNames.contains('handles')) db.createObjectStore('handles',{keyPath:'id'}); };
+    req.onsuccess = ()=>{ idbDB = req.result; resolve(); };
+    req.onerror = ()=> reject(req.error);
+  });
+}
+function idbPutHandle(id, handle){
+  return new Promise((resolve,reject)=>{
+    if(!idbDB) return resolve();
+    const tx=idbDB.transaction('handles','readwrite');
+    tx.objectStore('handles').put({id,handle});
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error);
+  });
+}
+function idbGetHandle(id){
+  return new Promise((resolve,reject)=>{
+    if(!idbDB) return resolve(null);
+    const tx=idbDB.transaction('handles','readonly');
+    const req=tx.objectStore('handles').get(id);
+    req.onsuccess=()=>resolve(req.result?req.result.handle:null);
+    req.onerror=()=>reject(req.error);
+  });
 }
 
-function fallbackProgress(){
-  const pct=(audio.currentTime/audio.duration)*100;
-  progressBar.style.width=pct+'%';
+/* ===== Build Library ===== */
+function libElRefill(){
+  libEl.innerHTML='';
+  CRESCENDOS.forEach((t,i)=>{
+    const li=document.createElement('li'); li.className='library-item';
+    const cb=document.createElement('input'); cb.type='checkbox'; cb.dataset.index=i;
+    const title=document.createElement('span'); title.className='title'; title.textContent=t.title;
+    const small=document.createElement('span'); small.className='small'; small.textContent='add';
+    li.append(cb,title,small);
+    libEl.appendChild(li);
+  });
+}
+libElRefill();
+
+/* ===== Utils ===== */
+function fmt(sec){ sec=Math.max(0,Math.floor(sec||0)); const m=Math.floor(sec/60); const s=String(sec%60).padStart(2,'0'); return `${m}:${s}`; }
+function persistState(){
+  const meta=playlist.map(p=>({title:p.title,type:p.type,url:p.type==='remote'?p.url:'',handleId:p.type==='local'?p.handleId:undefined,duration:typeof p.duration==='number'?p.duration:undefined}));
+  const state={playlist:meta,currentIndex,rate:parseFloat(rate.value||'1'),loopPlaylist:!!loopPlaylist.checked,loopTrack:!!loopTrack.checked,gap:Number(gapSlider.value||2)};
+  localStorage.setItem(LS_KEY, JSON.stringify(state));
 }
 
-async function loadTrack(url){
-  status.textContent='Waveform: loading...';
-  try{
-    const res=await fetch(url);
-    const arr=await res.arrayBuffer();
-    const ctxAudio=new AudioContext();
-    audioBuffer=await ctxAudio.decodeAudioData(arr);
-    waveformData=[];
-    const raw=audioBuffer.getChannelData(0);
-    const samples=1000;
-    const block=Math.floor(raw.length/samples);
-    for(let i=0;i<samples;i++){
-      let sum=0;
-      for(let j=0;j<block;j++)sum+=Math.abs(raw[i*block+j]);
-      waveformData.push(sum/block);
+/* ===== Playlist ===== */
+function renderPlaylist(){
+  playlistEl.innerHTML='';
+  playlist.forEach((t,idx)=>{
+    const li=document.createElement('li'); li.className='playlist-item'+(idx===currentIndex?' active-track':''); li.draggable=true; li.dataset.index=idx;
+    const drag=document.createElement('span'); drag.textContent='⋮⋮'; drag.className='drag';
+    const title=document.createElement('span'); title.className='title'; title.textContent=t.title;
+    const info=document.createElement('span'); info.className='small';
+    if(t.type==='local'){
+      const badge=document.createElement('span'); badge.className='file-badge'; badge.textContent=' (local file';
+      info.appendChild(badge);
+      info.appendChild(document.createTextNode(` • ${t.duration?fmt(t.duration):'--:--'})`));
+    }else{
+      info.textContent=(idx===currentIndex?'playing • ':'')+(t.duration?fmt(t.duration):'--:--');
     }
-    drawWaveform();
-    status.textContent='Waveform: ready';
-  }catch(e){
-    status.textContent='Waveform unavailable';
-  }
+    li.append(drag,title,info); playlistEl.appendChild(li);
+  });
 }
 
-canvas.addEventListener('mousedown',e=>{
-  const rect=canvas.getBoundingClientRect();
-  const x=e.clientX-rect.left;
-  const progress=x/canvas.width;
-  audio.currentTime=progress*audio.duration;
-  drawWaveform(progress);
-  dragging=true;
-});
-window.addEventListener('mouseup',()=>dragging=false);
-window.addEventListener('mousemove',e=>{
-  if(!dragging)return;
-  const rect=canvas.getBoundingClientRect();
-  const x=Math.max(0,Math.min(e.clientX-rect.left,canvas.width));
-  const progress=x/canvas.width;
-  audio.currentTime=progress*audio.duration;
-  drawWaveform(progress);
-});
+/* ===== Waveform drawing ===== */
+function setCanvasSizeForDPR(cv){
+  const r=cv.getBoundingClientRect(); const dpr=Math.max(1,window.devicePixelRatio||1);
+  cv.width=Math.floor(r.width*dpr); cv.height=Math.floor(140*dpr); // fixed visual height
+  return dpr;
+}
+function drawWaveform(peaks, progress=0){
+  const dpr=setCanvasSizeForDPR(waveCanvas);
+  const w=waveCanvas.width, h=waveCanvas.height, mid=Math.floor(h/2);
+  waveCtx.clearRect(0,0,w,h);
+  // bar color left/right of progress
+  const barW=Math.max(1,Math.floor(w/peaks.length));
+  for(let i=0;i<peaks.length;i++){
+    const x=i*barW;
+    const amp=Math.max(1,Math.floor(peaks[i]*(h*0.9/2)));
+    waveCtx.fillStyle = (i/peaks.length)<=progress ? '#2a9d8f' : '#ccd8e5';
+    waveCtx.fillRect(x,mid-amp,barW-1,amp*2);
+  }
+  // scrub handle (white outlined transparent circle)
+  const px=Math.floor(progress*w);
+  waveCtx.beginPath(); waveCtx.arc(px, mid, Math.max(6, 6*dpr), 0, Math.PI*2);
+  waveCtx.fillStyle='rgba(255,255,255,0.25)'; waveCtx.fill();
+  waveCtx.lineWidth=Math.max(2,2*dpr); waveCtx.strokeStyle='#fff'; waveCtx.stroke();
+}
+function startWaveLoop(){
+  cancelAnimationFrame(rafWave);
+  const loop=()=>{
+    if(audio.duration && waveformPeaks && !draggingHandle){
+      const prog=Math.min(1,Math.max(0,audio.currentTime/audio.duration));
+      drawWaveform(waveformPeaks, prog);
+      cursorTime.textContent=fmt(audio.currentTime);
+      fallbackProg.style.width=(prog*100)+'%';
+    }
+    rafWave=requestAnimationFrame(loop);
+  };
+  rafWave=requestAnimationFrame(loop);
+}
 
-audio.addEventListener('timeupdate',()=>{
-  if(!audio.duration)return;
-  const progress=audio.currentTime/audio.duration;
-  drawWaveform(progress);
-  fallbackProgress();
-});
+/* Pointer seek + handle drag */
+function seekFromClientX(clientX){
+  if(!audio.duration || !waveformPeaks) return;
+  const rect=waveCanvas.getBoundingClientRect();
+  const ratio=Math.min(1,Math.max(0,(clientX-rect.left)/rect.width));
+  audio.currentTime=ratio*audio.duration;
+  drawWaveform(waveformPeaks, ratio);
+  cursorTime.textContent=fmt(audio.currentTime);
+  fallbackProg.style.width=(ratio*100)+'%';
+}
+waveCanvas.addEventListener('pointerdown',e=>{ draggingHandle=true; seekFromClientX(e.clientX); waveCanvas.setPointerCapture(e.pointerId); });
+waveCanvas.addEventListener('pointermove',e=>{ if(draggingHandle) seekFromClientX(e.clientX); });
+waveCanvas.addEventListener('pointerup',e=>{ draggingHandle=false; waveCanvas.releasePointerCapture(e.pointerId); });
 
-playBtn.onclick=()=>{
-  if(audio.paused){audio.play();playBtn.textContent='⏸ Pause';}
-  else{audio.pause();playBtn.textContent='▶️ Play';}
-};
-stopBtn.onclick=()=>{audio.pause();audio.currentTime=0;playBtn.textContent='▶️ Play';drawWaveform(0);};
-rate.onchange=()=>{audio.playbackRate=parseFloat(rate.value);};
+/* Decode to peaks */
+async function decodeToPeaks(arrayBuffer, targetBars=1200){
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const buf=await ctx.decodeAudioData(arrayBuffer);
+    const chL=buf.getChannelData(0), chR=buf.numberOfChannels>1?buf.getChannelData(1):null;
+    const samples=chL.length, block=Math.max(1,Math.floor(samples/targetBars));
+    const peaks=new Float32Array(targetBars);
+    for(let i=0;i<targetBars;i++){
+      const s=i*block, e=Math.min(s+block,samples);
+      let peak=0; for(let j=s;j<e;j++){ const vL=Math.abs(chL[j]); const vR=chR?Math.abs(chR[j]):0; const v=chR?Math.max(vL,vR):vL; if(v>peak) peak=v; }
+      peaks[i]=peak;
+    }
+    return {peaks, duration: buf.duration};
+  }catch(_){ return null; }
+}
 
-window.addEventListener('resize',()=>drawWaveform(audio.currentTime/audio.duration));
+/* Build waveform for entry (with fallback) */
+async function buildWaveformFor(entry){
+  waveformPeaks=null; waveMsg.textContent='Waveform: generating...';
+  try{
+    let arrayBuffer;
+    if(entry.type==='remote'){
+      const res=await fetch(entry.url,{mode:'cors'}); arrayBuffer=await res.arrayBuffer();
+    }else{
+      if(entry.file) arrayBuffer=await entry.file.arrayBuffer();
+      else if(entry.objectURL){ const r=await fetch(entry.objectURL); arrayBuffer=await r.arrayBuffer(); }
+      else{ const handle=await idbGetHandle(entry.handleId); if(handle){ const f=await handle.getFile(); entry.file=f; arrayBuffer=await f.arrayBuffer(); } }
+    }
+    const result=arrayBuffer?await decodeToPeaks(arrayBuffer,1200):null;
+    if(result){
+      entry.peaks=result.peaks; if(!entry.duration) entry.duration=result.duration;
+      waveformPeaks=result.peaks; waveMsg.textContent='Waveform: ready';
+      drawWaveform(waveformPeaks, audio.currentTime && audio.duration?(audio.currentTime/audio.duration):0);
+      startWaveLoop(); renderPlaylist();
+    }else{
+      waveMsg.textContent='Waveform unavailable (using fallback)'; // fallback bar will run via timeupdate
+    }
+  }catch(_){ waveMsg.textContent='Waveform unavailable (using fallback)'; }
+}
 
-// Example Crescendos track
-const defaultUrl='https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/01%20Seize%20the%20Day%20-%20Performance.mp3';
-audio.src=defaultUrl;
-loadTrack(defaultUrl);
+/* ===== Load/Current Track ===== */
+function loadCurrent(){
+  if(currentIndex<0 || currentIndex>=playlist.length){
+    audio.removeAttribute('src'); nowPlaying.textContent='No track selected';
+    renderPlaylist(); waveformPeaks=null; drawWaveform(new Float32Array(10),0); fallbackProg.style.width='0%'; return;
+  }
+  const t=playlist[currentIndex];
+  audio.playbackRate=parseFloat(rate.value||'1');
+  if(t.type==='remote') audio.src=t.url;
+  else if(t.objectURL) audio.src=t.objectURL; else audio.removeAttribute('src');
+  nowPlaying.textContent=`Now Playing: ${t.title}`; renderPlaylist();
+  if(t.peaks){ waveformPeaks=t.peaks.slice(); drawWaveform(waveformPeaks,0); startWaveLoop(); }
+  else buildWaveformFor(t);
+}
+
+/* ===== Local files ===== */
+async function pickOneFile(){
+  return new Promise(resolve=>{
+    const handler=(e)=>{ const file=e.target.files&&e.target.files[0]; filePicker.removeEventListener('change',handler); filePicker.value=''; resolve(file||null); };
+    filePicker.addEventListener('change',handler,{once:true}); filePicker.click();
+  });
+}
+async function attachFileToEntry(entry,file){
+  const id=entry.handleId||`local_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+  entry.title=file.name||entry.title; entry.type='local'; entry.handleId=id; entry.file=file;
+  if(entry.objectURL) URL.revokeObjectURL(entry.objectURL);
+  entry.objectURL=URL.createObjectURL(file); entry.missing=false;
+  try{ if(file.handle) await idbPutHandle(id,file.handle); }catch(_){}
+  // duration label
+  try{ const ta=document.createElement('audio'); ta.src=entry.objectURL; ta.addEventListener('loadedmetadata',()=>{ entry.duration=ta.duration; renderPlaylist(); persistState(); },{once:true}); }catch(_){}
+}
+
+/* ===== Controls & events ===== */
+function stopAll(){ clearTimeout(gapTimer); audio.pause(); audio.currentTime=0; playPause.textContent='▶️ Play'; }
+function prevTrack(){
+  if(!playlist.length) return;
+  if(audio.currentTime>3){ audio.currentTime=0; return; }
+  if(currentIndex>0) currentIndex--; else if(loopPlaylist.checked) currentIndex=playlist.length-1; else currentIndex=0;
+  loadCurrent(); audio.play().catch(()=>{}); playPause.textContent='⏸ Pause';
+}
+function nextTrack(){
+  if(!playlist.length) return;
+  if(currentIndex<playlist.length-1) currentIndex++; else if(loopPlaylist.checked) currentIndex=0; else{ stopAll(); return; }
+  loadCurrent(); audio.play().catch(()=>{}); playPause.textContent='⏸ Pause';
+}
+playPause.onclick=async()=>{ if(!playlist.length) return; if(!audio.src) loadCurrent(); if(audio.paused){try{await audio.play();}catch(_){} playPause.textContent='⏸ Pause';} else{audio.pause(); playPause.textContent='▶️ Play';}};
+stopBtn.onclick=()=>stopAll();
+prevBtn.onclick=()=>prevTrack();
+nextBtn.onclick=()=>nextTrack();
+rate.onchange=()=>{ audio.playbackRate=parseFloat(rate.value||'1'); };
+gapSlider.oninput=()=>{ gapValue.textContent=Number(gapSlider.value).toFixed(1)+'s'; persistState(); };
+audio.addEventListener('timeupdate',()=>{ timeLabel.textContent=`${fmt(audio.currentTime)} / ${fmt(audio.duration||0)}`; if(!waveformPeaks && audio.duration){ fallbackProg.style.width=((audio.currentTime/audio.duration)*100)+'%'; }});
+audio.addEventListener('loadedmetadata',()=>{ timeLabel.textContent=`0:00 / ${fmt(audio.duration||0)}`; const t=playlist[currentIndex]; if(t && !t.duration){ t.duration=audio.duration; renderPlaylist(); persistState(); }});
+audio.addEventListener('ended',()=>{ playPause.textContent='▶️ Play'; clearTimeout(gapTimer); const gapMs=Math.max(0,Number(gapSlider.value||2))*1000; if(loopTrack.checked) setTimeout(()=>{ audio.currentTime=0; audio.play().catch(()=>{}); playPause.textContent='⏸ Pause'; },gapMs); else gapTimer=setTimeout(()=>nextTrack(),gapMs); });
+
+/* Keyboard */
+document.addEventListener('keydown',(e)=>{ if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) return; switch(e.key){case ' ':e.preventDefault();playPause.click();break;case 'ArrowLeft':prevBtn.click();break;case 'ArrowRight':nextBtn.click();break;case 's':case'S':stopBtn.click();break;case 'l':case'L':loopPlaylist.checked=!loopPlaylist.checked;persistState();break;case 'c':case'C':loopTrack.checked=!loopTrack.checked;persistState();break;}});
+let helpPinned=false;
+helpBtn.addEventListener('mouseenter',()=>{ if(!helpPinned) helpPanel.style.display='block'; });
+helpBtn.addEventListener('mouseleave',()=>{ if(!helpPinned) helpPanel.style.display='none'; });
+helpBtn.addEventListener('click',()=>{ helpPinned=!helpPinned; helpPanel.style.display=helpPinned?'block':'none'; });
+
+/* Playlist actions */
+addSelectedBtn.onclick=()=>{ const sel=[...libEl.querySelectorAll('input[type=checkbox]:checked')]; if(!sel.length) return; sel.forEach(cb=>{ const t=CRESCENDOS[parseInt(cb.dataset.index,10)]; playlist.push({...t}); cb.checked=false; }); persistState(); renderPlaylist(); if(currentIndex===-1){currentIndex=0; loadCurrent();}};
+addLocalBtn.onclick=async()=>{ const f=await pickOneFile(); if(!f) return; const entry={title:f.name,type:'local',handleId:null,objectURL:null,file:null,peaks:null,duration:null}; await attachFileToEntry(entry,f); playlist.push(entry); persistState(); renderPlaylist(); if(currentIndex===-1){currentIndex=0; loadCurrent();}};
+playlistEl.addEventListener('click',(e)=>{ const li=e.target.closest('.playlist-item'); if(!li) return; selectedPlaylistIndex=parseInt(li.dataset.index,10); [...playlistEl.children].forEach((c,i)=>c.style.background=i===selectedPlaylistIndex?'#eef7ff':''); });
+playlistEl.addEventListener('dragstart',(e)=>{ const li=e.target.closest('.playlist-item'); if(!li) return; draggingIndex=parseInt(li.dataset.index,10); e.dataTransfer.effectAllowed='move'; });
+playlistEl.addEventListener('dragover',(e)=>e.preventDefault());
+playlistEl.addEventListener('drop',(e)=>{ e.preventDefault(); const over=e.target.closest('.playlist-item'); if(!over) return; const j=parseInt(over.dataset.index,10); if(j===draggingIndex) return; const [m]=playlist.splice(draggingIndex,1); playlist.splice(j,0,m); if(currentIndex===draggingIndex) currentIndex=j; else if(draggingIndex<currentIndex && j>=currentIndex) currentIndex--; else if(draggingIndex>currentIndex && j<=currentIndex) currentIndex++; draggingIndex=null; persistState(); renderPlaylist();});
+moveUpBtn.onclick=()=>{ if(selectedPlaylistIndex<=0) return; const i=selectedPlaylistIndex; [playlist[i-1],playlist[i]]=[playlist[i],playlist[i-1]]; selectedPlaylistIndex=i-1; if(currentIndex===i) currentIndex=i-1; else if(currentIndex===i-1) currentIndex=i; persistState(); renderPlaylist(); };
+moveDownBtn.onclick=()=>{ if(selectedPlaylistIndex<0||selectedPlaylistIndex>=playlist.length-1) return; const i=selectedPlaylistIndex; [playlist[i+1],playlist[i]]=[playlist[i],playlist[i+1]]; selectedPlaylistIndex=i+1; if(currentIndex===i) currentIndex=i+1; else if(currentIndex===i+1) currentIndex=i; persistState(); renderPlaylist(); };
+removeBtn.onclick=()=>{ if(selectedPlaylistIndex<0) return; const i=selectedPlaylistIndex; if(i===currentIndex) stopAll(); const [r]=playlist.splice(i,1); if(r&&r.objectURL) URL.revokeObjectURL(r.objectURL); if(currentIndex>=playlist.length) currentIndex=playlist.length-1; selectedPlaylistIndex=-1; persistState(); renderPlaylist(); loadCurrent(); };
+clearPlaylistBtn.onclick=()=>{ stopAll(); playlist.forEach(p=>{if(p.objectURL) URL.revokeObjectURL(p.objectURL)}); playlist=[]; currentIndex=-1; persistState(); renderPlaylist(); loadCurrent(); };
+
+/* Restore */
+async function materializeLocalURL(entry){
+  const handle=await idbGetHandle(entry.handleId); if(!handle){ entry.missing=true; return; }
+  try{ const f=await handle.getFile(); entry.title=entry.title||f.name; entry.file=f; if(entry.objectURL) URL.revokeObjectURL(entry.objectURL); entry.objectURL=URL.createObjectURL(f); entry.missing=false; }catch(_){ entry.missing=true; }
+}
+async function restoreState(){
+  await idbInit();
+  const saved=localStorage.getItem(LS_KEY);
+  if(!saved){ playlist=CRESCENDOS.map(t=>({...t})); currentIndex=0; gapSlider.value=2; gapValue.textContent='2.0s'; renderPlaylist(); loadCurrent(); return; }
+  try{
+    const st=JSON.parse(saved); playlist=[];
+    for(const item of (st.playlist||[])){
+      if(item.type==='remote'){ playlist.push({title:item.title,url:item.url,type:'remote',duration:item.duration}); }
+      else if(item.type==='local'){ const e={title:item.title||'Local audio',type:'local',handleId:item.handleId,objectURL:null,file:null,peaks:null,duration:item.duration}; await materializeLocalURL(e); playlist.push(e); }
+    }
+    currentIndex=(typeof st.currentIndex==='number' && st.currentIndex<playlist.length)?st.currentIndex:0;
+    rate.value=st.rate||'1'; loopPlaylist.checked=!!st.loopPlaylist; loopTrack.checked=!!st.loopTrack;
+    gapSlider.value=st.gap!=null?st.gap:2; gapValue.textContent=Number(gapSlider.value).toFixed(1)+'s';
+    renderPlaylist(); loadCurrent();
+  }catch(_){ playlist=CRESCENDOS.map(t=>({...t})); currentIndex=0; renderPlaylist(); loadCurrent(); }
+}
+
+/* Resize redraw */
+new ResizeObserver(()=>{ if(waveformPeaks) drawWaveform(waveformPeaks, audio.duration?(audio.currentTime/audio.duration):0); }).observe(document.getElementById('waveWrap'));
+
+/* Init */
+restoreState();
 </script>
 </body>
 </html>
