@@ -27,7 +27,6 @@
   canvas{width:100%;height:140px;display:block}
   .fallback{height:10px;background:#ddd;border-radius:6px;overflow:hidden;margin-top:.5rem}
   .fallback>div{height:100%;width:0;background:#00796b}
-line-height:1.5;
   .small{font-size:.9rem;color:#456}
 </style>
 </head>
@@ -44,7 +43,7 @@ line-height:1.5;
     <div class="toolbar">
       <button id="addSelected" class="btn">Add Selected →</button>
       <button id="addLocal" class="btn">➕ Add Local File</button>
-            <button id="clearPlaylist" class="btn btn-muted">Reset Playlist</button>
+      <button id="clearPlaylist" class="btn btn-muted">Reset Playlist</button>
       <span class="small">Click a playlist song to play it instantly.</span>
     </div>
     <ul id="library" class="library-list"></ul>
@@ -83,13 +82,14 @@ line-height:1.5;
 
 <script>
 /* ---------- Data ---------- */
+// ▼▼▼ FIX: Using relative paths to solve the CORS issue ▼▼▼
 const TRACKS=[
-  {title:'Seize the Day',url:'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/01%20Seize%20the%20Day%20-%20Performance.mp3'},
-  {title:'Go the Distance — Soprano',url:'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-1-Soprano.mp3'},
-  {title:'Go the Distance — Alto',url:'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-2-Alto.mp3'},
-  {title:'Go the Distance — Tenor',url:'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-3-Tenor.mp3'},
-  {title:'Life is a Highway',url:'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/4-LifeIsAHighway-Full.mp3'},
-  {title:'I Lived',url:'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/5-I%20Lived%20-%20SATB%20(Faster).mp3'}
+  {title:'Seize the Day',url:'Crescendos 25-26/01 Seize the Day - Performance.mp3'},
+  {title:'Go the Distance — Soprano',url:'Crescendos 25-26/3-GoTheDistance-1-Soprano.mp3'},
+  {title:'Go the Distance — Alto',url:'Crescendos 25-26/3-GoTheDistance-2-Alto.mp3'},
+  {title:'Go the Distance — Tenor',url:'Crescendos 25-26/3-GoTheDistance-3-Tenor.mp3'},
+  {title:'Life is a Highway',url:'Crescendos 25-26/4-LifeIsAHighway-Full.mp3'},
+  {title:'I Lived',url:'Crescendos 25-26/5-I Lived - SATB (Faster).mp3'}
 ];
 
 /* ---------- Elements ---------- */
@@ -239,7 +239,7 @@ audio.addEventListener('ended', ()=>{
 });
 
 /* ---------- Time / fallback progress ---------- */
-// ▼▼▼ FIX 2: This function now updates the waveform playhead OR the fallback bar ▼▼▼
+// This function updates the waveform playhead OR the fallback bar
 audio.addEventListener('timeupdate', ()=>{
   if(audio.duration){
     const progress = audio.currentTime / audio.duration; // Store for reuse
@@ -269,4 +269,116 @@ function drawWave(progress){
 
   const len=peaks.length;
   const barW=Math.max(1, Math.floor(w/len));
-  for(let i=0;i<len
+  for(let i=0;i<len;i++){
+    const x=i*barW;
+    const amp = Math.max(1, Math.floor(peaks[i]*(h*0.9/2)));
+    ctx.fillStyle = (i/len)<=progress ? '#2a9d8f' : '#ccd8e5';
+    ctx.fillRect(x, mid-amp, barW-1, amp*2);
+  }
+  const px=Math.floor(progress*w);
+  ctx.beginPath();
+  ctx.arc(px, mid, Math.max(6,6*dpr), 0, Math.PI*2);
+  ctx.fillStyle='rgba(255,255,255,0.25)';
+  ctx.fill();
+  ctx.lineWidth=Math.max(2,2*dpr);
+  ctx.strokeStyle='#fff';
+  ctx.stroke();
+}
+async function buildWaveformFor(url, token){
+  peaks = null; drawWave(0); // clear
+  try{
+    // This will now fetch from the same domain (e.g., schmidt-education.com/...)
+    // which avoids the CORS error.
+    const res = await fetch(url); // No mode:'cors' needed
+    const buf = await res.arrayBuffer();
+    // if user jumped to another track, abandon
+    if(token!==decodeToken) return;
+
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const ac = new AC();
+    const audioBuf = await ac.decodeAudioData(buf);
+    if(token!==decodeToken) return;
+
+    const ch = audioBuf.getChannelData(0);
+    const N = 1200;
+    const block = Math.max(1, Math.floor(ch.length/N));
+    const p = new Float32Array(N);
+    for(let i=0;i<N;i++){
+      let peak=0;
+      const s=i*block, e=Math.min(s+block, ch.length);
+      for(let j=s;j<e;j++){ const v=Math.abs(ch[j]); if(v>peak) peak=v; }
+      p[i]=peak;
+  {
+type: uploaded file
+fileName: image_07646a.png
+}
+  }
+    peaks = p;
+    drawWave(audio.duration ? audio.currentTime/audio.duration : 0);
+  }catch(_){ /* fall back silently, the fallback bar will be used */ }
+}
+function seekAtClientX(clientX){
+  if(!audio.duration) return;
+  const rect = wave.getBoundingClientRect();
+  const ratio = Math.min(1, Math.max(0, (clientX-rect.left)/rect.width));
+  audio.currentTime = ratio * audio.duration;
+  drawWave(ratio);
+}
+wave.addEventListener('pointerdown', e=>{ draggingHandle=true; seekAtClientX(e.clientX); wave.setPointerCapture(e.pointerId); });
+wave.addEventListener('pointermove', e=>{ if(draggingHandle) seekAtClientX(e.clientX); });
+wave.addEventListener('pointerup',   e=>{ draggingHandle=false; wave.releasePointerCapture(e.pointerId); });
+window.addEventListener('resize', ()=> drawWave(audio.duration? audio.currentTime/audio.duration : 0));
+
+/* ---------- Library actions ---------- */
+function addSelectedFromLibrary(){
+  const selected=[...lib.querySelectorAll('input[type=checkbox]:checked')];
+  if(!selected.length) return;
+  selected.forEach(cb=>{
+    const t = TRACKS[parseInt(cb.dataset.i,10)];
+    playlist.push({...t});
+    cb.checked=false;
+  });
+  renderPlaylist();
+}
+function addLocalFile(file){
+  const url = URL.createObjectURL(file);
+  playlist.push({title:file.name, url, local:true});
+  renderPlaylist();
+}
+document.getElementById('addSelected').addEventListener('click', addSelectedFromLibrary);
+document.getElementById('addLocal').addEventListener('click', ()=> picker.click());
+picker.addEventListener('change', e=>{ const f=e.target.files && e.target.files[0]; if(f) addLocalFile(f); });
+
+// This button is correctly labeled 'Reset Playlist' in the HTML
+document.getElementById('clearPlaylist').addEventListener('click', ()=>{
+  clearGap();
+  playlist=[...TRACKS];
+  current=0;
+  renderPlaylist();
+  setTrack(0, {autoplay:false});
+});
+
+/* ---------- Keyboard shortcuts ---------- */
+document.addEventListener('keydown', (e)=>{
+  if(['INPUT','TEXTAREA','SELECT','BUTTON'].includes(document.activeElement.tagName)) return;
+  switch(e.key){
+    case ' ': e.preventDefault(); playPause.click(); break;
+    case 'ArrowRight': next.click(); break;
+    case 'ArrowLeft':  prev.click(); break;
+    case 's': case 'S': stopBtn.click(); break;
+    case 'l': case 'L': loopPlaylist.checked = !loopPlaylist.checked; break;
+    case 'c': case 'C': loopTrack.checked = !loopTrack.checked; break;
+  }
+});
+
+/* ---------- Init ---------- */
+(function init(){
+  renderLibrary();
+  renderPlaylist();
+  setSpeedFromSlider();
+  gapText.textContent = gapSeconds.toFixed(1)+'s';
+  setTrack(0, {autoplay:false});
+})();
+</script>
+</body>
+</html>
