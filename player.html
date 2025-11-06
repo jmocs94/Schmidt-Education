@@ -5,79 +5,78 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Crescendos 25-26 — Playlist Player</title>
 <style>
-  body{font-family:Helvetica,Arial,sans-serif;background:#f0f8ff;color:#333;padding:1.5rem}
-  header{text-align:center;margin-bottom:1rem}
-  h1{color:#00796b;margin:.25rem 0}
-  .app{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
-  .card{background:#fff;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.08);padding:1rem}
-  h2{color:#00796b;font-size:1.1rem;margin:.25rem 0 .75rem}
-  .toolbar{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;margin:.75rem 0}
-  .btn{appearance:none;border:none;border-radius:10px;padding:.5rem .85rem;cursor:pointer;background:#00796b;color:#fff;font-weight:600}
-  .btn:hover{background:#004d40}
-  .btn-muted{background:#d7e6ee;color:#234}
-  .library-list,.playlist{list-style:none;margin:0;padding:0;max-height:420px;overflow:auto;border:1px solid #ccd;border-radius:10px}
-  .library-item,.playlist-item{display:flex;align-items:center;gap:.6rem;padding:.65rem .8rem;border-bottom:1px solid #eef3f9}
-  .playlist-item{cursor:pointer}
-  .playlist-item:hover{background:#f7fbfd}
-  .playlist-item.active{background:#f2fbf8}
-  .controls{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;padding:.6rem;background:#e7eef6;border-radius:10px;margin-top:.75rem}
-  label{display:flex;align-items:center;gap:.45rem}
-  #speed{width:160px}
-  #waveWrap{margin-top:.9rem;background:#fff;border:1px solid #d4dde7;border-radius:10px;padding:.5rem}
-  canvas{width:100%;height:140px;display:block}
-  .fallback{height:10px;background:#ddd;border-radius:6px;overflow:hidden;margin-top:.5rem}
-  .fallback>div{height:100%;width:0;background:#00796b}
-  .small{font-size:.9rem;color:#456}
+  body{font-family:Helvetica,Arial,sans-serif;background:#f0f8ff;color:#333;padding:1.5rem}
+  header{text-align:center;margin-bottom:1rem}
+  h1{color:#00796b;margin:.25rem 0}
+  .app{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  .card{background:#fff;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.08);padding:1rem}
+  h2{color:#00796b;font-size:1.1rem;margin:.25rem 0 .75rem}
+  .toolbar{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;margin:.75rem 0}
+  .btn{appearance:none;border:none;border-radius:10px;padding:.5rem .85rem;cursor:pointer;background:#00796b;color:#fff;font-weight:600}
+  .btn:hover{background:#004d40}
+  .btn-muted{background:#d7e6ee;color:#234}
+  .library-list,.playlist{list-style:none;margin:0;padding:0;max-height:420px;overflow:auto;border:1px solid #ccd;border-radius:10px}
+  .library-item,.playlist-item{display:flex;align-items:center;gap:.6rem;padding:.65rem .8rem;border-bottom:1px solid #eef3f9}
+  .playlist-item{cursor:pointer}
+  .playlist-item:hover{background:#f7fbfd}
+  .playlist-item.active{background:#f2fbf8}
+  .controls{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;padding:.6rem;background:#e7eef6;border-radius:10px;margin-top:.75rem}
+  label{display:flex;align-items:center;gap:.45rem}
+  #speed{width:160px}
+  #waveWrap{margin-top:.9rem;background:#fff;border:1px solid #d4dde7;border-radius:10px;padding:.5rem}
+  canvas{width:100%;height:140px;display:block}
+  .fallback{height:10px;background:#ddd;border-radius:6px;overflow:hidden;margin-top:.5rem}
+  .fallback>div{height:100%;width:0;background:#00796b}
+line-height:1.5;
+  .small{font-size:.9rem;color:#456}
 </style>
 </head>
 <body>
 <header>
-  <img src="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/360c0fde872bd41d319af96a3e55bc9df7df3a54/Crescendos_w_trans.png" width="160" alt="Crescendos">
-  <h1>Crescendos 25-26 — Playlist Player</h1>
-  <p>Create your playlist, control playback, and use headphones for clean audio.</p>
+  <img src="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/360c0fde872bd41d319af96a3e55bc9df7df3a54/Crescendos_w_trans.png" width="160" alt="Crescendos">
+  <h1>Crescendos 25-26 — Playlist Player</h1>
+  <p>Create your playlist, control playback, and use headphones for clean audio.</p>
 </header>
 
 <div class="app">
-  <!-- Library -->
-  <section class="card">
-    <h2>Song Library</h2>
-    <div class="toolbar">
-      <button id="addSelected" class="btn">Add Selected →</button>
-      <button id="addLocal" class="btn">➕ Add Local File</button>
-      <button id="clearPlaylist" class="btn btn-muted">Clear Playlist</button>
-      <span class="small">Click a playlist song to play it instantly.</span>
-    </div>
-    <ul id="library" class="library-list"></ul>
-  </section>
+    <section class="card">
+    <h2>Song Library</h2>
+    <div class="toolbar">
+      <button id="addSelected" class="btn">Add Selected →</button>
+      <button id="addLocal" class="btn">➕ Add Local File</button>
+            <button id="clearPlaylist" class="btn btn-muted">Reset Playlist</button>
+      <span class="small">Click a playlist song to play it instantly.</span>
+    </div>
+    <ul id="library" class="library-list"></ul>
+  </section>
 
-  <!-- Playlist + Player -->
-  <section class="card">
-    <h2>Your Playlist</h2>
-    <div class="toolbar">
-      <label><input type="checkbox" id="loopTrack"> Loop current</label>
-      <label><input type="checkbox" id="loopPlaylist"> Loop playlist</label>
-      <label>Speed <input id="speed" type="range" min="0.05" max="2.0" step="0.05" value="1.00"></label>
-      <span id="speedVal">1.00×</span>
-      <span class="small" style="margin-left:auto">Gap between tracks: <strong id="gapText">2.0s</strong></span>
-    </div>
+    <section class="card">
+    <h2>Your Playlist</h2>
+    <div class="toolbar">
+      <label><input type="checkbox" id="loopTrack"> Loop current</label>
+      <label><input type="checkbox" id="loopPlaylist"> Loop playlist</label>
+      <label>Speed <input id="speed" type="range" min="0.05" max="2.0" step="0.05" value="1.00"></label>
+      <span id="speedVal">1.00×</span>
+      <span class="small" style="margin-left:auto">Gap between tracks: <strong id="gapText">2.0s</strong></span>
+    </div>
 
-    <ul id="playlist" class="playlist" aria-label="Playlist (click item to play)"></ul>
+    <ul id="playlist" class="playlist" aria-label="Playlist (click item to play)"></ul>
 
-    <div class="controls">
-      <button id="prev" class="btn">⏮ Prev</button>
-      <button id="playPause" class="btn">▶️ Play</button>
-      <button id="stop" class="btn btn-muted">⏹ Stop</button>
-      <button id="next" class="btn">⏭ Next</button>
-      <span id="time" style="margin-left:auto">0:00 / 0:00</span>
-    </div>
+    <div class="controls">
+      <button id="prev" class="btn">⏮ Prev</button>
+      <button id="playPause" class="btn">▶️ Play</button>
+      <button id="stop" class="btn btn-muted">⏹ Stop</button>
+      <button id="next" class="btn">⏭ Next</button>
+      <span id="time" style="margin-left:auto">0:00 / 0:00</span>
+    </div>
 
-    <div id="waveWrap">
-      <canvas id="wave"></canvas>
-      <div class="fallback"><div id="fallbackProg"></div></div>
-    </div>
+    <div id="waveWrap">
+      <canvas id="wave"></canvas>
+      <div class="fallback"><div id="fallbackProg"></div></div>
+    </div>
 
-    <audio id="audio" preload="auto" crossorigin="anonymous"></audio>
-  </section>
+    <audio id="audio" preload="auto" crossorigin="anonymous"></audio>
+  </section>
 </div>
 
 <input id="filePicker" type="file" accept="audio/*" style="display:none"/>
@@ -85,12 +84,12 @@
 <script>
 /* ---------- Data ---------- */
 const TRACKS=[
-  {title:'Seize the Day',url:'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/01%20Seize%20the%20Day%20-%20Performance.mp3'},
-  {title:'Go the Distance — Soprano',url:'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-1-Soprano.mp3'},
-  {title:'Go the Distance — Alto',url:'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-2-Alto.mp3'},
-  {title:'Go the Distance — Tenor',url:'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-3-Tenor.mp3'},
-  {title:'Life is a Highway',url:'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/4-LifeIsAHighway-Full.mp3'},
-  {title:'I Lived',url:'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/5-I%20Lived%20-%20SATB%20(Faster).mp3'}
+  {title:'Seize the Day',url:'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/01%20Seize%20the%20Day%20-%20Performance.mp3'},
+  {title:'Go the Distance — Soprano',url:'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-1-Soprano.mp3'},
+  {title:'Go the Distance — Alto',url:'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-2-Alto.mp3'},
+  {title:'Go the Distance — Tenor',url:'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/cec2ad04c4b5b110795754e954b0d171db12e442/Crescendos%2025-26/3-GoTheDistance-3-Tenor.mp3'},
+  {title:'Life is a Highway',url:'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/4-LifeIsAHighway-Full.mp3'},
+  {title:'I Lived',url:'https://raw.githubusercontent.com/jmocs94/Schmidt-Education/d6ffc2f4207c4d7dfc207c8d49da8863c02fe413/Crescendos%2025-26/5-I%20Lived%20-%20SATB%20(Faster).mp3'}
 ];
 
 /* ---------- Elements ---------- */
@@ -123,10 +122,10 @@ let current = 0;
 let gapSeconds = 2.0;
 let gapTimer = null;
 
-let peaks = null;         // Float32Array
+let peaks = null;         // Float32Array
 let draggingHandle = false;
-let decodeToken = 0;      // cancels stale decodes
-let playToken = 0;        // cancels stale plays
+let decodeToken = 0;      // cancels stale decodes
+let playToken = 0;        // cancels stale plays
 
 /* ---------- Helpers ---------- */
 const fmt = (s)=>{ s=Math.floor(s||0); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; };
@@ -135,97 +134,97 @@ function setSpeedFromSlider(){ audio.playbackRate = parseFloat(speed.value); spe
 
 /* ---------- Build Library ---------- */
 function renderLibrary(){
-  lib.innerHTML='';
-  TRACKS.forEach((t,i)=>{
-    const li=document.createElement('li'); li.className='library-item';
-    const cb=document.createElement('input'); cb.type='checkbox'; cb.dataset.i=i;
-    li.append(cb, document.createTextNode(' '+t.title));
-    lib.append(li);
-  });
+  lib.innerHTML='';
+  TRACKS.forEach((t,i)=>{
+    const li=document.createElement('li'); li.className='library-item';
+    const cb=document.createElement('input'); cb.type='checkbox'; cb.dataset.i=i;
+    li.append(cb, document.createTextNode(' '+t.title));
+    lib.append(li);
+  });
 }
 
 /* ---------- Playlist ---------- */
 function renderPlaylist(){
-  playlistEl.innerHTML='';
-  playlist.forEach((t,i)=>{
-    const li=document.createElement('li');
-    li.className='playlist-item'+(i===current?' active':'');
-    li.dataset.index=i;
-    li.textContent=t.title;
-    playlistEl.append(li);
-  });
+  playlistEl.innerHTML='';
+  playlist.forEach((t,i)=>{
+    const li=document.createElement('li');
+    li.className='playlist-item'+(i===current?' active':'');
+    li.dataset.index=i;
+    li.textContent=t.title;
+    playlistEl.append(li);
+  });
 }
 playlistEl.addEventListener('click', (e)=>{
-  const li = e.target.closest('.playlist-item');
-  if(!li) return;
-  const i = parseInt(li.dataset.index,10);
-  // click-to-play: cancel gap, load+play immediately
-  clearGap(); setTrack(i, {autoplay:true, user:true});
+  const li = e.target.closest('.playlist-item');
+  if(!li) return;
+  const i = parseInt(li.dataset.index,10);
+  // click-to-play: cancel gap, load+play immediately
+  clearGap(); setTrack(i, {autoplay:true, user:true});
 });
 
 /* ---------- Safe play wrapper ---------- */
 async function safePlay(){
-  try{
-    const token=++playToken;
-    await audio.play();
-    // if another play was requested after this, silently ignore
-    if(token!==playToken) audio.pause();
-  }catch(_){} // swallow AbortError etc.
+  try{
+    const token=++playToken;
+    await audio.play();
+    // if another play was requested after this, silently ignore
+    if(token!==playToken) audio.pause();
+  }catch(_){} // swallow AbortError etc.
 }
 
 /* ---------- Track loading ---------- */
 async function setTrack(index, opts={autoplay:false, user:false}){
-  if(index<0 || index>=playlist.length) return;
-  current=index;
-  clearGap();
-  playToken++; // invalidate any in-flight play
-  decodeToken++; // invalidate any in-flight decode
-  const t = playlist[current];
+  if(index<0 || index>=playlist.length) return;
+  current=index;
+  clearGap();
+  playToken++; // invalidate any in-flight play
+  decodeToken++; // invalidate any in-flight decode
+  const t = playlist[current];
 
-  // update UI selection
-  renderPlaylist();
+  // update UI selection
+  renderPlaylist();
 
-  // load source
-  audio.pause();
-  audio.src = t.url;
-  setSpeedFromSlider();
+  // load source
+  audio.pause();
+  audio.src = t.url;
+  setSpeedFromSlider();
 
-  // build waveform (debounced by token)
-  buildWaveformFor(t.url, decodeToken);
+  // build waveform (debounced by token)
+  buildWaveformFor(t.url, decodeToken);
 
-  if(opts.autoplay) safePlay();
+  if(opts.autoplay) safePlay();
 }
 
 /* ---------- Next/Prev with gap ---------- */
 function nextTrack({user=false}={}){
-  clearGap();
-  if(loopTrack.checked && !user){
-    audio.currentTime = 0;
-    safePlay();
-    return;
-  }
-  if(current < playlist.length-1) current++;
-  else if(loopPlaylist.checked) current = 0;
-  else { playPause.textContent='▶️ Play'; return; }
+  clearGap();
+  if(loopTrack.checked && !user){
+    audio.currentTime = 0;
+    safePlay();
+    return;
+  }
+  if(current < playlist.length-1) current++;
+  else if(loopPlaylist.checked) current = 0;
+  else { playPause.textContent='▶️ Play'; return; }
 
-  setTrack(current, {autoplay:true});
+  setTrack(current, {autoplay:true});
 }
 function prevTrack(){
-  clearGap();
-  if(audio.currentTime > 3){ audio.currentTime = 0; return; }
-  if(current > 0) current--;
-  else if(loopPlaylist.checked) current = playlist.length-1;
-  setTrack(current, {autoplay:true});
+  clearGap();
+  if(audio.currentTime > 3){ audio.currentTime = 0; return; }
+  if(current > 0) current--;
+  else if(loopPlaylist.checked) current = playlist.length-1;
+  setTrack(current, {autoplay:true});
 }
 
 /* ---------- Controls ---------- */
 playPause.addEventListener('click', ()=>{
-  if(!audio.src) setTrack(current);
-  if(audio.paused){ safePlay(); playPause.textContent='⏸ Pause'; }
-  else { audio.pause(); playPause.textContent='▶️ Play'; clearGap(); }
+  if(!audio.src) setTrack(current);
+  if(audio.paused){ safePlay(); playPause.textContent='⏸ Pause'; }
+  else { audio.pause(); playPause.textContent='▶️ Play'; clearGap(); }
 });
 stopBtn.addEventListener('click', ()=>{
-  clearGap(); audio.pause(); audio.currentTime=0; playPause.textContent='▶️ Play';
+  clearGap(); audio.pause(); audio.currentTime=0; playPause.textContent='▶️ Play';
 });
 prev.addEventListener('click', ()=>prevTrack());
 next.addEventListener('click', ()=>nextTrack({user:true}));
@@ -233,141 +232,41 @@ speed.addEventListener('input', setSpeedFromSlider);
 
 /* ---------- Ended with gap ---------- */
 audio.addEventListener('ended', ()=>{
-  playPause.textContent='▶️ Play';
-  clearGap();
-  gapText.textContent = gapSeconds.toFixed(1)+'s';
-  gapTimer = setTimeout(()=> nextTrack(), gapSeconds*1000);
+  playPause.textContent='▶️ Play';
+  clearGap();
+  gapText.textContent = gapSeconds.toFixed(1)+'s';
+  gapTimer = setTimeout(()=> nextTrack(), gapSeconds*1000);
 });
 
 /* ---------- Time / fallback progress ---------- */
+// ▼▼▼ FIX 2: This function now updates the waveform playhead OR the fallback bar ▼▼▼
 audio.addEventListener('timeupdate', ()=>{
-  if(audio.duration){
-    timeLbl.textContent = `${fmt(audio.currentTime)} / ${fmt(audio.duration)}`;
-    if(!peaks){ // fallback bar when waveform missing/blocked
-      const pct = (audio.currentTime / audio.duration) * 100;
-      fallback.style.width = pct + '%';
-    }
-  }
+  if(audio.duration){
+    const progress = audio.currentTime / audio.duration; // Store for reuse
+    timeLbl.textContent = `${fmt(audio.currentTime)} / ${fmt(audio.duration)}`;
+    
+    if(peaks){ // We have a waveform
+      drawWave(progress); // Update the canvas playhead
+    } else { // No waveform, use fallback
+      const pct = progress * 100;
+      fallback.style.width = pct + '%';
+    }
+  }
 });
 
 /* ---------- Waveform (decode + draw) ---------- */
 function setCanvasSize(){
-  const r=wave.getBoundingClientRect(), dpr=Math.max(1, window.devicePixelRatio||1);
-  wave.width = Math.floor(r.width*dpr);
-  wave.height = Math.floor(140*dpr);
-  return dpr;
+  const r=wave.getBoundingClientRect(), dpr=Math.max(1, window.devicePixelRatio||1);
+  wave.width = Math.floor(r.width*dpr);
+  wave.height = Math.floor(140*dpr);
+  return dpr;
 }
 function drawWave(progress){
-  const dpr=setCanvasSize();
-  const w=wave.width, h=wave.height, mid=Math.floor(h/2);
-  const ctx=wctx; ctx.clearRect(0,0,w,h);
-  if(!peaks){ return; }
+  const dpr=setCanvasSize();
+  const w=wave.width, h=wave.height, mid=Math.floor(h/2);
+  const ctx=wctx; ctx.clearRect(0,0,w,h);
+  if(!peaks){ return; }
 
-  const len=peaks.length;
-  const barW=Math.max(1, Math.floor(w/len));
-  for(let i=0;i<len;i++){
-    const x=i*barW;
-    const amp = Math.max(1, Math.floor(peaks[i]*(h*0.9/2)));
-    ctx.fillStyle = (i/len)<=progress ? '#2a9d8f' : '#ccd8e5';
-    ctx.fillRect(x, mid-amp, barW-1, amp*2);
-  }
-  const px=Math.floor(progress*w);
-  ctx.beginPath();
-  ctx.arc(px, mid, Math.max(6,6*dpr), 0, Math.PI*2);
-  ctx.fillStyle='rgba(255,255,255,0.25)';
-  ctx.fill();
-  ctx.lineWidth=Math.max(2,2*dpr);
-  ctx.strokeStyle='#fff';
-  ctx.stroke();
-}
-async function buildWaveformFor(url, token){
-  peaks = null; drawWave(0); // clear
-  try{
-    const res = await fetch(url, { mode:'cors' });
-    const buf = await res.arrayBuffer();
-    // if user jumped to another track, abandon
-    if(token!==decodeToken) return;
-
-    const AC = window.AudioContext || window.webkitAudioContext;
-    const ac = new AC();
-    const audioBuf = await ac.decodeAudioData(buf);
-    if(token!==decodeToken) return;
-
-    const ch = audioBuf.getChannelData(0);
-    const N = 1200;
-    const block = Math.max(1, Math.floor(ch.length/N));
-    const p = new Float32Array(N);
-    for(let i=0;i<N;i++){
-      let peak=0;
-      const s=i*block, e=Math.min(s+block, ch.length);
-      for(let j=s;j<e;j++){ const v=Math.abs(ch[j]); if(v>peak) peak=v; }
-      p[i]=peak;
-    }
-    peaks = p;
-    drawWave(audio.duration ? audio.currentTime/audio.duration : 0);
-  }catch(_){ /* fall back silently */ }
-}
-function seekAtClientX(clientX){
-  if(!audio.duration) return;
-  const rect = wave.getBoundingClientRect();
-  const ratio = Math.min(1, Math.max(0, (clientX-rect.left)/rect.width));
-  audio.currentTime = ratio * audio.duration;
-  drawWave(ratio);
-}
-wave.addEventListener('pointerdown', e=>{ draggingHandle=true; seekAtClientX(e.clientX); wave.setPointerCapture(e.pointerId); });
-wave.addEventListener('pointermove', e=>{ if(draggingHandle) seekAtClientX(e.clientX); });
-wave.addEventListener('pointerup',   e=>{ draggingHandle=false; wave.releasePointerCapture(e.pointerId); });
-window.addEventListener('resize', ()=> drawWave(audio.duration? audio.currentTime/audio.duration : 0));
-
-/* ---------- Library actions ---------- */
-function addSelectedFromLibrary(){
-  const selected=[...lib.querySelectorAll('input[type=checkbox]:checked')];
-  if(!selected.length) return;
-  selected.forEach(cb=>{
-    const t = TRACKS[parseInt(cb.dataset.i,10)];
-    playlist.push({...t});
-    cb.checked=false;
-  });
-  renderPlaylist();
-}
-function addLocalFile(file){
-  const url = URL.createObjectURL(file);
-  playlist.push({title:file.name, url, local:true});
-  renderPlaylist();
-}
-document.getElementById('addSelected').addEventListener('click', addSelectedFromLibrary);
-document.getElementById('addLocal').addEventListener('click', ()=> picker.click());
-picker.addEventListener('change', e=>{ const f=e.target.files && e.target.files[0]; if(f) addLocalFile(f); });
-
-document.getElementById('clearPlaylist').addEventListener('click', ()=>{
-  clearGap();
-  playlist=[...TRACKS];
-  current=0;
-  renderPlaylist();
-  setTrack(0, {autoplay:false});
-});
-
-/* ---------- Keyboard shortcuts ---------- */
-document.addEventListener('keydown', (e)=>{
-  if(['INPUT','TEXTAREA','SELECT','BUTTON'].includes(document.activeElement.tagName)) return;
-  switch(e.key){
-    case ' ': e.preventDefault(); playPause.click(); break;
-    case 'ArrowRight': next.click(); break;
-    case 'ArrowLeft':  prev.click(); break;
-    case 's': case 'S': stopBtn.click(); break;
-    case 'l': case 'L': loopPlaylist.checked = !loopPlaylist.checked; break;
-    case 'c': case 'C': loopTrack.checked = !loopTrack.checked; break;
-  }
-});
-
-/* ---------- Init ---------- */
-(function init(){
-  renderLibrary();
-  renderPlaylist();
-  setSpeedFromSlider();
-  gapText.textContent = gapSeconds.toFixed(1)+'s';
-  setTrack(0, {autoplay:false});
-})();
-</script>
-</body>
-</html>
+  const len=peaks.length;
+  const barW=Math.max(1, Math.floor(w/len));
+  for(let i=0;i<len
