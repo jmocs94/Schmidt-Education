@@ -164,36 +164,87 @@ renderPlaylist();
 
 /* ---------- EQ ---------- */
 function initEQ(){
-  if(eqFilters)return;
-  const audioContext=wavesurfer.backend.ac;
-  const source=wavesurfer.backend.source;
-  eqFilters={
-    bass:audioContext.createBiquadFilter(),
-    mid:audioContext.createBiquadFilter(),
-    treble:audioContext.createBiquadFilter()
-  };
-  eqFilters.bass.type='lowshelf';eqFilters.bass.frequency.value=320;eqFilters.bass.gain.value=parseFloat(eqBass.value);
-  eqFilters.mid.type='peaking';eqFilters.mid.frequency.value=1000;eqFilters.mid.Q.value=1;eqFilters.mid.gain.value=parseFloat(eqMid.value);
-  eqFilters.treble.type='highshelf';eqFilters.treble.frequency.value=3200;eqFilters.treble.gain.value=parseFloat(eqTreble.value);
-  analyser=audioContext.createAnalyser();analyser.fftSize=2048;dataArray=new Uint8Array(analyser.frequencyBinCount);
-  source.disconnect();source.connect(eqFilters.bass);
-  eqFilters.bass.connect(eqFilters.mid);
-  eqFilters.mid.connect(eqFilters.treble);
-  eqFilters.treble.connect(analyser);
-  analyser.connect(audioContext.destination);
-  canvasCtx=eqCanvas.getContext('2d');
-  drawEqCurve();
+  // 1. Run only once
+  if(eqFilters) return; 
+
+  // 2. Get the audio context safely
+  const audioContext = wavesurfer.getAudioContext(); 
+  if(!audioContext) return; // Safety check
+
+  // 3. Create the EQ filters
+  eqFilters = {
+    bass: audioContext.createBiquadFilter(),
+    mid:  audioContext.createBiquadFilter(),
+    treble: audioContext.createBiquadFilter(),
+  };
+  
+  eqFilters.bass.type='lowshelf';
+  eqFilters.bass.frequency.value=320;
+  eqFilters.bass.gain.value=parseFloat(eqBass.value); // Set initial value
+
+  eqFilters.mid.type='peaking';
+  eqFilters.mid.frequency.value=1000;
+  eqFilters.mid.Q.value=1;
+  eqFilters.mid.gain.value=parseFloat(eqMid.value); // Set initial value
+  
+  eqFilters.treble.type='highshelf';
+  eqFilters.treble.frequency.value=3200;
+  eqFilters.treble.gain.value=parseFloat(eqTreble.value); // Set initial value
+
+  // 4. Create the Analyser node
+  analyser = audioContext.createAnalyser();
+  analyser.fftSize = 2048;
+  dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+  // 5. THIS IS THE FIX:
+  // Tell Wavesurfer to use our filters.
+  // It will automatically route them:
+  // [Source] -> [Filters] -> [Analyser] -> [Volume] -> [Destination]
+  // This *preserves* the volume control and is the correct method.
+  wavesurfer.setFilters([
+    eqFilters.bass, 
+    eqFilters.mid, 
+    eqFilters.treble, 
+    analyser // Analyser must be last in the chain to graph the final output
+  ]);
+
+  // 6. Get canvas context and start drawing
+  canvasCtx = eqCanvas.getContext('2d');
+  drawEqCurve();
 }
+
 function drawEqCurve(){
-  if(!analyser||!canvasCtx||!dataArray)return;
-  animationId=requestAnimationFrame(drawEqCurve);
-  analyser.getByteFrequencyData(dataArray);
-  canvasCtx.clearRect(0,0,eqCanvas.width,eqCanvas.height);
-  canvasCtx.lineWidth=2;canvasCtx.strokeStyle='rgb(0,121,107)';
-  canvasCtx.beginPath();
-  const sliceWidth=eqCanvas.width/dataArray.length;let x=0;
-  for(let i=0;i<dataArray.length;i++){const v=dataArray[i]/255;const y=eqCanvas.height-(v*eqCanvas.height);if(i===0)canvasCtx.moveTo(x,y);else canvasCtx.lineTo(x,y);x+=sliceWidth;}
-  canvasCtx.stroke();
+  if(!analyser || !canvasCtx || !dataArray) return;
+  
+  // Loop the animation
+  animationId = requestAnimationFrame(drawEqCurve);
+
+  // Get frequency data
+  analyser.getByteFrequencyData(dataArray);
+
+  // Clear the canvas
+  canvasCtx.clearRect(0, 0, eqCanvas.width, eqCanvas.height);
+  
+  canvasCtx.lineWidth = 2;
+  canvasCtx.strokeStyle = 'rgb(0,121,107)';
+  canvasCtx.beginPath();
+
+  const sliceWidth = eqCanvas.width * 1.0 / dataArray.length;
+  let x = 0;
+
+  for(let i = 0; i < dataArray.length; i++) {
+    const v = dataArray[i] / 255.0;
+    const y = eqCanvas.height - (v * eqCanvas.height); // Invert Y-axis
+
+    if(i === 0) {
+      canvasCtx.moveTo(x, y);
+    } else {
+      canvasCtx.lineTo(x, y);
+    }
+    x += sliceWidth;
+  }
+
+  canvasCtx.stroke();
 }
 
 /* ---------- Playback ---------- */
