@@ -175,7 +175,7 @@ function setTrack(i, autoplay=false){
 
   // Ensure we only react to THIS load finishing
   const onReady = ()=>{
-    wavesurfer.off('ready', onReady);
+    wavesurfer.un('ready', onReady);
     loading=false;
     loadedIndex=i;
     setSpeed();
