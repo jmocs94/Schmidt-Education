@@ -102,7 +102,6 @@ const addSel=document.getElementById('addSelected');
 const addLocal=document.getElementById('addLocal');
 const clearBtn=document.getElementById('clearPlaylist');
 const picker=document.getElementById('filePicker');
-
 const playPause=document.getElementById('playPause');
 const prev=document.getElementById('prev');
 const next=document.getElementById('next');
@@ -138,13 +137,15 @@ let gap=2.0;
 let gapTimer=null;
 let loading=false;
 let loadedIndex=-1;
-let audioContext=null, eqFilters=null, analyser=null, dataArray=null, canvasCtx=null, animationId=null;
+let eqFilters=null, analyser=null, dataArray=null, canvasCtx=null, animationId=null;
 
+/* ---------- Helpers ---------- */
 const fmt=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
 function clearGap(){if(gapTimer){clearTimeout(gapTimer);gapTimer=null;}}
 function setSpeed(){wavesurfer.setPlaybackRate(parseFloat(speed.value));speedVal.textContent=parseFloat(speed.value).toFixed(2)+'×';}
 function updatePlayBtn(){playPause.textContent=wavesurfer.isPlaying()?'⏸ Pause':'▶️ Play';}
 
+/* ---------- Library ---------- */
 function renderLib(){
   lib.innerHTML='';
   TRACKS.forEach((t,i)=>{
@@ -169,38 +170,65 @@ function renderPlaylist(){
 }
 renderPlaylist();
 
-/* ---------- EQ ---------- */
-function initEQ(){
-  if(eqFilters) return;
-  audioContext=wavesurfer.getAudioContext();
-  eqFilters={
-    bass:audioContext.createBiquadFilter(),
-    mid:audioContext.createBiquadFilter(),
-    treble:audioContext.createBiquadFilter(),
-  };
-  eqFilters.bass.type='lowshelf'; eqFilters.bass.frequency.value=320;
-  eqFilters.mid.type='peaking'; eqFilters.mid.frequency.value=1000; eqFilters.mid.Q.value=1;
-  eqFilters.treble.type='highshelf'; eqFilters.treble.frequency.value=3200;
+/* ---------- EQ for Wavesurfer v7 ---------- */
+function initEQ() {
+  if (eqFilters) return; // only once
 
-  analyser=audioContext.createAnalyser();
-  analyser.fftSize=2048;
-  dataArray=new Uint8Array(analyser.frequencyBinCount);
-  wavesurfer.setFilters([eqFilters.bass,eqFilters.mid,eqFilters.treble,analyser]);
-  canvasCtx=eqCanvas.getContext('2d');
+  const audioContext = wavesurfer.backend.ac;
+  const source = wavesurfer.backend.source;
+
+  eqFilters = {
+    bass: audioContext.createBiquadFilter(),
+    mid: audioContext.createBiquadFilter(),
+    treble: audioContext.createBiquadFilter(),
+  };
+
+  eqFilters.bass.type = 'lowshelf';
+  eqFilters.bass.frequency.value = 320;
+  eqFilters.bass.gain.value = parseFloat(eqBass.value);
+
+  eqFilters.mid.type = 'peaking';
+  eqFilters.mid.frequency.value = 1000;
+  eqFilters.mid.Q.value = 1;
+  eqFilters.mid.gain.value = parseFloat(eqMid.value);
+
+  eqFilters.treble.type = 'highshelf';
+  eqFilters.treble.frequency.value = 3200;
+  eqFilters.treble.gain.value = parseFloat(eqTreble.value);
+
+  // Create and wire analyser
+  analyser = audioContext.createAnalyser();
+  analyser.fftSize = 2048;
+  dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+  // Connect: source → bass → mid → treble → analyser → destination
+  source.disconnect();
+  source.connect(eqFilters.bass);
+  eqFilters.bass.connect(eqFilters.mid);
+  eqFilters.mid.connect(eqFilters.treble);
+  eqFilters.treble.connect(analyser);
+  analyser.connect(audioContext.destination);
+
+  canvasCtx = eqCanvas.getContext('2d');
   drawEqCurve();
 }
-function drawEqCurve(){
-  if(!analyser||!canvasCtx||!dataArray)return;
-  animationId=requestAnimationFrame(drawEqCurve);
+
+function drawEqCurve() {
+  if (!analyser || !canvasCtx || !dataArray) return;
+  animationId = requestAnimationFrame(drawEqCurve);
   analyser.getByteFrequencyData(dataArray);
   canvasCtx.clearRect(0,0,eqCanvas.width,eqCanvas.height);
-  canvasCtx.lineWidth=2;canvasCtx.strokeStyle='rgb(0,121,107)';
+  canvasCtx.lineWidth = 2;
+  canvasCtx.strokeStyle = 'rgb(0,121,107)';
   canvasCtx.beginPath();
-  const sliceWidth=eqCanvas.width/dataArray.length;let x=0;
-  for(let i=0;i<dataArray.length;i++){
-    const v=dataArray[i]/255;const y=eqCanvas.height-(v*eqCanvas.height);
-    if(i===0)canvasCtx.moveTo(x,y);else canvasCtx.lineTo(x,y);
-    x+=sliceWidth;
+  const sliceWidth = eqCanvas.width / dataArray.length;
+  let x = 0;
+  for (let i = 0; i < dataArray.length; i++) {
+    const v = dataArray[i] / 255;
+    const y = eqCanvas.height - (v * eqCanvas.height);
+    if (i === 0) canvasCtx.moveTo(x, y);
+    else canvasCtx.lineTo(x, y);
+    x += sliceWidth;
   }
   canvasCtx.stroke();
 }
@@ -252,7 +280,7 @@ eqTreble.addEventListener('input',e=>{if(eqFilters)eqFilters.treble.gain.value=p
 /* ---------- Wavesurfer Events ---------- */
 wavesurfer.on('play',()=>{
   updatePlayBtn();
-  initEQ(); // <-- moved here so filters attach AFTER play starts
+  initEQ(); // attach filters *after* playback starts
 });
 wavesurfer.on('pause',()=>{
   updatePlayBtn();
@@ -262,7 +290,19 @@ wavesurfer.on('finish',()=>{updatePlayBtn();clearGap();gapTimer=setTimeout(()=>{
 wavesurfer.on('audioprocess',()=>{const cur=wavesurfer.getCurrentTime()||0;const dur=wavesurfer.getDuration()||0;if(dur)timeLbl.textContent=`${fmt(cur)} / ${fmt(dur)}`;});
 wavesurfer.on('seek',()=>{const cur=wavesurfer.getCurrentTime()||0;const dur=wavesurfer.getDuration()||0;if(dur)timeLbl.textContent=`${fmt(cur)} / ${fmt(dur)}`;});
 
-/* ---------- Playlist Actions ---------- */
+/* ---------- Playlist ---------- */
+playlistEl.addEventListener('click',e=>{
+  const li=e.target.closest('.playlist-item');if(!li)return;
+  const i=parseInt(li.dataset.index,10);if(i===current)return;
+  clearGap();setTrack(i,false);
+});
+playlistEl.addEventListener('dblclick',e=>{
+  const li=e.target.closest('.playlist-item');if(!li)return;
+  const i=parseInt(li.dataset.index,10);
+  clearGap();setTrack(i,true);
+});
+
+/* ---------- Library ---------- */
 addSel.onclick=()=>{[...lib.querySelectorAll('input:checked')].forEach(cb=>{playlist.push(TRACKS[cb.dataset.i]);cb.checked=false;});renderPlaylist();};
 addLocal.onclick=()=>picker.click();
 picker.onchange=e=>{const f=e.target.files?.[0];if(!f)return;const o=URL.createObjectURL(f);playlist.push({title:f.name,url:o,local:true});renderPlaylist();};
