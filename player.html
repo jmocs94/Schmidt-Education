@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Crescendos 25-26 — Playlist Player</title>
+<title>Crescendos 25-26 — Waveform Playlist Player</title>
+<script src="https://unpkg.com/wavesurfer.js@7"></script>
 <style>
   body{font-family:Helvetica,Arial,sans-serif;background:#f0f8ff;color:#333;padding:1.5rem}
   header{text-align:center;margin-bottom:1rem}
@@ -23,11 +24,7 @@
   .controls{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;padding:.6rem;background:#e7eef6;border-radius:10px;margin-top:.75rem}
   label{display:flex;align-items:center;gap:.45rem}
   #speed{width:160px}
-  #waveWrap{margin-top:.9rem;background:#fff;border:1px solid #d4dde7;border-radius:10px;padding:.5rem}
-  canvas{width:100%;height:140px;display:block;background:#fafafa}
-  .fallback{height:10px;background:#ddd;border-radius:6px;overflow:hidden;margin-top:.5rem;position:relative}
-  .fallback>div{height:100%;width:0;background:#9a4dff}
-  .scrubber{position:absolute;top:-6px;width:12px;height:22px;background:#9a4dff;border-radius:6px;box-shadow:0 0 6px #9a4dff}
+  #waveform{margin-top:.9rem;width:100%;height:150px;border-radius:10px;background:#fff;border:1px solid #d4dde7}
   .small{font-size:.9rem;color:#456}
 </style>
 </head>
@@ -45,7 +42,7 @@
       <button id="addSelected" class="btn">Add Selected →</button>
       <button id="addLocal" class="btn">➕ Add Local File</button>
       <button id="clearPlaylist" class="btn btn-muted">Clear Playlist</button>
-      <span class="small">Click a playlist song to play it instantly.</span>
+      <span class="small">Double-click a playlist song to play it instantly.</span>
     </div>
     <ul id="library" class="library-list"></ul>
   </section>
@@ -69,19 +66,14 @@
       <span id="time" style="margin-left:auto">0:00 / 0:00</span>
     </div>
 
-    <div id="waveWrap">
-      <canvas id="wave"></canvas>
-      <div class="fallback"><div id="fallbackProg"></div><div class="scrubber" id="scrubber"></div></div>
-    </div>
-
-    <audio id="audio" preload="auto" crossorigin="anonymous"></audio>
+    <div id="waveform"></div>
+    <audio id="audio" hidden></audio>
   </section>
 </div>
 
 <input id="filePicker" type="file" accept="audio/*" style="display:none"/>
 
 <script>
-/* ---------- Data ---------- */
 const TRACKS=[
   {title:'Seize the Day',url:'Crescendos 25-26/01 Seize the Day - Performance.mp3'},
   {title:'Go the Distance — Soprano',url:'Crescendos 25-26/3-GoTheDistance-1-Soprano.mp3'},
@@ -91,7 +83,6 @@ const TRACKS=[
   {title:'I Lived',url:'Crescendos 25-26/5-I Lived - SATB (Faster).mp3'}
 ];
 
-/* ---------- Elements ---------- */
 const lib=document.getElementById('library');
 const playlistEl=document.getElementById('playlist');
 const addSel=document.getElementById('addSelected');
@@ -99,7 +90,6 @@ const addLocal=document.getElementById('addLocal');
 const clearBtn=document.getElementById('clearPlaylist');
 const picker=document.getElementById('filePicker');
 
-const audio=document.getElementById('audio');
 const playPause=document.getElementById('playPause');
 const prev=document.getElementById('prev');
 const next=document.getElementById('next');
@@ -107,20 +97,21 @@ const stopBtn=document.getElementById('stop');
 const speed=document.getElementById('speed');
 const speedVal=document.getElementById('speedVal');
 const timeLbl=document.getElementById('time');
-
-const wave=document.getElementById('wave');
-const ctx=wave.getContext('2d');
-const fallback=document.getElementById('fallbackProg');
-const scrubber=document.getElementById('scrubber');
 const loopTrack=document.getElementById('loopTrack');
 const loopPlaylist=document.getElementById('loopPlaylist');
+let playlist=[...TRACKS],current=0,gap=2.0,gapTimer=null;
 
-let playlist=[...TRACKS],current=0,gap=2.0,gapTimer=null,peaks=null,dragging=false;
-
-/* ---------- Helpers ---------- */
-const fmt=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
-const clearGap=()=>{if(gapTimer){clearTimeout(gapTimer);gapTimer=null;}};
-function setSpeed(){audio.playbackRate=parseFloat(speed.value);speedVal.textContent=audio.playbackRate.toFixed(2)+'×';}
+const wavesurfer = WaveSurfer.create({
+  container: '#waveform',
+  waveColor: '#d0cbe6',
+  progressColor: '#9a4dff',
+  cursorColor: '#9a4dff',
+  height: 150,
+  responsive: true,
+  barWidth: 2,
+  barRadius: 2,
+  cursorWidth: 2
+});
 
 /* ---------- Build Library ---------- */
 function renderLib(){
@@ -128,10 +119,13 @@ function renderLib(){
   TRACKS.forEach((t,i)=>{
     const li=document.createElement('li');
     li.className='library-item';
-    const cb=document.createElement('input');cb.type='checkbox';cb.dataset.i=i;
-    li.append(cb,document.createTextNode(' '+t.title));lib.append(li);
+    const cb=document.createElement('input');
+    cb.type='checkbox';cb.dataset.i=i;
+    li.append(cb,document.createTextNode(' '+t.title));
+    lib.append(li);
   });
 }
+renderLib();
 
 /* ---------- Playlist ---------- */
 function renderPlaylist(){
@@ -139,93 +133,84 @@ function renderPlaylist(){
   playlist.forEach((t,i)=>{
     const li=document.createElement('li');
     li.className='playlist-item'+(i===current?' active':'');
-    li.dataset.index=i;li.textContent=t.title;
+    li.textContent=t.title;
+    li.dataset.index=i;
     playlistEl.append(li);
   });
 }
-playlistEl.onclick=e=>{
+playlistEl.addEventListener('dblclick',e=>{
   const li=e.target.closest('.playlist-item');
-  if(!li)return;clearGap();
-  const i=parseInt(li.dataset.index);setTrack(i,true);
-};
+  if(!li)return;
+  setTrack(parseInt(li.dataset.index),true);
+});
+renderPlaylist();
+
+/* ---------- Helpers ---------- */
+const fmt=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+function clearGap(){if(gapTimer){clearTimeout(gapTimer);gapTimer=null;}}
+function setSpeed(){wavesurfer.setPlaybackRate(parseFloat(speed.value));speedVal.textContent=speed.value+'×';}
 
 /* ---------- Core ---------- */
-function safePlay(){audio.play().catch(()=>{});}
 function setTrack(i,auto=false){
-  if(i<0||i>=playlist.length)return;current=i;clearGap();renderPlaylist();
-  audio.src=playlist[i].url;setSpeed();buildWave(playlist[i].url);if(auto)safePlay();
+  if(i<0||i>=playlist.length)return;
+  current=i;clearGap();renderPlaylist();
+  wavesurfer.load(playlist[i].url);
+  if(auto) wavesurfer.once('ready',()=>wavesurfer.play());
 }
 function nextTrack(user=false){
   clearGap();
-  if(loopTrack.checked&&!user){audio.currentTime=0;safePlay();return;}
+  if(loopTrack.checked && !user){wavesurfer.seekTo(0);wavesurfer.play();return;}
   if(current<playlist.length-1)current++;
-  else if(loopPlaylist.checked)current=0;
-  else return;
+  else if(loopPlaylist.checked)current=0; else return;
   setTrack(current,true);
 }
 function prevTrack(){
   clearGap();
-  if(audio.currentTime>3){audio.currentTime=0;return;}
-  if(current>0)current--;else if(loopPlaylist.checked)current=playlist.length-1;
+  if(wavesurfer.getCurrentTime()>3){wavesurfer.seekTo(0);return;}
+  if(current>0)current--; else if(loopPlaylist.checked)current=playlist.length-1;
   setTrack(current,true);
 }
 
 /* ---------- Controls ---------- */
-playPause.onclick=()=>{if(!audio.src)setTrack(current);
-  if(audio.paused){safePlay();playPause.textContent='⏸ Pause';}
-  else{audio.pause();playPause.textContent='▶️ Play';clearGap();}
+playPause.onclick=()=>{
+  if(!wavesurfer.isReady){setTrack(current,true);return;}
+  if(wavesurfer.isPlaying()){wavesurfer.pause();playPause.textContent='▶️ Play';}
+  else{wavesurfer.play();playPause.textContent='⏸ Pause';}
 };
-stopBtn.onclick=()=>{audio.pause();audio.currentTime=0;playPause.textContent='▶️ Play';};
+stopBtn.onclick=()=>{wavesurfer.stop();playPause.textContent='▶️ Play';};
 prev.onclick=()=>prevTrack();
 next.onclick=()=>nextTrack(true);
 speed.oninput=setSpeed;
 
-audio.onended=()=>{
-  playPause.textContent='▶️ Play';clearGap();
+wavesurfer.on('ready',()=>{setSpeed();});
+wavesurfer.on('finish',()=>{
+  playPause.textContent='▶️ Play';
+  clearGap();
   gapTimer=setTimeout(()=>nextTrack(),gap*1000);
-};
-audio.ontimeupdate=()=>{
-  if(audio.duration){timeLbl.textContent=`${fmt(audio.currentTime)} / ${fmt(audio.duration)}`;if(!peaks){
-    const pct=(audio.currentTime/audio.duration)*100;fallback.style.width=pct+'%';
-    scrubber.style.left=`calc(${pct}% - 6px)`;}}
-  if(peaks)draw(audio.currentTime/audio.duration);
-};
-
-/* ---------- Waveform ---------- */
-function draw(p=0){
-  const w=wave.width=wave.clientWidth,h=wave.height=wave.clientHeight,m=h/2;
-  ctx.clearRect(0,0,w,h);if(!peaks)return;
-  const len=peaks.length,barW=Math.max(1,w/len);
-  for(let i=0;i<len;i++){
-    const x=i/len*w,a=peaks[i]*m;
-    ctx.fillStyle=(i/len)<=p?'#9a4dff':'#d0cbe6';
-    ctx.fillRect(x,m-a,barW-1,a*2);
-  }
-  const px=p*w;ctx.beginPath();ctx.arc(px,m,7,0,Math.PI*2);
-  ctx.fillStyle='rgba(154,77,255,.25)';ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#9a4dff';ctx.stroke();
-}
-async function buildWave(url){
-  peaks=null;draw(0);
-  try{
-    const buf=await fetch(url).then(r=>r.arrayBuffer());
-    const ac=new(AudioContext||webkitAudioContext)();
-    const b=await ac.decodeAudioData(buf);
-    const ch=b.getChannelData(0),n=1200,step=Math.floor(ch.length/n);
-    const p=new Float32Array(n);
-    for(let i=0;i<n;i++){let s=0;for(let j=0;j<step;j++)s+=Math.abs(ch[i*step+j]);p[i]=s/step;}
-    peaks=p;draw(0);
-  }catch(e){peaks=null;}
-}
-wave.onpointerdown=e=>{if(!audio.duration)return;dragging=true;seek(e.clientX);wave.setPointerCapture(e.pointerId);};
-wave.onpointermove=e=>{if(dragging)seek(e.clientX);};
-wave.onpointerup=e=>{dragging=false;wave.releasePointerCapture(e.pointerId);};
-function seek(x){const r=wave.getBoundingClientRect();const pct=(x-r.left)/r.width;audio.currentTime=Math.max(0,Math.min(pct,1))*audio.duration;draw(pct);}
+});
+wavesurfer.on('audioprocess',()=>{
+  const cur=wavesurfer.getCurrentTime();
+  const dur=wavesurfer.getDuration();
+  if(dur)timeLbl.textContent=`${fmt(cur)} / ${fmt(dur)}`;
+});
+wavesurfer.on('play',()=>{playPause.textContent='⏸ Pause';});
+wavesurfer.on('pause',()=>{playPause.textContent='▶️ Play';});
 
 /* ---------- Library actions ---------- */
-addSel.onclick=()=>{[...lib.querySelectorAll('input:checked')].forEach(cb=>{
-  playlist.push(TRACKS[cb.dataset.i]);cb.checked=false;});renderPlaylist();};
+addSel.onclick=()=>{
+  [...lib.querySelectorAll('input:checked')].forEach(cb=>{
+    playlist.push(TRACKS[cb.dataset.i]);cb.checked=false;
+  });
+  renderPlaylist();
+};
 addLocal.onclick=()=>picker.click();
-picker.onchange=e=>{const f=e.target.files[0];if(!f)return;const o=URL.createObjectURL(f);playlist.push({title:f.name,url:o,local:true});renderPlaylist();if(!audio.src)setTrack(playlist.length-1);};
+picker.onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  const o=URL.createObjectURL(f);
+  playlist.push({title:f.name,url:o,local:true});
+  renderPlaylist();
+  setTrack(playlist.length-1);
+};
 clearBtn.onclick=()=>{playlist=[...TRACKS];current=0;setTrack(0);renderPlaylist();};
 
 /* ---------- Keyboard ---------- */
@@ -242,7 +227,7 @@ document.onkeydown=e=>{
 };
 
 /* ---------- Init ---------- */
-renderLib();renderPlaylist();setSpeed();setTrack(0);
+setTrack(0);
 </script>
 </body>
 </html>
