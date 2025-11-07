@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Crescendos 25-26 — Enhanced Waveform Playlist Player</title>
+<title>Crescendos 25-26 — Enhanced Playlist Player</title>
 <script src="https://unpkg.com/wavesurfer.js@7"></script>
 <style>
   body{font-family:Helvetica,Arial,sans-serif;background:#f0f8ff;color:#333;padding:1.5rem}
@@ -16,7 +16,7 @@
   .btn{appearance:none;border:none;border-radius:10px;padding:.5rem .85rem;cursor:pointer;background:#00796b;color:#fff;font-weight:600}
   .btn:hover{background:#004d40}
   .btn-muted{background:#d7e6ee;color:#234}
-  .library-list,.playlist{list-style:none;margin:0;padding:0;max-height:420px;overflow:auto;border:1px solid #ccd;border-radius:10px}
+  .library-list,.playlist{list-style:none;margin:0;padding:0;max-height:420px;overflow:auto;border:1px solid #ccd;border-radius:10px;min-height:200px}
   .library-item,.playlist-item{display:flex;align-items:center;gap:.6rem;padding:.65rem .8rem;border-bottom:1px solid #eef3f9}
   .playlist-item{cursor:pointer}
   .playlist-item:hover{background:#f7fbfd}
@@ -162,6 +162,7 @@ function renderPlaylist(){
     playlistEl.append(li);
   });
 }
+renderPlaylist();
 
 playlistEl.addEventListener('click',e=>{
   const li=e.target.closest('.playlist-item');
@@ -199,6 +200,7 @@ function setTrack(i,autoplay=false){
   };
   wavesurfer.on('ready',onReady);
 }
+
 function nextTrack(user=false){
   clearGap();
   if(loopTrack.checked&&!user){wavesurfer.seekTo(0);wavesurfer.play();return;}
@@ -234,24 +236,24 @@ prev.addEventListener('click',()=>prevTrack());
 next.addEventListener('click',()=>nextTrack(true));
 speed.addEventListener('input',setSpeed);
 
-/* ---------- New Controls (Volume, Gap, EQ) ---------- */
+/* ---------- Volume, Gap, and EQ ---------- */
 volumeSlider.addEventListener('input',e=>{wavesurfer.setVolume(parseFloat(e.target.value));});
 gapSlider.addEventListener('input',e=>{gap=parseFloat(e.target.value);gapVal.textContent=gap.toFixed(1)+'s';});
 
 const audioContext=wavesurfer.getAudioContext();
+const source=wavesurfer.getMediaElementSource();
 const eqFilters={
   bass:audioContext.createBiquadFilter(),
   mid:audioContext.createBiquadFilter(),
   treble:audioContext.createBiquadFilter(),
 };
-eqFilters.bass.type='lowshelf';
-eqFilters.bass.frequency.value=320;
-eqFilters.mid.type='peaking';
-eqFilters.mid.frequency.value=1000;
-eqFilters.mid.Q.value=1;
-eqFilters.treble.type='highshelf';
-eqFilters.treble.frequency.value=3200;
-wavesurfer.setFilters([eqFilters.bass,eqFilters.mid,eqFilters.treble]);
+eqFilters.bass.type='lowshelf'; eqFilters.bass.frequency.value=320;
+eqFilters.mid.type='peaking'; eqFilters.mid.frequency.value=1000; eqFilters.mid.Q.value=1;
+eqFilters.treble.type='highshelf'; eqFilters.treble.frequency.value=3200;
+source.connect(eqFilters.bass);
+eqFilters.bass.connect(eqFilters.mid);
+eqFilters.mid.connect(eqFilters.treble);
+eqFilters.treble.connect(audioContext.destination);
 
 eqBass.addEventListener('input',e=>{eqFilters.bass.gain.value=parseFloat(e.target.value);});
 eqMid.addEventListener('input',e=>{eqFilters.mid.gain.value=parseFloat(e.target.value);});
