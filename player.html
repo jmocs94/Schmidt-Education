@@ -163,12 +163,14 @@ function renderPlaylist(){
 renderPlaylist();
 
 /* ---------- EQ ---------- */
+/* ---------- EQ ---------- */
 function initEQ(){
   // 1. Run only once
-  if(eqFilters) return; 
+  if(eqFilters) return; 
 
   // 2. Get the audio context safely
-  const audioContext = wavesurfer.getAudioContext(); 
+  // THIS IS THE FIX: Use .backend.ac instead of .getAudioContext()
+  const audioContext = wavesurfer.backend.ac; 
   if(!audioContext) return; // Safety check
 
   // 3. Create the EQ filters
@@ -177,7 +179,7 @@ function initEQ(){
     mid:  audioContext.createBiquadFilter(),
     treble: audioContext.createBiquadFilter(),
   };
-  
+  
   eqFilters.bass.type='lowshelf';
   eqFilters.bass.frequency.value=320;
   eqFilters.bass.gain.value=parseFloat(eqBass.value); // Set initial value
@@ -186,7 +188,7 @@ function initEQ(){
   eqFilters.mid.frequency.value=1000;
   eqFilters.mid.Q.value=1;
   eqFilters.mid.gain.value=parseFloat(eqMid.value); // Set initial value
-  
+  
   eqFilters.treble.type='highshelf';
   eqFilters.treble.frequency.value=3200;
   eqFilters.treble.gain.value=parseFloat(eqTreble.value); // Set initial value
@@ -196,16 +198,12 @@ function initEQ(){
   analyser.fftSize = 2048;
   dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-  // 5. THIS IS THE FIX:
-  // Tell Wavesurfer to use our filters.
-  // It will automatically route them:
-  // [Source] -> [Filters] -> [Analyser] -> [Volume] -> [Destination]
-  // This *preserves* the volume control and is the correct method.
+  // 5. Tell Wavesurfer to use our filters
   wavesurfer.setFilters([
-    eqFilters.bass, 
-    eqFilters.mid, 
-    eqFilters.treble, 
-    analyser // Analyser must be last in the chain to graph the final output
+    eqFilters.bass, 
+    eqFilters.mid, 
+    eqFilters.treble, 
+    analyser // Analyser must be last in the chain
   ]);
 
   // 6. Get canvas context and start drawing
