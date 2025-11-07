@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Crescendos 25-26 — Enhanced Playlist Player</title>
+<title>Crescendos 25-26 — Enhanced Playlist Player + EQ Graph</title>
 <script src="https://unpkg.com/wavesurfer.js@7"></script>
 <style>
   body{font-family:Helvetica,Arial,sans-serif;background:#f0f8ff;color:#333;padding:1.5rem}
@@ -26,6 +26,7 @@
   #speed,#gap{width:160px}
   #volume{width:100px}
   #waveform{margin-top:.9rem;width:100%;height:150px;border-radius:10px;background:#fff;border:1px solid #d4dde7}
+  #eqCanvas{margin-top:.9rem;width:100%;height:150px;border-radius:10px;background:#fff;border:1px solid #d4dde7}
   .small{font-size:.9rem;color:#456}
 </style>
 </head>
@@ -79,12 +80,16 @@
     </div>
 
     <div id="waveform"></div>
+
+    <!-- NEW: Real-time EQ curve canvas -->
+    <canvas id="eqCanvas" width="500" height="150"></canvas>
   </section>
 </div>
 
 <input id="filePicker" type="file" accept="audio/*" style="display:none"/>
 
 <script>
+/* ---------- Data ---------- */
 const TRACKS=[
   {title:'Seize the Day',url:'Crescendos 25-26/01 Seize the Day - Performance.mp3'},
   {title:'Go the Distance — Soprano',url:'Crescendos 25-26/3-GoTheDistance-1-Soprano.mp3'},
@@ -94,12 +99,14 @@ const TRACKS=[
   {title:'I Lived',url:'Crescendos 25-26/5-I Lived - SATB (Faster).mp3'}
 ];
 
+/* ---------- Elements ---------- */
 const lib=document.getElementById('library');
 const playlistEl=document.getElementById('playlist');
 const addSel=document.getElementById('addSelected');
 const addLocal=document.getElementById('addLocal');
 const clearBtn=document.getElementById('clearPlaylist');
 const picker=document.getElementById('filePicker');
+
 const playPause=document.getElementById('playPause');
 const prev=document.getElementById('prev');
 const next=document.getElementById('next');
@@ -109,13 +116,16 @@ const speedVal=document.getElementById('speedVal');
 const timeLbl=document.getElementById('time');
 const loopTrack=document.getElementById('loopTrack');
 const loopPlaylist=document.getElementById('loopPlaylist');
+
 const gapSlider=document.getElementById('gap');
 const gapVal=document.getElementById('gapVal');
 const volumeSlider=document.getElementById('volume');
 const eqBass=document.getElementById('eqBass');
 const eqMid=document.getElementById('eqMid');
 const eqTreble=document.getElementById('eqTreble');
+const eqCanvas=document.getElementById('eqCanvas');
 
+/* ---------- WaveSurfer ---------- */
 const wavesurfer=WaveSurfer.create({
   container:'#waveform',
   waveColor:'#d0cbe6',
@@ -128,6 +138,7 @@ const wavesurfer=WaveSurfer.create({
   cursorWidth:2
 });
 
+/* ---------- State ---------- */
 let playlist=[...TRACKS];
 let current=0;
 let gap=2.0;
@@ -135,11 +146,21 @@ let gapTimer=null;
 let loading=false;
 let loadedIndex=-1;
 
+/* EQ graph state */
+let audioContext=null;
+let eqFilters=null;    // {bass, mid, treble}
+let analyser=null;     // AnalyserNode
+let dataArray=null;    // Uint8Array for frequency data
+let canvasCtx=null;
+let animationId=null;
+
+/* ---------- Helpers ---------- */
 const fmt=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
 function clearGap(){if(gapTimer){clearTimeout(gapTimer);gapTimer=null;}}
 function setSpeed(){wavesurfer.setPlaybackRate(parseFloat(speed.value));speedVal.textContent=parseFloat(speed.value).toFixed(2)+'×';}
 function updatePlayBtn(){playPause.textContent=wavesurfer.isPlaying()?'⏸ Pause':'▶️ Play';}
 
+/* ---------- Library ---------- */
 function renderLib(){
   lib.innerHTML='';
   TRACKS.forEach((t,i)=>{
@@ -152,6 +173,7 @@ function renderLib(){
 }
 renderLib();
 
+/* ---------- Playlist ---------- */
 function renderPlaylist(){
   playlistEl.innerHTML='';
   playlist.forEach((t,i)=>{
@@ -164,6 +186,7 @@ function renderPlaylist(){
 }
 renderPlaylist();
 
+/* Single-click = load (no play) */
 playlistEl.addEventListener('click',e=>{
   const li=e.target.closest('.playlist-item');
   if(!li)return;
@@ -173,6 +196,7 @@ playlistEl.addEventListener('click',e=>{
   setTrack(i,false);
 });
 
+/* Double-click = load + play */
 playlistEl.addEventListener('dblclick',e=>{
   const li=e.target.closest('.playlist-item');
   if(!li)return;
@@ -181,21 +205,109 @@ playlistEl.addEventListener('dblclick',e=>{
   setTrack(i,true);
 });
 
+/* ---------- EQ init & Graph ---------- */
+function initEQ(){
+  if(eqFilters) return; // init once
+  audioContext = wavesurfer.getAudioContext();
+
+  // Create EQ filters
+  eqFilters = {
+    bass: audioContext.createBiquadFilter(),
+    mid:  audioContext.createBiquadFilter(),
+    treble: audioContext.createBiquadFilter(),
+  };
+  eqFilters.bass.type='lowshelf';
+  eqFilters.bass.frequency.value=320;
+  eqFilters.bass.gain.value=parseFloat(eqBass.value);
+
+  eqFilters.mid.type='peaking';
+  eqFilters.mid.frequency.value=1000;
+  eqFilters.mid.Q.value=1;
+  eqFilters.mid.gain.value=parseFloat(eqMid.value);
+
+  eqFilters.treble.type='highshelf';
+  eqFilters.treble.frequency.value=3200;
+  eqFilters.treble.gain.value=parseFloat(eqTreble.value);
+
+  // Create analyser at end of chain
+  analyser = audioContext.createAnalyser();
+  analyser.fftSize = 2048;
+  const bufferLength = analyser.frequencyBinCount;
+  dataArray = new Uint8Array(bufferLength);
+
+  // Tell Wavesurfer to use our chain and route to destination automatically.
+  // Order matters: source -> bass -> mid -> treble -> analyser -> destination
+  wavesurfer.setFilters([eqFilters.bass, eqFilters.mid, eqFilters.treble, analyser]);
+
+  // Canvas context
+  canvasCtx = eqCanvas.getContext('2d');
+
+  // Start drawing loop
+  drawEqCurve();
+}
+
+function drawEqCurve(){
+  if(!analyser || !canvasCtx || !dataArray) return;
+  animationId = requestAnimationFrame(drawEqCurve);
+
+  analyser.getByteFrequencyData(dataArray);
+
+  // Clear canvas
+  canvasCtx.clearRect(0,0,eqCanvas.width,eqCanvas.height);
+
+  // Style
+  canvasCtx.lineWidth = 2;
+  canvasCtx.strokeStyle = 'rgb(0,121,107)'; // teal to match theme
+  canvasCtx.beginPath();
+
+  const sliceWidth = eqCanvas.width * 1.0 / dataArray.length;
+  let x = 0;
+
+  for(let i=0;i<dataArray.length;i++){
+    const v = dataArray[i]/255.0;
+    const y = eqCanvas.height - (v * eqCanvas.height);
+    if(i===0){ canvasCtx.moveTo(x,y); }
+    else{ canvasCtx.lineTo(x,y); }
+    x += sliceWidth;
+  }
+
+  canvasCtx.stroke();
+}
+
+/* ---------- Core ---------- */
 function setTrack(i,autoplay=false){
   if(i<0||i>=playlist.length)return;
   current=i;
   clearGap();
   renderPlaylist();
+
+  // Stop any ongoing EQ animation & clear canvas before loading new track
+  if(animationId){
+    cancelAnimationFrame(animationId);
+    animationId=null;
+  }
+  if(eqCanvas && !canvasCtx){
+    canvasCtx = eqCanvas.getContext('2d');
+  }
+  if(canvasCtx){
+    canvasCtx.clearRect(0,0,eqCanvas.width,eqCanvas.height);
+  }
+
   loading=true;
   loadedIndex=-1;
   wavesurfer.load(playlist[i].url);
+
   const onReady=()=>{
     wavesurfer.un('ready',onReady);
     loading=false;
     loadedIndex=i;
     setSpeed();
     timeLbl.textContent=`0:00 / ${fmt(wavesurfer.getDuration()||0)}`;
-    if(autoplay)wavesurfer.play();
+
+    // Ensure EQ graph/filters are initialized (only once)
+    initEQ();
+
+    if(autoplay) wavesurfer.play();
     updatePlayBtn();
   };
   wavesurfer.on('ready',onReady);
@@ -203,24 +315,25 @@ function setTrack(i,autoplay=false){
 
 function nextTrack(user=false){
   clearGap();
-  if(loopTrack.checked&&!user){wavesurfer.seekTo(0);wavesurfer.play();return;}
-  if(current<playlist.length-1)current++;
-  else if(loopPlaylist.checked)current=0;
-  else{return;}
+  if(loopTrack.checked && !user){ wavesurfer.seekTo(0); wavesurfer.play(); return; }
+  if(current<playlist.length-1) current++;
+  else if(loopPlaylist.checked) current=0;
+  else { return; }
   setTrack(current,true);
 }
 function prevTrack(){
   clearGap();
-  if((wavesurfer.getCurrentTime()||0)>3){wavesurfer.seekTo(0);return;}
-  if(current>0)current--;
-  else if(loopPlaylist.checked)current=playlist.length-1;
+  if((wavesurfer.getCurrentTime()||0)>3){ wavesurfer.seekTo(0); return; }
+  if(current>0) current--;
+  else if(loopPlaylist.checked) current=playlist.length-1;
   setTrack(current,true);
 }
 
+/* ---------- Controls ---------- */
 playPause.addEventListener('click',()=>{
-  if(loading)return;
-  if(loadedIndex!==current){setTrack(current,true);return;}
-  if(wavesurfer.isPlaying())wavesurfer.pause(); else wavesurfer.play();
+  if(loading) return;
+  if(loadedIndex!==current){ setTrack(current,true); return; }
+  if(wavesurfer.isPlaying()) wavesurfer.pause(); else wavesurfer.play();
   updatePlayBtn();
 });
 
@@ -228,6 +341,11 @@ stopBtn.addEventListener('click',()=>{
   clearGap();
   wavesurfer.pause();
   wavesurfer.seekTo(0);
+  if(animationId){
+    cancelAnimationFrame(animationId);
+    animationId=null;
+    if(canvasCtx) canvasCtx.clearRect(0,0,eqCanvas.width,eqCanvas.height);
+  }
   timeLbl.textContent=`0:00 / ${fmt(wavesurfer.getDuration()||0)}`;
   updatePlayBtn();
 });
@@ -236,40 +354,79 @@ prev.addEventListener('click',()=>prevTrack());
 next.addEventListener('click',()=>nextTrack(true));
 speed.addEventListener('input',setSpeed);
 
-/* ---------- Volume, Gap, and EQ ---------- */
-volumeSlider.addEventListener('input',e=>{wavesurfer.setVolume(parseFloat(e.target.value));});
-gapSlider.addEventListener('input',e=>{gap=parseFloat(e.target.value);gapVal.textContent=gap.toFixed(1)+'s';});
+/* ---------- Volume, Gap, EQ Controls ---------- */
+volumeSlider.addEventListener('input',e=>{
+  wavesurfer.setVolume(parseFloat(e.target.value));
+});
+gapSlider.addEventListener('input',e=>{
+  gap=parseFloat(e.target.value);
+  gapVal.textContent=gap.toFixed(1)+'s';
+});
+eqBass.addEventListener('input',e=>{
+  if(eqFilters) eqFilters.bass.gain.value=parseFloat(e.target.value);
+});
+eqMid.addEventListener('input',e=>{
+  if(eqFilters) eqFilters.mid.gain.value=parseFloat(e.target.value);
+});
+eqTreble.addEventListener('input',e=>{
+  if(eqFilters) eqFilters.treble.gain.value=parseFloat(e.target.value);
+});
 
-const audioContext=wavesurfer.getAudioContext();
-const source=wavesurfer.getMediaElementSource();
-const eqFilters={
-  bass:audioContext.createBiquadFilter(),
-  mid:audioContext.createBiquadFilter(),
-  treble:audioContext.createBiquadFilter(),
+/* ---------- WaveSurfer events ---------- */
+wavesurfer.on('play',()=>{
+  updatePlayBtn();
+  // (Re)start the EQ draw loop if needed
+  if(!animationId && analyser && canvasCtx && dataArray){
+    drawEqCurve();
+  }
+});
+wavesurfer.on('pause',()=>{
+  updatePlayBtn();
+  // Stop the draw loop while paused (keep graph on screen)
+  if(animationId){
+    cancelAnimationFrame(animationId);
+    animationId=null;
+  }
+});
+wavesurfer.on('finish',()=>{
+  updatePlayBtn();
+  clearGap();
+  gapTimer=setTimeout(()=>nextTrack(),gap*1000);
+});
+wavesurfer.on('audioprocess',()=>{
+  const cur=wavesurfer.getCurrentTime()||0;
+  const dur=wavesurfer.getDuration()||0;
+  if(dur) timeLbl.textContent=`${fmt(cur)} / ${fmt(dur)}`;
+});
+wavesurfer.on('seek',()=>{
+  const cur=wavesurfer.getCurrentTime()||0;
+  const dur=wavesurfer.getDuration()||0;
+  if(dur) timeLbl.textContent=`${fmt(cur)} / ${fmt(dur)}`;
+});
+
+/* ---------- Library actions ---------- */
+addSel.onclick=()=>{
+  [...lib.querySelectorAll('input:checked')].forEach(cb=>{
+    playlist.push(TRACKS[cb.dataset.i]); cb.checked=false;
+  });
+  renderPlaylist();
 };
-eqFilters.bass.type='lowshelf'; eqFilters.bass.frequency.value=320;
-eqFilters.mid.type='peaking'; eqFilters.mid.frequency.value=1000; eqFilters.mid.Q.value=1;
-eqFilters.treble.type='highshelf'; eqFilters.treble.frequency.value=3200;
-source.connect(eqFilters.bass);
-eqFilters.bass.connect(eqFilters.mid);
-eqFilters.mid.connect(eqFilters.treble);
-eqFilters.treble.connect(audioContext.destination);
-
-eqBass.addEventListener('input',e=>{eqFilters.bass.gain.value=parseFloat(e.target.value);});
-eqMid.addEventListener('input',e=>{eqFilters.mid.gain.value=parseFloat(e.target.value);});
-eqTreble.addEventListener('input',e=>{eqFilters.treble.gain.value=parseFloat(e.target.value);});
-
-wavesurfer.on('play',updatePlayBtn);
-wavesurfer.on('pause',updatePlayBtn);
-wavesurfer.on('finish',()=>{updatePlayBtn();clearGap();gapTimer=setTimeout(()=>nextTrack(),gap*1000);});
-wavesurfer.on('audioprocess',()=>{const cur=wavesurfer.getCurrentTime()||0;const dur=wavesurfer.getDuration()||0;if(dur)timeLbl.textContent=`${fmt(cur)} / ${fmt(dur)}`;});
-wavesurfer.on('seek',()=>{const cur=wavesurfer.getCurrentTime()||0;const dur=wavesurfer.getDuration()||0;if(dur)timeLbl.textContent=`${fmt(cur)} / ${fmt(dur)}`;});
-
-addSel.onclick=()=>{[...lib.querySelectorAll('input:checked')].forEach(cb=>{playlist.push(TRACKS[cb.dataset.i]);cb.checked=false;});renderPlaylist();};
 addLocal.onclick=()=>picker.click();
-picker.onchange=e=>{const f=e.target.files?.[0];if(!f)return;const o=URL.createObjectURL(f);playlist.push({title:f.name,url:o,local:true});renderPlaylist();};
-clearBtn.onclick=()=>{clearGap();playlist=[...TRACKS];current=0;renderPlaylist();setTrack(0,false);};
+picker.onchange=e=>{
+  const f=e.target.files?.[0]; if(!f) return;
+  const o=URL.createObjectURL(f);
+  playlist.push({title:f.name,url:o,local:true});
+  renderPlaylist();
+};
+clearBtn.onclick=()=>{
+  clearGap();
+  playlist=[...TRACKS];
+  current=0;
+  renderPlaylist();
+  setTrack(0,false);
+};
 
+/* ---------- Keyboard ---------- */
 document.addEventListener('keydown',e=>{
   if(['INPUT','TEXTAREA','SELECT','BUTTON'].includes(document.activeElement.tagName))return;
   switch(e.key){
@@ -282,7 +439,9 @@ document.addEventListener('keydown',e=>{
   }
 });
 
-setTrack(0,false);
+/* ---------- Init ---------- */
+renderPlaylist();         // ensure playlist shows immediately
+setTrack(0,false);        // load first track (no autoplay)
 </script>
 </body>
 </html>
