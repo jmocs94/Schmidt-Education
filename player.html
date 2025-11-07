@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Crescendos 25-26 — EQ Fixed + Graph</title>
+<title>Crescendos 25-26 — EQ Fixed + WebAudio Backend</title>
 <script src="https://unpkg.com/wavesurfer.js@7"></script>
 <style>
   body{font-family:Helvetica,Arial,sans-serif;background:#f0f8ff;color:#333;padding:1.5rem}
@@ -56,10 +56,8 @@
       <label><input type="checkbox" id="loopPlaylist"> Loop playlist</label>
       <label>Speed <input id="speed" type="range" min="0.05" max="2.0" step="0.05" value="1.00"></label>
       <span id="speedVal">1.00×</span>
-
       <label>Gap <input id="gap" type="range" min="0" max="5" step="0.1" value="2.0"></label>
       <span id="gapVal">2.0s</span>
-
       <label>Bass <input id="eqBass" type="range" min="-10" max="10" value="0" step="1"></label>
       <label>Mid <input id="eqMid" type="range" min="-10" max="10" value="0" step="1"></label>
       <label>Treble <input id="eqTreble" type="range" min="-10" max="10" value="0" step="1"></label>
@@ -72,7 +70,6 @@
       <button id="playPause" class="btn">▶️ Play</button>
       <button id="stop" class="btn btn-muted">⏹ Stop</button>
       <button id="next" class="btn">⏭ Next</button>
-
       <label style="margin-left:auto">Volume
         <input id="volume" type="range" min="0" max="1" step="0.01" value="1">
       </label>
@@ -128,24 +125,19 @@ const wavesurfer=WaveSurfer.create({
   responsive:true,
   barWidth:2,
   barRadius:2,
-  cursorWidth:2
+  cursorWidth:2,
+  backend:'WebAudio'   // ✅ Force WebAudio backend
 });
 
 let playlist=[...TRACKS];
-let current=0;
-let gap=2.0;
-let gapTimer=null;
-let loading=false;
-let loadedIndex=-1;
-let eqFilters=null, analyser=null, dataArray=null, canvasCtx=null, animationId=null;
+let current=0,gap=2.0,gapTimer=null,loading=false,loadedIndex=-1;
+let eqFilters=null,analyser=null,dataArray=null,canvasCtx=null,animationId=null;
 
-/* ---------- Helpers ---------- */
 const fmt=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
 function clearGap(){if(gapTimer){clearTimeout(gapTimer);gapTimer=null;}}
 function setSpeed(){wavesurfer.setPlaybackRate(parseFloat(speed.value));speedVal.textContent=parseFloat(speed.value).toFixed(2)+'×';}
 function updatePlayBtn(){playPause.textContent=wavesurfer.isPlaying()?'⏸ Pause':'▶️ Play';}
 
-/* ---------- Library ---------- */
 function renderLib(){
   lib.innerHTML='';
   TRACKS.forEach((t,i)=>{
@@ -170,104 +162,60 @@ function renderPlaylist(){
 }
 renderPlaylist();
 
-/* ---------- EQ for Wavesurfer v7 ---------- */
-function initEQ() {
-  if (eqFilters) return; // only once
-
-  const audioContext = wavesurfer.backend.ac;
-  const source = wavesurfer.backend.source;
-
-  eqFilters = {
-    bass: audioContext.createBiquadFilter(),
-    mid: audioContext.createBiquadFilter(),
-    treble: audioContext.createBiquadFilter(),
+/* ---------- EQ ---------- */
+function initEQ(){
+  if(eqFilters)return;
+  const audioContext=wavesurfer.backend.ac;
+  const source=wavesurfer.backend.source;
+  eqFilters={
+    bass:audioContext.createBiquadFilter(),
+    mid:audioContext.createBiquadFilter(),
+    treble:audioContext.createBiquadFilter()
   };
-
-  eqFilters.bass.type = 'lowshelf';
-  eqFilters.bass.frequency.value = 320;
-  eqFilters.bass.gain.value = parseFloat(eqBass.value);
-
-  eqFilters.mid.type = 'peaking';
-  eqFilters.mid.frequency.value = 1000;
-  eqFilters.mid.Q.value = 1;
-  eqFilters.mid.gain.value = parseFloat(eqMid.value);
-
-  eqFilters.treble.type = 'highshelf';
-  eqFilters.treble.frequency.value = 3200;
-  eqFilters.treble.gain.value = parseFloat(eqTreble.value);
-
-  // Create and wire analyser
-  analyser = audioContext.createAnalyser();
-  analyser.fftSize = 2048;
-  dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-  // Connect: source → bass → mid → treble → analyser → destination
-  source.disconnect();
-  source.connect(eqFilters.bass);
+  eqFilters.bass.type='lowshelf';eqFilters.bass.frequency.value=320;eqFilters.bass.gain.value=parseFloat(eqBass.value);
+  eqFilters.mid.type='peaking';eqFilters.mid.frequency.value=1000;eqFilters.mid.Q.value=1;eqFilters.mid.gain.value=parseFloat(eqMid.value);
+  eqFilters.treble.type='highshelf';eqFilters.treble.frequency.value=3200;eqFilters.treble.gain.value=parseFloat(eqTreble.value);
+  analyser=audioContext.createAnalyser();analyser.fftSize=2048;dataArray=new Uint8Array(analyser.frequencyBinCount);
+  source.disconnect();source.connect(eqFilters.bass);
   eqFilters.bass.connect(eqFilters.mid);
   eqFilters.mid.connect(eqFilters.treble);
   eqFilters.treble.connect(analyser);
   analyser.connect(audioContext.destination);
-
-  canvasCtx = eqCanvas.getContext('2d');
+  canvasCtx=eqCanvas.getContext('2d');
   drawEqCurve();
 }
-
-function drawEqCurve() {
-  if (!analyser || !canvasCtx || !dataArray) return;
-  animationId = requestAnimationFrame(drawEqCurve);
+function drawEqCurve(){
+  if(!analyser||!canvasCtx||!dataArray)return;
+  animationId=requestAnimationFrame(drawEqCurve);
   analyser.getByteFrequencyData(dataArray);
   canvasCtx.clearRect(0,0,eqCanvas.width,eqCanvas.height);
-  canvasCtx.lineWidth = 2;
-  canvasCtx.strokeStyle = 'rgb(0,121,107)';
+  canvasCtx.lineWidth=2;canvasCtx.strokeStyle='rgb(0,121,107)';
   canvasCtx.beginPath();
-  const sliceWidth = eqCanvas.width / dataArray.length;
-  let x = 0;
-  for (let i = 0; i < dataArray.length; i++) {
-    const v = dataArray[i] / 255;
-    const y = eqCanvas.height - (v * eqCanvas.height);
-    if (i === 0) canvasCtx.moveTo(x, y);
-    else canvasCtx.lineTo(x, y);
-    x += sliceWidth;
-  }
+  const sliceWidth=eqCanvas.width/dataArray.length;let x=0;
+  for(let i=0;i<dataArray.length;i++){const v=dataArray[i]/255;const y=eqCanvas.height-(v*eqCanvas.height);if(i===0)canvasCtx.moveTo(x,y);else canvasCtx.lineTo(x,y);x+=sliceWidth;}
   canvasCtx.stroke();
 }
 
-/* ---------- Core ---------- */
+/* ---------- Playback ---------- */
 function setTrack(i,autoplay=false){
   if(i<0||i>=playlist.length)return;
-  current=i;
-  clearGap();
-  renderPlaylist();
+  current=i;clearGap();renderPlaylist();
   if(animationId){cancelAnimationFrame(animationId);animationId=null;}
   if(canvasCtx)canvasCtx.clearRect(0,0,eqCanvas.width,eqCanvas.height);
   loading=true;loadedIndex=-1;
   wavesurfer.load(playlist[i].url);
-  const onReady=()=>{
-    wavesurfer.un('ready',onReady);
-    loading=false;loadedIndex=i;
-    setSpeed();
+  const onReady=()=>{wavesurfer.un('ready',onReady);loading=false;loadedIndex=i;setSpeed();
     timeLbl.textContent=`0:00 / ${fmt(wavesurfer.getDuration()||0)}`;
-    if(autoplay)wavesurfer.play();
-    updatePlayBtn();
-  };
+    if(autoplay)wavesurfer.play();updatePlayBtn();};
   wavesurfer.on('ready',onReady);
 }
 
 /* ---------- Controls ---------- */
-playPause.addEventListener('click',()=>{
-  if(loading)return;
-  if(loadedIndex!==current){setTrack(current,true);return;}
-  if(wavesurfer.isPlaying())wavesurfer.pause(); else wavesurfer.play();
-  updatePlayBtn();
-});
-stopBtn.addEventListener('click',()=>{
-  clearGap();
-  wavesurfer.pause();wavesurfer.seekTo(0);
+playPause.addEventListener('click',()=>{if(loading)return;if(loadedIndex!==current){setTrack(current,true);return;}
+  if(wavesurfer.isPlaying())wavesurfer.pause();else wavesurfer.play();updatePlayBtn();});
+stopBtn.addEventListener('click',()=>{clearGap();wavesurfer.pause();wavesurfer.seekTo(0);
   if(animationId){cancelAnimationFrame(animationId);animationId=null;canvasCtx.clearRect(0,0,eqCanvas.width,eqCanvas.height);}
-  timeLbl.textContent=`0:00 / ${fmt(wavesurfer.getDuration()||0)}`;
-  updatePlayBtn();
-});
+  timeLbl.textContent=`0:00 / ${fmt(wavesurfer.getDuration()||0)}`;updatePlayBtn();});
 prev.addEventListener('click',()=>{if((wavesurfer.getCurrentTime()||0)>3){wavesurfer.seekTo(0);}else{current=current>0?current-1:playlist.length-1;setTrack(current,true);}});
 next.addEventListener('click',()=>{clearGap();current=(current+1)%playlist.length;setTrack(current,true);});
 speed.addEventListener('input',setSpeed);
@@ -278,29 +226,17 @@ eqMid.addEventListener('input',e=>{if(eqFilters)eqFilters.mid.gain.value=parseFl
 eqTreble.addEventListener('input',e=>{if(eqFilters)eqFilters.treble.gain.value=parseFloat(e.target.value);});
 
 /* ---------- Wavesurfer Events ---------- */
-wavesurfer.on('play',()=>{
-  updatePlayBtn();
-  initEQ(); // attach filters *after* playback starts
-});
-wavesurfer.on('pause',()=>{
-  updatePlayBtn();
-  if(animationId){cancelAnimationFrame(animationId);animationId=null;}
-});
+wavesurfer.on('play',()=>{updatePlayBtn();initEQ();});
+wavesurfer.on('pause',()=>{updatePlayBtn();if(animationId){cancelAnimationFrame(animationId);animationId=null;}});
 wavesurfer.on('finish',()=>{updatePlayBtn();clearGap();gapTimer=setTimeout(()=>{current=(current+1)%playlist.length;setTrack(current,true);},gap*1000);});
 wavesurfer.on('audioprocess',()=>{const cur=wavesurfer.getCurrentTime()||0;const dur=wavesurfer.getDuration()||0;if(dur)timeLbl.textContent=`${fmt(cur)} / ${fmt(dur)}`;});
 wavesurfer.on('seek',()=>{const cur=wavesurfer.getCurrentTime()||0;const dur=wavesurfer.getDuration()||0;if(dur)timeLbl.textContent=`${fmt(cur)} / ${fmt(dur)}`;});
 
 /* ---------- Playlist ---------- */
-playlistEl.addEventListener('click',e=>{
-  const li=e.target.closest('.playlist-item');if(!li)return;
-  const i=parseInt(li.dataset.index,10);if(i===current)return;
-  clearGap();setTrack(i,false);
-});
-playlistEl.addEventListener('dblclick',e=>{
-  const li=e.target.closest('.playlist-item');if(!li)return;
-  const i=parseInt(li.dataset.index,10);
-  clearGap();setTrack(i,true);
-});
+playlistEl.addEventListener('click',e=>{const li=e.target.closest('.playlist-item');if(!li)return;
+  const i=parseInt(li.dataset.index,10);if(i===current)return;clearGap();setTrack(i,false);});
+playlistEl.addEventListener('dblclick',e=>{const li=e.target.closest('.playlist-item');if(!li)return;
+  const i=parseInt(li.dataset.index,10);clearGap();setTrack(i,true);});
 
 /* ---------- Library ---------- */
 addSel.onclick=()=>{[...lib.querySelectorAll('input:checked')].forEach(cb=>{playlist.push(TRACKS[cb.dataset.i]);cb.checked=false;});renderPlaylist();};
@@ -318,7 +254,6 @@ document.addEventListener('keydown',e=>{
     case's':case'S':stopBtn.click();break;
   }
 });
-
 setTrack(0,false);
 </script>
 </body>
