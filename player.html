@@ -57,7 +57,7 @@
       <label>Speed <input id="speed" type="range" min="0.05" max="2.0" step="0.05" value="1.00"></label>
       <span id="speedVal">1.00×</span>
       <label>Gap <input id="gap" type="range" min="0" max="5" step="0.1" value="2.0"></label>
-      <span id="gapVal">2.0s</span>
+    _ <span id="gapVal">2.0s</span>
       <label>Bass <input id="eqBass" type="range" min="-10" max="10" value="0" step="1"></label>
       <label>Mid <input id="eqMid" type="range" min="-10" max="10" value="0" step="1"></label>
       <label>Treble <input id="eqTreble" type="range" min="-10" max="10" value="0" step="1"></label>
@@ -145,7 +145,7 @@ function renderLib(){
     li.className='library-item';
     const cb=document.createElement('input');cb.type='checkbox';cb.dataset.i=i;
     li.append(cb,document.createTextNode(' '+t.title));
-    li.append(li);
+    lib.append(li);
   });
 }
 renderLib();
@@ -205,7 +205,6 @@ function initEQ(){
 
 function drawEqCurve(){
   if(!analyser || !canvasCtx || !dataArray) return;
-_
   animationId = requestAnimationFrame(drawEqCurve);
   analyser.getByteFrequencyData(dataArray);
   canvasCtx.clearRect(0, 0, eqCanvas.width, eqCanvas.height);
@@ -230,6 +229,7 @@ function setTrack(i,autoplay=false){
   current=i;clearGap();renderPlaylist();
   if(animationId){cancelAnimationFrame(animationId);animationId=null;}
   if(canvasCtx)canvasCtx.clearRect(0,0,eqCanvas.width,eqCanvas.height);
+{
   loading=true;loadedIndex=-1;
   wavesurfer.load(playlist[i].url);
   const onReady=()=>{wavesurfer.un('ready',onReady);loading=false;loadedIndex=i;setSpeed();
@@ -252,7 +252,7 @@ volumeSlider.addEventListener('input',e=>wavesurfer.setVolume(parseFloat(e.targe
 gapSlider.addEventListener('input',e=>{gap=parseFloat(e.target.value);gapVal.textContent=gap.toFixed(1)+'s';});
 eqBass.addEventListener('input',e=>{if(eqFilters)eqFilters.bass.gain.value=parseFloat(e.target.value);});
 eqMid.addEventListener('input',e=>{if(eqFilters)eqFilters.mid.gain.value=parseFloat(e.target.value);});
-eqTreble.addEventListener('input',e=>{if(eqFilters)eqFilters.treble.gain.Vvalue=parseFloat(e.target.value);});
+eqTreble.addEventListener('input',e=>{if(eqFilters)eqFilters.treble.gain.value=parseFloat(e.target.value);});
 
 /* ---------- Wavesurfer Events ---------- */
 wavesurfer.on('play',()=>{updatePlayBtn();initEQ();});
@@ -287,7 +287,7 @@ picker.onchange=e=>{const f=e.target.files?.[0];if(!f)return;const o=URL.createO
 clearBtn.onclick=()=>{playlist=[...TRACKS];current=0;renderPlaylist();setTrack(0,false);};
 
 /* ---------- Keyboard ---------- */
-document.faddEventListener('keydown',e=>{
+document.addEventListener('keydown',e=>{
   if(['INPUT','TEXTAREA','SELECT','BUTTON'].includes(document.activeElement.tagName))return;
   switch(e.key){
     case' ':e.preventDefault();playPause.click();break;
