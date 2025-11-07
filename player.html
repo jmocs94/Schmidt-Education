@@ -102,16 +102,16 @@ const loopTrack=document.getElementById('loopTrack');
 const loopPlaylist=document.getElementById('loopPlaylist');
 
 /* ---------- WaveSurfer ---------- */
-const wavesurfer = WaveSurfer.create({
-  container: '#waveform',
-  waveColor: '#d0cbe6',
-  progressColor: '#9a4dff',
-  cursorColor: '#9a4dff',
-  height: 150,
-  responsive: true,
-  barWidth: 2,
-  barRadius: 2,
-  cursorWidth: 2
+const wavesurfer=WaveSurfer.create({
+  container:'#waveform',
+  waveColor:'#d0cbe6',
+  progressColor:'#9a4dff',
+  cursorColor:'#9a4dff',
+  height:150,
+  responsive:true,
+  barWidth:2,
+  barRadius:2,
+  cursorWidth:2
 });
 
 /* ---------- State ---------- */
@@ -119,14 +119,14 @@ let playlist=[...TRACKS];
 let current=0;
 let gap=2.0;
 let gapTimer=null;
-let loading=false;      // actively loading a track
-let loadedIndex=-1;     // index of currently loaded source
+let loading=false;
+let loadedIndex=-1;
 
 /* ---------- Helpers ---------- */
 const fmt=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
-function clearGap(){ if(gapTimer){ clearTimeout(gapTimer); gapTimer=null; } }
-function setSpeed(){ wavesurfer.setPlaybackRate(parseFloat(speed.value)); speedVal.textContent=parseFloat(speed.value).toFixed(2)+'×'; }
-function updatePlayBtn(){ playPause.textContent = wavesurfer.isPlaying() ? '⏸ Pause' : '▶️ Play'; }
+function clearGap(){if(gapTimer){clearTimeout(gapTimer);gapTimer=null;}}
+function setSpeed(){wavesurfer.setPlaybackRate(parseFloat(speed.value));speedVal.textContent=parseFloat(speed.value).toFixed(2)+'×';}
+function updatePlayBtn(){playPause.textContent=wavesurfer.isPlaying()?'⏸ Pause':'▶️ Play';}
 
 /* ---------- Library ---------- */
 function renderLib(){
@@ -134,8 +134,8 @@ function renderLib(){
   TRACKS.forEach((t,i)=>{
     const li=document.createElement('li');
     li.className='library-item';
-    const cb=document.createElement('input'); cb.type='checkbox'; cb.dataset.i=i;
-    li.append(cb, document.createTextNode(' '+t.title));
+    const cb=document.createElement('input');cb.type='checkbox';cb.dataset.i=i;
+    li.append(cb,document.createTextNode(' '+t.title));
     lib.append(li);
   });
 }
@@ -152,142 +152,128 @@ function renderPlaylist(){
     playlistEl.append(li);
   });
 }
-renderPlaylist();
-
-playlistEl.addEventListener('dblclick', e=>{
+playlistEl.addEventListener('dblclick',e=>{
   const li=e.target.closest('.playlist-item');
-  if(!li) return;
+  if(!li)return;
   const i=parseInt(li.dataset.index,10);
   clearGap();
-  setTrack(i, /*autoplay*/ true);
+  setTrack(i,true);
 });
+renderPlaylist();
 
 /* ---------- Core ---------- */
-function setTrack(i, autoplay=false){
-  if(i<0 || i>=playlist.length) return;
+function setTrack(i,autoplay=false){
+  if(i<0||i>=playlist.length)return;
   current=i;
   clearGap();
   renderPlaylist();
-
   loading=true;
   loadedIndex=-1;
   wavesurfer.load(playlist[i].url);
-
-  // Ensure we only react to THIS load finishing
-  const onReady = ()=>{
-    wavesurfer.un('ready', onReady);
+  const onReady=()=>{
+    wavesurfer.un('ready',onReady);
     loading=false;
     loadedIndex=i;
     setSpeed();
-    timeLbl.textContent = `0:00 / ${fmt(wavesurfer.getDuration()||0)}`;
-    if(autoplay){ wavesurfer.play(); }
+    timeLbl.textContent=`0:00 / ${fmt(wavesurfer.getDuration()||0)}`;
+    if(autoplay)wavesurfer.play();
     updatePlayBtn();
   };
-  wavesurfer.on('ready', onReady);
+  wavesurfer.on('ready',onReady);
 }
-
 function nextTrack(user=false){
   clearGap();
-  if(loopTrack.checked && !user){
-    wavesurfer.seekTo(0); wavesurfer.play(); return;
-  }
-  if(current < playlist.length-1) current++;
-  else if(loopPlaylist.checked) current=0;
-  else { updatePlayBtn(); return; }
-  setTrack(current, true);
+  if(loopTrack.checked&&!user){wavesurfer.seekTo(0);wavesurfer.play();return;}
+  if(current<playlist.length-1)current++;
+  else if(loopPlaylist.checked)current=0;
+  else{return;}
+  setTrack(current,true);
 }
-
 function prevTrack(){
   clearGap();
-  if((wavesurfer.getCurrentTime()||0) > 3){ wavesurfer.seekTo(0); return; }
-  if(current>0) current--;
-  else if(loopPlaylist.checked) current = playlist.length-1;
-  setTrack(current, true);
+  if((wavesurfer.getCurrentTime()||0)>3){wavesurfer.seekTo(0);return;}
+  if(current>0)current--;
+  else if(loopPlaylist.checked)current=playlist.length-1;
+  setTrack(current,true);
 }
 
-/* ---------- Controls ---------- */
-playPause.addEventListener('click', ()=>{
-  // Never trigger a new load on pause/play toggle.
-  if(loading){
-    // ignore clicks while loading to avoid races
+/* ---------- Fixed Controls ---------- */
+// ✅ Corrected Play/Pause logic
+playPause.addEventListener('click',()=>{
+  if(loading)return;
+  if(loadedIndex!==current){
+    setTrack(current,true);
     return;
   }
-  if(loadedIndex !== current || !wavesurfer.isReady){
-    // User pressed Play before the current track was loaded
-    setTrack(current, true);
-    return;
-  }
-  if(wavesurfer.isPlaying()){ wavesurfer.pause(); }
-  else { wavesurfer.play(); }
+  if(wavesurfer.isPlaying()){wavesurfer.pause();}
+  else{wavesurfer.play();}
   updatePlayBtn();
 });
 
-stopBtn.addEventListener('click', ()=>{
+// ✅ Corrected Stop logic
+stopBtn.addEventListener('click',()=>{
   clearGap();
-  if(wavesurfer.isReady){
-    wavesurfer.pause();
-    wavesurfer.seekTo(0);
-  }
+  wavesurfer.pause();
+  wavesurfer.seekTo(0);
+  timeLbl.textContent=`0:00 / ${fmt(wavesurfer.getDuration()||0)}`;
   updatePlayBtn();
 });
 
-prev.addEventListener('click', ()=> prevTrack());
-next.addEventListener('click', ()=> nextTrack(true));
-speed.addEventListener('input', setSpeed);
+/* ---------- Other Events ---------- */
+prev.addEventListener('click',()=>prevTrack());
+next.addEventListener('click',()=>nextTrack(true));
+speed.addEventListener('input',setSpeed);
 
-/* ---------- WaveSurfer events ---------- */
-wavesurfer.on('play', updatePlayBtn);
-wavesurfer.on('pause', updatePlayBtn);
-wavesurfer.on('finish', ()=>{
+wavesurfer.on('play',updatePlayBtn);
+wavesurfer.on('pause',updatePlayBtn);
+wavesurfer.on('finish',()=>{
   updatePlayBtn();
   clearGap();
-  gapTimer = setTimeout(()=> nextTrack(), gap*1000);
+  gapTimer=setTimeout(()=>nextTrack(),gap*1000);
 });
-wavesurfer.on('audioprocess', ()=>{
+wavesurfer.on('audioprocess',()=>{
   const cur=wavesurfer.getCurrentTime()||0;
   const dur=wavesurfer.getDuration()||0;
-  if(dur) timeLbl.textContent = `${fmt(cur)} / ${fmt(dur)}`;
+  if(dur)timeLbl.textContent=`${fmt(cur)} / ${fmt(dur)}`;
 });
-wavesurfer.on('seek', ()=>{
-  // Seeking shouldn’t auto-play; button will show correct state
+wavesurfer.on('seek',()=>{
   const cur=wavesurfer.getCurrentTime()||0;
   const dur=wavesurfer.getDuration()||0;
-  if(dur) timeLbl.textContent = `${fmt(cur)} / ${fmt(dur)}`;
+  if(dur)timeLbl.textContent=`${fmt(cur)} / ${fmt(dur)}`;
 });
 
 /* ---------- Library actions ---------- */
 addSel.onclick=()=>{
   [...lib.querySelectorAll('input:checked')].forEach(cb=>{
-    playlist.push(TRACKS[cb.dataset.i]); cb.checked=false;
+    playlist.push(TRACKS[cb.dataset.i]);cb.checked=false;
   });
   renderPlaylist();
 };
-addLocal.onclick=()=> picker.click();
+addLocal.onclick=()=>picker.click();
 picker.onchange=e=>{
-  const f=e.target.files?.[0]; if(!f) return;
+  const f=e.target.files?.[0];if(!f)return;
   const o=URL.createObjectURL(f);
   playlist.push({title:f.name,url:o,local:true});
   renderPlaylist();
-  // Don’t auto-play here—let user choose/double-click
 };
 clearBtn.onclick=()=>{
   clearGap();
   playlist=[...TRACKS];
   current=0;
   renderPlaylist();
-  setTrack(0, false);
+  setTrack(0,false);
 };
 
 /* ---------- Keyboard ---------- */
-document.addEventListener('keydown', (e)=>{
-  if(['INPUT','TEXTAREA','SELECT','BUTTON'].includes(document.activeElement.tagName)) return;
+document.addEventListener('keydown',e=>{
+  if(['INPUT','TEXTAREA','SELECT','BUTTON'].includes(document.activeElement.tagName))return;
   switch(e.key){
-    case ' ': e.preventDefault(); playPause.click(); break;
-    case 'ArrowRight': next.click(); break;
-    case 'ArrowLeft':  prev.click(); break;
-    case 's': case 'S': stopBtn.click(); break;
-    case 'l': case 'L': loopPlaylist.checked=!loopPlaylist.checked; break;
-    case 'c': case 'C': loopTrack.checked=!loopTrack.checked; break;
+    case' ':e.preventDefault();playPause.click();break;
+    case'ArrowRight':next.click();break;
+    case'ArrowLeft':prev.click();break;
+    case's':case'S':stopBtn.click();break;
+    case'l':case'L':loopPlaylist.checked=!loopPlaylist.checked;break;
+    case'c':case'C':loopTrack.checked=!loopTrack.checked;break;
   }
 });
 
