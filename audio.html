@@ -115,14 +115,33 @@
 
     let micStream, recorder, audioChunks = [], animationId, startTime, timerInterval, recording = false;
     const mimePreferences = [
-      { type: "audio/mp4;codecs=mp4a.40.2", extension: "m4a" },
-      { type: "audio/webm;codecs=opus", extension: "webm" },
-      { type: "audio/webm", extension: "webm" }
+      { container: "audio/mp4", codecs: "mp4a.40.2", extension: "m4a" },
+      { container: "audio/webm", codecs: "opus", extension: "webm" },
+      { container: "audio/webm", codecs: "", extension: "webm" },
+      { container: "audio/ogg", codecs: "opus", extension: "ogg" }
     ];
+
+    const audioTypeTest = document.createElement("audio");
     const supportedMime = mimePreferences.find(option => {
-      return typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(option.type);
+      if (typeof MediaRecorder === "undefined") return false;
+      const mimeForRecorder = option.codecs
+        ? `${option.container};codecs=${option.codecs}`
+        : option.container;
+      if (!MediaRecorder.isTypeSupported(mimeForRecorder)) return false;
+
+      if (typeof audioTypeTest.canPlayType !== "function") return true;
+      const mimeForPlayback = option.codecs
+        ? `${option.container}; codecs="${option.codecs}"`
+        : option.container;
+      const playbackSupport = audioTypeTest.canPlayType(mimeForPlayback);
+      return playbackSupport === "probably" || playbackSupport === "maybe";
     });
-    const selectedMimeType = supportedMime ? supportedMime.type : "";
+
+    const selectedMimeType = supportedMime
+      ? (supportedMime.codecs
+          ? `${supportedMime.container};codecs=${supportedMime.codecs}`
+          : supportedMime.container)
+      : "";
     const selectedExtension = supportedMime ? supportedMime.extension : "webm";
 
     function updateFilename() {
