@@ -125,6 +125,31 @@
     let isRecording = false;
     let countdownInterval = null;
     let countdownActive = false;
+    let recordingOptions = { mimeType: "", extension: "webm" };
+
+    function determineRecordingOptions() {
+      if (typeof MediaRecorder === "undefined" || typeof MediaRecorder.isTypeSupported !== "function") {
+        recordingOptions = { mimeType: "", extension: "webm" };
+        return;
+      }
+
+      const preferredTypes = [
+        { mimeType: "video/webm;codecs=vp9,opus", extension: "webm" },
+        { mimeType: "video/webm;codecs=vp8,opus", extension: "webm" },
+        { mimeType: "video/webm", extension: "webm" },
+        { mimeType: "video/mp4;codecs=h264,aac", extension: "mp4" },
+        { mimeType: "video/mp4", extension: "mp4" }
+      ];
+
+      for (const option of preferredTypes) {
+        if (MediaRecorder.isTypeSupported(option.mimeType)) {
+          recordingOptions = option;
+          return;
+        }
+      }
+
+      recordingOptions = { mimeType: "", extension: "webm" };
+    }
 
     function getFormattedDate() {
       const date = new Date();
@@ -164,6 +189,7 @@
     });
 
     updateFilename();
+    determineRecordingOptions();
 
     async function setupCamera() {
       stream = await navigator.mediaDevices.getUserMedia({
@@ -191,7 +217,8 @@
 
     function beginRecording() {
       recordedChunks = [];
-      mediaRecorder = new MediaRecorder(stream);
+      const options = recordingOptions.mimeType ? { mimeType: recordingOptions.mimeType } : undefined;
+      mediaRecorder = options ? new MediaRecorder(stream, options) : new MediaRecorder(stream);
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) recordedChunks.push(e.data);
       };
@@ -202,14 +229,14 @@
         detectOrientation();
         pauseYouTubeVideo();
         recordBtn.disabled = false;
-        const blob = new Blob(recordedChunks, { type: "video/webm" });
+        const blob = new Blob(recordedChunks, recordingOptions.mimeType ? { type: recordingOptions.mimeType } : undefined);
         const url = URL.createObjectURL(blob);
         recordedVideo.src = url;
         downloadBtn.onclick = () => {
           const a = document.createElement("a");
           a.href = url;
           const name = videoFilename.value.trim() || "Crescendos-Video-" + getFormattedDate();
-          a.download = name + ".webm";
+          a.download = `${name}.${recordingOptions.extension}`;
           a.click();
         };
       };
