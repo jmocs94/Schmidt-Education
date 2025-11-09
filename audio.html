@@ -114,6 +114,16 @@
     const countdownNumber = document.getElementById("countdownNumber");
 
     let micStream, recorder, audioChunks = [], animationId, startTime, timerInterval, recording = false;
+    const mimePreferences = [
+      { type: "audio/mp4;codecs=mp4a.40.2", extension: "m4a" },
+      { type: "audio/webm;codecs=opus", extension: "webm" },
+      { type: "audio/webm", extension: "webm" }
+    ];
+    const supportedMime = mimePreferences.find(option => {
+      return typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(option.type);
+    });
+    const selectedMimeType = supportedMime ? supportedMime.type : "";
+    const selectedExtension = supportedMime ? supportedMime.extension : "webm";
 
     function updateFilename() {
       const text = songSelect.options[songSelect.selectedIndex].textContent;
@@ -141,7 +151,8 @@
         }
       });
 
-      recorder = new MediaRecorder(micStream);
+      const recorderOptions = selectedMimeType ? { mimeType: selectedMimeType } : undefined;
+      recorder = new MediaRecorder(micStream, recorderOptions);
       const audioCtx = new AudioContext();
       const source = audioCtx.createMediaStreamSource(micStream);
       const analyser = audioCtx.createAnalyser();
@@ -200,14 +211,15 @@
     }
 
     function saveRecording() {
-      const blob = new Blob(audioChunks, { type: "audio/webm" });
+      const blobOptions = selectedMimeType ? { type: selectedMimeType } : undefined;
+      const blob = new Blob(audioChunks, blobOptions);
       const url = URL.createObjectURL(blob);
       playback.src = url;
       downloadBtn.onclick = () => {
         const name = filenameInput.value.trim() || "recording";
         const a = document.createElement("a");
         a.href = url;
-        a.download = name + ".webm";
+        a.download = `${name}.${selectedExtension}`;
         a.click();
       };
     }
