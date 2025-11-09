@@ -19,7 +19,8 @@
       margin: 1em 0;
     }
     #preview {
-      width: 480px;
+      width: 100%;
+      max-width: 480px;
       aspect-ratio: 16 / 9;
       object-fit: cover;
     }
@@ -45,6 +46,11 @@
     #countdown {
       font-size: 2em;
       color: red;
+    }
+    #recordedVideo {
+      width: 100%;
+      max-height: 560px;
+      object-fit: contain;
     }
     #rotate-warning {
       display: none;
@@ -87,13 +93,12 @@
     <video id="preview" autoplay muted playsinline></video>
     <div id="countdown"></div>
     <br />
-    <button id="startBtn">Start Recording</button>
-    <button id="stopBtn" disabled>Stop Recording</button>
+    <button id="recordBtn">Start Recording</button>
   </div>
 
   <div>
     <h3>Playback</h3>
-    <video id="recordedVideo" controls></video>
+    <video id="recordedVideo" controls playsinline></video>
     <br />
     <label for="videoFilename">File Name:</label>
     <input type="text" id="videoFilename" />
@@ -105,8 +110,7 @@
   <script>
     const preview = document.getElementById("preview");
     const recordedVideo = document.getElementById("recordedVideo");
-    const startBtn = document.getElementById("startBtn");
-    const stopBtn = document.getElementById("stopBtn");
+    const recordBtn = document.getElementById("recordBtn");
     const countdown = document.getElementById("countdown");
     const videoFilename = document.getElementById("videoFilename");
     const downloadBtn = document.getElementById("downloadVideo");
@@ -118,6 +122,9 @@
     let recordedChunks = [];
     let stream;
     let currentVideoId = videoSelect.value;
+    let isRecording = false;
+    let countdownInterval = null;
+    let countdownActive = false;
 
     function getFormattedDate() {
       const date = new Date();
@@ -135,10 +142,14 @@
     function detectOrientation() {
       if (window.innerWidth < 768 && window.innerHeight > window.innerWidth) {
         rotateWarning.style.display = "block";
-        startBtn.disabled = true;
+        if (!isRecording && !countdownActive) {
+          recordBtn.disabled = true;
+        }
       } else {
         rotateWarning.style.display = "none";
-        startBtn.disabled = false;
+        if (!countdownActive) {
+          recordBtn.disabled = false;
+        }
       }
     }
 
@@ -178,53 +189,74 @@
       ytplayer.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
     }
 
-    setupCamera().then(() => {
-      startBtn.onclick = () => {
-        videoSelect.disabled = true;
-        countdown.textContent = "3";
-        let count = 3;
-        const interval = setInterval(() => {
-          count--;
-          if (count === 0) {
-            clearInterval(interval);
-            countdown.textContent = "";
-            recordedChunks = [];
-            mediaRecorder = new MediaRecorder(stream);
-            mediaRecorder.ondataavailable = (e) => {
-              if (e.data.size > 0) recordedChunks.push(e.data);
-            };
-            mediaRecorder.onstop = () => {
-              const blob = new Blob(recordedChunks, { type: "video/webm" });
-              const url = URL.createObjectURL(blob);
-              recordedVideo.src = url;
-              downloadBtn.onclick = () => {
-                const a = document.createElement("a");
-                a.href = url;
-                const name = videoFilename.value.trim() || "Crescendos-Video-" + getFormattedDate();
-                a.download = name + ".webm";
-                a.click();
-              };
-            };
-            mediaRecorder.start();
-            playYouTubeVideo();
-            startBtn.disabled = true;
-            stopBtn.disabled = false;
-
-            if (window.innerWidth > 768 && document.fullscreenEnabled) {
-              ytplayer.requestFullscreen?.();
-            }
-          } else {
-            countdown.textContent = count;
-          }
-        }, 1000);
+    function beginRecording() {
+      recordedChunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
       };
-
-      stopBtn.onclick = () => {
-        mediaRecorder.stop();
-        pauseYouTubeVideo();
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
+      mediaRecorder.onstop = () => {
+        isRecording = false;
+        recordBtn.textContent = "Start Recording";
         videoSelect.disabled = false;
+        detectOrientation();
+        pauseYouTubeVideo();
+        recordBtn.disabled = false;
+        const blob = new Blob(recordedChunks, { type: "video/webm" });
+        const url = URL.createObjectURL(blob);
+        recordedVideo.src = url;
+        downloadBtn.onclick = () => {
+          const a = document.createElement("a");
+          a.href = url;
+          const name = videoFilename.value.trim() || "Crescendos-Video-" + getFormattedDate();
+          a.download = name + ".webm";
+          a.click();
+        };
+      };
+      mediaRecorder.start();
+      playYouTubeVideo();
+      isRecording = true;
+      recordBtn.textContent = "Stop Recording";
+      recordBtn.disabled = false;
+    }
+
+    function stopRecording() {
+      if (!isRecording || !mediaRecorder) return;
+      recordBtn.disabled = true;
+      mediaRecorder.stop();
+    }
+
+    function startCountdown() {
+      countdownActive = true;
+      recordBtn.disabled = true;
+      videoSelect.disabled = true;
+      let count = 3;
+      countdown.textContent = String(count);
+      countdownInterval = setInterval(() => {
+        count--;
+        if (count === 0) {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+          countdownActive = false;
+          countdown.textContent = "";
+          beginRecording();
+        } else {
+          countdown.textContent = String(count);
+        }
+      }, 1000);
+    }
+
+    setupCamera().then(() => {
+      recordBtn.onclick = () => {
+        if (countdownActive) {
+          return;
+        }
+
+        if (!isRecording) {
+          startCountdown();
+        } else {
+          stopRecording();
+        }
       };
     });
   </script>
