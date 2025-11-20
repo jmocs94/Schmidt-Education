@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Crescendos 25-26 — Simple Playlist Player</title>
+<script src="https://unpkg.com/wavesurfer.js@7"></script>
+<style>
+  body{font-family:Helvetica,Arial,sans-serif;background:#f0f8ff;color:#333;padding:1.5rem}
+  header{text-align:center;margin-bottom:1rem}
+  h1{color:#00796b;margin:.25rem 0}
+  .app{display:grid;grid-template-columns:minmax(220px,1fr) minmax(440px,2fr);gap:1rem;align-items:start}
+  @media (max-width: 900px){
+    .app{grid-template-columns:1fr}
+  }
+  .card{background:#fff;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.08);padding:1rem}
+  h2{color:#00796b;font-size:1.1rem;margin:.25rem 0 .75rem}
+  .toolbar{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;margin:.75rem 0}
+  .btn{appearance:none;border:none;border-radius:10px;padding:.5rem .85rem;cursor:pointer;background:#00796b;color:#fff;font-weight:600}
+  .btn:hover{background:#004d40}
+  .btn-muted{background:#d7e6ee;color:#234}
+  .library-list,.playlist{list-style:none;margin:0;padding:0;max-height:420px;overflow:auto;border:1px solid #ccd;border-radius:10px;min-height:200px}
+  .library-item,.playlist-item{display:flex;align-items:center;gap:.6rem;padding:.65rem .8rem;border-bottom:1px solid #eef3f9}
+  .playlist-item{cursor:pointer}
+  .playlist-item:hover{background:#f7fbfd}
+  .playlist-item.active{background:#f2fbf8}
+  .playlist-item{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:.75rem;cursor:grab}
+  .playlist-item:active{cursor:grabbing}
+  .playlist-item.dragging{opacity:.6}
+  .playlist-item.drag-over{box-shadow:0 0 0 2px #9a4dff33 inset}
+  .drag-handle{font-size:1.1rem;color:#889;cursor:grab;display:flex;align-items:center}
+  .playlist-item.dragging .drag-handle{cursor:grabbing}
+  .track-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .item-actions{display:flex;gap:.3rem}
+  .icon-btn{appearance:none;border:none;background:#d7e6ee;color:#234;border-radius:999px;padding:.25rem;width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .icon-btn:hover{background:#b8cfde}
+  .icon-btn:active{background:#9cbacf}
+  .icon-btn svg{width:1rem;height:1rem}
+  .icon-btn.danger{background:#fee2e2;color:#b91c1c}
+  .icon-btn.danger:hover{background:#fecaca}
+  .icon-btn.danger:active{background:#fca5a5}
+  .controls{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;padding:.6rem;background:#e7eef6;border-radius:10px;margin-top:.75rem}
+  label{display:flex;align-items:center;gap:.45rem}
+  #speed,#gap{width:160px}
+  #volume{width:100px}
+  #waveform{margin-top:.9rem;width:100%;height:150px;border-radius:10px;background:#fff;border:1px solid #d4dde7}
+  .small{font-size:.9rem;color:#456}
+  .info-icon{display:inline-flex;align-items:center;justify-content:center;width:1.3rem;height:1.3rem;border-radius:50%;background:#00796b;color:#fff;font-size:.9rem;margin-left:.4rem;cursor:help}
+  .time-display{text-align:center;font-weight:600;color:#234;margin-bottom:.5rem}
+  .playlist-area{position:relative}
+  .trash-zone{position:absolute;top:0;right:-150px;bottom:0;width:130px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.35rem;background:rgba(239,68,68,.08);border:2px dashed rgba(220,38,38,.5);border-radius:14px;color:#b91c1c;font-weight:600;opacity:0;pointer-events:none;transform:translateX(20px);transition:opacity .2s ease,transform .2s ease}
+  .trash-zone.visible{opacity:1;pointer-events:auto;transform:translateX(0)}
+  .trash-zone.active{background:rgba(239,68,68,.16);border-color:#dc2626;box-shadow:0 8px 24px rgba(220,38,38,.15)}
+  .trash-icon{font-size:2rem}
+  .trash-text{font-size:.9rem;text-align:center}
+  @media (max-width: 1100px){
+    .trash-zone{right:-120px;width:110px}
+  }
+  @media (max-width: 900px){
+    .playlist-area{display:flex;flex-direction:column;gap:.75rem}
+    .trash-zone{position:relative;right:auto;bottom:auto;width:100%;height:90px;transform:translateY(10px);opacity:0;margin-top:.25rem}
+    .trash-zone.visible{transform:translateY(0)}
+  }
+</style>
+</head>
+<body>
+<header>
+  <a href="https://schmidt-education.com">
+  <img src="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/360c0fde872bd41d319af96a3e55bc9df7df3a54/Crescendos_w_trans.png" width="160" alt="Crescendos" style="border:0;">
+</a>
+  <h1>Crescendos 25-26 — Playlist Player</h1>
+  <p>Create your playlist, control playback, and use headphones for clean audio.</p>
+</header>
+
+<div class="app">
+  <section class="card">
+    <h2>Song Library</h2>
+    <div class="toolbar">
+      <button id="addSelected" class="btn">Add Selected →</button>
+      <button id="addLocal" class="btn">➕ Add Local File</button>
+      <button id="clearPlaylist" class="btn btn-muted">Clear Playlist</button>
+    </div>
+    <ul id="library" class="library-list"></ul>
+  </section>
+
+  <section class="card">
+    <h2>Your Playlist <span class="info-icon" title="Space = Play/Pause · ←/→ = Prev/Next · S = Stop">i</span></h2>
+    <div class="toolbar">
+      <button id="loopMode" class="btn btn-muted" title="Change loop mode">No Loop</button>
+      <label>Speed <input id="speed" type="range" min="0.05" max="2.0" step="0.05" value="1.00"></label>
+      <span id="speedVal">1.00×</span>
+
+      <label>Gap <input id="gap" type="range" min="0" max="5" step="0.1" value="2.0"></label>
+      <span id="gapVal">2.0s</span>
+    </div>
+
+    <div class="playlist-area">
+      <ul id="playlist" class="playlist"></ul>
+      <div id="trashZone" class="trash-zone" aria-hidden="true">
+        <span class="trash-icon" aria-hidden="true">🗑</span>
+        <span class="trash-text">Drop to remove</span>
+      </div>
+    </div>
+
+    <div id="time" class="time-display">0:00 / 0:00</div>
+    <div class="controls">
+      <button id="prev" class="btn">⏮ Prev</button>
+      <button id="playPause" class="btn">▶️ Play</button>
+      <button id="stop" class="btn btn-muted">⏹ Stop</button>
+      <button id="next" class="btn">⏭ Next</button>
+
+      <label style="margin-left:auto">Volume
+        <input id="volume" type="range" min="0" max="1" step="0.01" value="1">
+      </label>
+    </div>
+
+    <div id="waveform"></div>
+  </section>
+</div>
+
+<input id="filePicker" type="file" accept="audio/*" style="display:none"/>
+
+<script>
+/* ---------- Data (relative paths so they work on schmidt-education.com) ---------- */
+const TRACKS = [
+  {
+    "title": "1 Prologue: Invisible",
+    "url": "https://drive.google.com/uc?export=download&id=1flNpRL-EqxAeMKUHfiAIrsOz8TKQ5jpy"
+  },
+  {
+    "title": "2 Beetlejuice Appears",
+    "url": "https://drive.google.com/uc?export=download&id=1fB5DBzzaRKyQNtzODmLQ-ft41864YsOg"
+  },
+  {
+    "title": "3 The Whole \u201cBeing Dead\u201d Thing",
+    "url": "https://drive.google.com/uc?export=download&id=1fj_glg8m4qDpTN9dxsbLZEnpkUGbMpTq"
+  },
+  {
+    "title": "4 The Maitlands",
+    "url": "https://drive.google.com/uc?export=download&id=1K7Qa61fVzAg6I_e3gp_HjFJitmlG50kB"
+  },
+  {
+    "title": "5 Phone Ring",
+    "url": "https://drive.google.com/uc?export=download&id=1Cf0aEPXeTfcp6cbu_GxAj6m0mPchI1EQ"
+  },
+  {
+    "title": "6 Ready, Set, Not Yet",
+    "url": "https://drive.google.com/uc?export=download&id=1dHMj7_WKEGlpNWW3CNqpufmIZ_rFmyfX"
+  },
+  {
+    "title": "7 The Handbook",
+    "url": "https://drive.google.com/uc?export=download&id=1ree3A-rb_qwbWF2sDtXIvuoabCn6jpjH"
+  },
+  {
+    "title": "8 Shock",
+    "url": "https://drive.google.com/uc?export=download&id=1hOKTQyKNdysVdt-phAZFG5TJoVX_IN3t"
+  },
+  {
+    "title": "9 The Whole \u201cBeing Dead\u201d Thing (Part 2)",
+    "url": "https://drive.google.com/uc?export=download&id=12nBLNtbF8AflpqvpbxKA7MPKKJEJxsQK"
+  },
+  {
+    "title": "10 The Whole \u201cBeing Dead\u201d Thing (Part 3)",
+    "url": "https://drive.google.com/uc?export=download&id=1hVevprXnGHbgDgLonQEEeIUpyCtSqq1_"
+  },
+  {
+    "title": "11 The Deetzes",
+    "url": "https://drive.google.com/uc?export=download&id=1EEbYWVYMVtRNHNi-q6Q4UyZPfrUJPy7t"
+  },
+  {
+    "title": "12 Let\u2019s Clean Up",
+    "url": "https://drive.google.com/uc?export=download&id=1rodp2FaxHGjykDASGoqV8hFc7jkAp2ry"
+  },
+  {
+    "title": "13 Dead Mom",
+    "url": "https://drive.google.com/uc?export=download&id=1nYcDfpzqRyahjnd-J0Rk0WEY9FbVbSMF"
+  },
+  {
+    "title": "14 The Attic",
+    "url": "https://drive.google.com/uc?export=download&id=1Z5OU3p2xThZ9Iz2XypK5QjILCVQ_pifJ"
+  },
+  {
+    "title": "15 Sweat Lodge",
+    "url": "https://drive.google.com/uc?export=download&id=1Lruznc9AVe6CDuWYwzy_ITM2Umdr43P5"
+  },
+  {
+    "title": "16 No Reason",
+    "url": "https://drive.google.com/uc?export=download&id=1ANzyx5gIQCc70827BU1-yL-k2tysu3nC"
+  },
+  {
+    "title": "17 Ghosts",
+    "url": "https://drive.google.com/uc?export=download&id=13zDtQ1hdSfIZjJhmAGNQw_2XP5yoUHkJ"
+  },
+  {
+    "title": "18 Mama",
+    "url": "https://drive.google.com/uc?export=download&id=1_LMRyiJBUM57Xx6NJWUJBIW6vT3Plqyx"
+  },
+  {
+    "title": "19 Let\u2019s Scare My Dad",
+    "url": "https://drive.google.com/uc?export=download&id=100slqibImdVe2YL02zgvPQzJlKhPgOJi"
+  },
+  {
+    "title": "20 Diamond Ring",
+    "url": "https://drive.google.com/uc?export=download&id=1UG2ayiXMPtBR18ASp1kmdP2jwvRtR3gP"
+  },
+  {
+    "title": "21 Please Leave This House",
+    "url": "https://drive.google.com/uc?export=download&id=1v8GB-1hFviot-PClqsrZQ2lOzn67y7t7"
+  },
+  {
+    "title": "22 Invisible (Reprise)",
+    "url": "https://drive.google.com/uc?export=download&id=1YZ0qE1dymKa8xTIW-tmbRXh18uH2jacN"
+  },
+  {
+    "title": "23 Say My Name",
+    "url": "https://drive.google.com/uc?export=download&id=19-xSD_RxU7tWmLiB4Yd16dWIam_xCXzK"
+  },
+  {
+    "title": "24 The Dinner Party",
+    "url": "https://drive.google.com/uc?export=download&id=1uuGGApBBXTWZABXMRvc_QUE8Z7RcA12t"
+  },
+  {
+    "title": "25 Dinner Bell",
+    "url": "https://drive.google.com/uc?export=download&id=1oox2sbELygj9iFsyufSBpoaFLDG6vJnG"
+  },
+  {
+    "title": "26 Day-O (The Banana Boat Song)",
+    "url": "https://drive.google.com/uc?export=download&id=1vkFJEB-nHz0DpXh8KlxVuw_oBUI93A-m"
+  },
+  {
+    "title": "27 Showtime!",
+    "url": "https://drive.google.com/uc?export=download&id=1sEQCMuP-4er3McUUMwbLFdbGVZ7ls0wl"
+  },
+  {
+    "title": "28 Girl Scout",
+    "url": "https://drive.google.com/uc?export=download&id=1VxcjizGqJUKgJ8XY9ORsajqfNoCa5ZWj"
+  },
+  {
+    "title": "29 That Beautiful Sound",
+    "url": "https://drive.google.com/uc?export=download&id=1oubDFgGKiZPUr_4oIEC4zf9D5bbfMofd"
+  },
+  {
+    "title": "30 The Handbook 2",
+    "url": "https://drive.google.com/uc?export=download&id=1bER-vCF0C__TYkLtj6NLUzTFA7UxBj2i"
+  },
+  {
+    "title": "31 The Attic 2",
+    "url": "https://drive.google.com/uc?export=download&id=1Ng6BPmYvZEcWcmi8jYEgqCg6VAWMOBAc"
+  },
+  {
+    "title": "32 Adam Opens The Book",
+    "url": "https://drive.google.com/uc?export=download&id=1017PurlGZzwY8YW1KNY08FSCVkniglNV"
+  },
+  {
+    "title": "33 Netherworld 1",
+    "url": "https://drive.google.com/uc?export=download&id=16TjSSzhbjrDFlKOLHy9mAtVAZ82uOQxB"
+  },
+  {
+    "title": "34 A Very Deetz Return",
+    "url": "https://drive.google.com/uc?export=download&id=1IdHll5BfzZtZGpL9FQtmexd2ruuLZG6i"
+  },
+  {
+    "title": "35 Otho",
+    "url": "https://drive.google.com/uc?export=download&id=1C4AFwq4sw3dSyBenk0SgkB8p5VpvF3wT"
+  },
+  {
+    "title": "36 The Handbook 3",
+    "url": "https://drive.google.com/uc?export=download&id=1bELObHEvA8k7Our78irD9WR0APqyRazT"
+  },
+  {
+    "title": "37 The S\u00e9ance",
+    "url": "https://drive.google.com/uc?export=download&id=1LyBqIWQ8rnBJXMDVxZ5TY_XGpYhsmeHY"
+  },
+  {
+    "title": "38 Netherworld 2",
+    "url": "https://drive.google.com/uc?export=download&id=1cbA6HycmN-DeuEXEdbyAFDs5MtGIr4D8"
+  },
+  {
+    "title": "39 The Netherworld!",
+    "url": "https://drive.google.com/uc?export=download&id=1TXE04IOoa39ERJXXJqVVq-Wrdtfm_BoG"
+  },
+  {
+    "title": "40 What I Know Now",
+    "url": "https://drive.google.com/uc?export=download&id=1Zjsp2ADjPf-kgIfM73-u4Sv3Q_iD99l7"
+  },
+  {
+    "title": "41 Klaxon",
+    "url": "https://drive.google.com/uc?export=download&id=1W_mWEp97UaB20FIUiw9Sddkp_EHYbPd-"
+  },
+  {
+    "title": "42 The Netherworld Chase",
+    "url": "https://drive.google.com/uc?export=download&id=15xqVcme-tC5eHfrnWfzr6UMh0zr_srLO"
+  },
+  {
+    "title": "43 Home (Part 1)",
+    "url": "https://drive.google.com/uc?export=download&id=1XskbNBkIl7XxhrokoV8NvIubqJQGaegi"
+  },
+  {
+    "title": "44 Home (Part 2)",
+    "url": "https://drive.google.com/uc?export=download&id=11pS_U2sIQ4W3G_o4GzXHG62iqx_fXFl2"
+  },
+  {
+    "title": "45 Back Home",
+    "url": "https://drive.google.com/uc?export=download&id=1rTbIeZ64nsDTrOX0ZkECm01Hl8reZv6M"
+  },
+  {
+    "title": "46 Here Comes The\u2026",
+    "url": "https://drive.google.com/uc?export=download&id=1n-18k8_NgMzpCyuZWaacfIRO98nglNre"
+  },
+  {
+    "title": "47 Alive!",
+    "url": "https://drive.google.com/uc?export=download&id=1EE_POKHR3iNA6YDprrHUAl5v4EtWS0iR"
+  },
+  {
+    "title": "48 Netherworld 3",
+    "url": "https://drive.google.com/uc?export=download&id=1q-_aAGwzHfbU5JPuUpejL7UXgToZgdUy"
+  },
+  {
+    "title": "49 The Wasteland",
+    "url": "https://drive.google.com/uc?export=download&id=1RMy8Eo0ZA8_Ia_C-hxzTC0bwMOlPc1gc"
+  },
+  {
+    "title": "50 Yeehaw!",
+    "url": "https://drive.google.com/uc?export=download&id=1i8ZvITkX5Vh52OYTMWNETwMNVkRP-5z9"
+  },
+  {
+    "title": "51 Most Of All, Scarecrow",
+    "url": "https://drive.google.com/uc?export=download&id=1-MGexRR6Ry4wMCh2rEpiEKGVX-CPoMXK"
+  },
+  {
+    "title": "52 Jump In The Line",
+    "url": "https://drive.google.com/uc?export=download&id=1WQ1XH9S4Z4Z6tuzVn4ZgMw-yoYlHW20N"
+  },
+  {
+    "title": "53 Bows",
+    "url": "https://drive.google.com/uc?export=download&id=1yNkzYIjjty7GRIdhOPTAAj1JMYL1rnCT"
+  },
+  {
+    "title": "54 Exit Music",
+    "url": "https://drive.google.com/uc?export=download&id=1-SoXjLcycRz5E_cjv_MyQrl5k00S1vDm"
+  }
+];
+
+/* ---------- Elements ---------- */
+const lib=document.getElementById('library');
+const playlistEl=document.getElementById('playlist');
+const addSel=document.getElementById('addSelected');
+const addLocal=document.getElementById('addLocal');
+const clearBtn=document.getElementById('clearPlaylist');
+const trashZone=document.getElementById('trashZone');
+const picker=document.getElementById('filePicker');
+
+const playPause=document.getElementById('playPause');
+const prev=document.getElementById('prev');
+const next=document.getElementById('next');
+const stopBtn=document.getElementById('stop');
+const speed=document.getElementById('speed');
+const speedVal=document.getElementById('speedVal');
+const timeLbl=document.getElementById('time');
+const loopButton=document.getElementById('loopMode');
+const gapSlider=document.getElementById('gap');
+const gapVal=document.getElementById('gapVal');
+const volumeSlider=document.getElementById('volume');
+
+/* ---------- WaveSurfer ---------- */
+const wavesurfer=WaveSurfer.create({
+  container:'#waveform',
+  waveColor:'#d0cbe6',
+  progressColor:'#9a4dff',
+  cursorColor:'#9a4dff',
+  height:150,
+  responsive:true,
+  barWidth:2,
+  barRadius:2,
+  cursorWidth:2
+});
+
+/* ---------- State ---------- */
+let playlist=TRACKS.slice(0,5);
+let current=0;
+let gap=2.0;
+let gapTimer=null;
+let loading=false;
+let loadedIndex=-1;
+const LOOP_MODES=['none','track','playlist'];
+const LOOP_LABELS=['No Loop','Loop Current','Loop Playlist'];
+let loopIndex=0;
+
+/* ---------- Helpers ---------- */
+const fmt=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+function clearGap(){if(gapTimer){clearTimeout(gapTimer);gapTimer=null;}}
+function setSpeed(){wavesurfer.setPlaybackRate(parseFloat(speed.value));speedVal.textContent=parseFloat(speed.value).toFixed(2)+'×';}
+function updatePlayBtn(){playPause.textContent=wavesurfer.isPlaying()?'⏸ Pause':'▶️ Play';}
+function updateLoopBtn(){loopButton.textContent=LOOP_LABELS[loopIndex];loopButton.classList.toggle('btn-muted',loopIndex===0);}
+function resetTime(){timeLbl.textContent='0:00 / 0:00';}
+
+/* ---------- Library ---------- */
+function renderLib(){
+  lib.innerHTML='';
+  TRACKS.forEach((t,i)=>{
+    const li=document.createElement('li');
+    li.className='library-item';
+    const cb=document.createElement('input');cb.type='checkbox';cb.dataset.i=i;
+    li.append(cb,document.createTextNode(' '+t.title));
+    lib.append(li);
+  });
+}
+renderLib();
+
+/* ---------- Playlist ---------- */
+function renderPlaylist(){
+  playlistEl.innerHTML='';
+  playlist.forEach((t,i)=>{
+    const li=document.createElement('li');
+    li.className='playlist-item'+(i===current?' active':'');
+    li.dataset.index=i;
+    li.draggable=true;
+
+    const handle=document.createElement('span');
+    handle.className='drag-handle';
+    handle.textContent='⋮⋮';
+
+    const title=document.createElement('span');
+    title.className='track-title';
+    title.textContent=t.title;
+
+    const actions=document.createElement('div');
+    actions.className='item-actions';
+
+    const up=document.createElement('button');
+    up.type='button';
+    up.className='icon-btn';
+    up.dataset.action='up';
+    up.title='Move up';
+    up.setAttribute('aria-label','Move track up');
+    up.innerHTML='▲';
+
+    const down=document.createElement('button');
+    down.type='button';
+    down.className='icon-btn';
+    down.dataset.action='down';
+    down.title='Move down';
+    down.setAttribute('aria-label','Move track down');
+    down.innerHTML='▼';
+
+    const remove=document.createElement('button');
+    remove.type='button';
+    remove.className='icon-btn danger';
+    remove.dataset.action='delete';
+    remove.title='Remove from playlist';
+    remove.setAttribute('aria-label','Remove track');
+    remove.innerHTML='✖';
+
+    actions.append(up,down,remove);
+    li.append(handle,title,actions);
+
+    playlistEl.append(li);
+  });
+  if(current>=playlist.length) current=playlist.length?playlist.length-1:0;
+}
+renderPlaylist();
+
+/* Single-click = load (no play) */
+playlistEl.addEventListener('click',e=>{
+  if(e.target.closest('.icon-btn')) return;
+  const li=e.target.closest('.playlist-item'); if(!li) return;
+  const i=parseInt(li.dataset.index,10);
+  if(i===current) return;
+  clearGap();
+  setTrack(i,false);
+});
+
+/* Double-click = load + play */
+playlistEl.addEventListener('dblclick',e=>{
+  if(e.target.closest('.icon-btn')) return;
+  const li=e.target.closest('.playlist-item'); if(!li) return;
+  const i=parseInt(li.dataset.index,10);
+  clearGap();
+  setTrack(i,true);
+});
+
+function moveTrack(from,to){
+  if(from===to||playlist.length===0) return;
+  const activeTrack=playlist[current]||null;
+  const loadedTrack=loadedIndex>=0?playlist[loadedIndex]:null;
+  const [item]=playlist.splice(from,1);
+  const target=Math.max(0,Math.min(to,playlist.length));
+  playlist.splice(target,0,item);
+  if(activeTrack){
+    const idx=playlist.indexOf(activeTrack);
+    current=idx>=0?idx:0;
+  }else{
+    current=0;
+  }
+  if(loadedTrack){
+    loadedIndex=playlist.indexOf(loadedTrack);
+  }else{
+    loadedIndex=-1;
+  }
+  renderPlaylist();
+}
+
+playlistEl.addEventListener('click',e=>{
+  const btn=e.target.closest('.icon-btn');
+  if(!btn) return;
+  const li=btn.closest('.playlist-item');
+  if(!li) return;
+  const idx=parseInt(li.dataset.index,10);
+  if(btn.dataset.action==='up'&&idx>0){
+    moveTrack(idx,idx-1);
+  }else if(btn.dataset.action==='down'&&idx<playlist.length-1){
+    moveTrack(idx,idx+1);
+  }else if(btn.dataset.action==='delete'){
+    removeTrack(idx);
+  }
+});
+
+let dragIndex=null;
+
+playlistEl.addEventListener('dragstart',e=>{
+  const li=e.target.closest('.playlist-item');
+  if(!li) return;
+  dragIndex=parseInt(li.dataset.index,10);
+  li.classList.add('dragging');
+  e.dataTransfer.effectAllowed='move';
+  e.dataTransfer.setData('text/plain','');
+  if(trashZone){
+    trashZone.classList.remove('active');
+    trashZone.classList.add('visible');
+    trashZone.setAttribute('aria-hidden','false');
+  }
+});
+
+playlistEl.addEventListener('dragend',e=>{
+  const li=e.target.closest('.playlist-item');
+  if(li) li.classList.remove('dragging');
+  dragIndex=null;
+  [...playlistEl.querySelectorAll('.drag-over')].forEach(el=>el.classList.remove('drag-over'));
+  if(trashZone){
+    trashZone.classList.remove('visible','active');
+    trashZone.setAttribute('aria-hidden','true');
+  }
+});
+
+playlistEl.addEventListener('dragover',e=>{
+  e.preventDefault();
+  const li=e.target.closest('.playlist-item');
+  if(!li||dragIndex===null) return;
+  [...playlistEl.querySelectorAll('.drag-over')].forEach(el=>{if(el!==li)el.classList.remove('drag-over');});
+  li.classList.add('drag-over');
+});
+
+playlistEl.addEventListener('dragleave',e=>{
+  const li=e.target.closest('.playlist-item');
+  if(li) li.classList.remove('drag-over');
+});
+
+playlistEl.addEventListener('drop',e=>{
+  e.preventDefault();
+  const li=e.target.closest('.playlist-item');
+  if(!li||dragIndex===null) return;
+  li.classList.remove('drag-over');
+  const rect=li.getBoundingClientRect();
+  const offset=e.clientY-rect.top;
+  const mid=rect.height/2;
+  let targetIndex=parseInt(li.dataset.index,10);
+  if(offset>mid) targetIndex+=1;
+  moveTrack(dragIndex,targetIndex);
+});
+
+if(trashZone){
+  trashZone.addEventListener('dragover',e=>{
+    if(dragIndex===null) return;
+    e.preventDefault();
+    trashZone.classList.add('active');
+  });
+  trashZone.addEventListener('dragleave',()=>{
+    trashZone.classList.remove('active');
+  });
+  trashZone.addEventListener('drop',e=>{
+    if(dragIndex===null) return;
+    e.preventDefault();
+    const idx=dragIndex;
+    dragIndex=null;
+    trashZone.classList.remove('active');
+    trashZone.classList.remove('visible');
+    trashZone.setAttribute('aria-hidden','true');
+    removeTrack(idx);
+  });
+}
+
+function removeTrack(index){
+  if(index<0||index>=playlist.length) return;
+  const removedTrack=playlist[index];
+  const activeTrack=playlist[current]||null;
+  const loadedTrack=loadedIndex>=0?playlist[loadedIndex]:null;
+  const wasPlaying=wavesurfer.isPlaying();
+  playlist.splice(index,1);
+
+  if(playlist.length===0){
+    current=0;
+    loadedIndex=-1;
+    renderPlaylist();
+    wavesurfer.pause();
+    if(typeof wavesurfer.empty==='function') wavesurfer.empty();
+    resetTime();
+    updatePlayBtn();
+    return;
+  }
+
+  if(removedTrack===activeTrack){
+    current=Math.min(index,playlist.length-1);
+  }else if(activeTrack){
+    const idx=playlist.indexOf(activeTrack);
+    current=idx>=0?idx:Math.min(current,playlist.length-1);
+  }else{
+    current=Math.min(current,playlist.length-1);
+  }
+
+  if(removedTrack===loadedTrack){
+    loadedIndex=-1;
+  }else if(loadedTrack){
+    loadedIndex=playlist.indexOf(loadedTrack);
+  }else{
+    loadedIndex=-1;
+  }
+
+  renderPlaylist();
+
+  if(removedTrack===activeTrack){
+    setTrack(current,wasPlaying);
+  }else if(removedTrack===loadedTrack){
+    setTrack(current,false);
+  }
+}
+
+/* ---------- Core ---------- */
+function setTrack(i,autoplay=false){
+  if(playlist.length===0){
+    wavesurfer.pause();
+    if(typeof wavesurfer.empty==='function') wavesurfer.empty();
+    loading=false;
+    loadedIndex=-1;
+    resetTime();
+    updatePlayBtn();
+    return;
+  }
+  if(i<0||i>=playlist.length) return;
+  current=i;
+  clearGap();
+  renderPlaylist();
+
+  loading=true;
+  loadedIndex=-1;
+  resetTime();
+  wavesurfer.load(playlist[i].url);
+
+  const onReady=()=>{
+    wavesurfer.un('ready',onReady);
+    loading=false;
+    loadedIndex=i;
+    setSpeed();
+    timeLbl.textContent=`0:00 / ${fmt(wavesurfer.getDuration()||0)}`;
+    if(autoplay) wavesurfer.play();
+    updatePlayBtn();
+  };
+  wavesurfer.on('ready',onReady);
+}
+
+function nextTrack(user=false){
+  clearGap();
+  if(loopIndex===1 && !user){
+    wavesurfer.seekTo(0); wavesurfer.play(); return;
+  }
+  if(current<playlist.length-1) current++;
+  else if(loopIndex===2 && playlist.length>0) current=0;
+  else return;
+  setTrack(current,true);
+}
+
+function prevTrack(){
+  clearGap();
+  if((wavesurfer.getCurrentTime()||0)>3){ wavesurfer.seekTo(0); return; }
+  if(current>0) current--;
+  else if(loopIndex===2 && playlist.length>0) current=playlist.length-1;
+  setTrack(current,true);
+}
+
+/* ---------- Controls ---------- */
+playPause.addEventListener('click',()=>{
+  if(loading||playlist.length===0) return;
+  if(loadedIndex!==current){ setTrack(current,true); return; }
+  if(wavesurfer.isPlaying()) wavesurfer.pause(); else wavesurfer.play();
+  updatePlayBtn();
+});
+
+stopBtn.addEventListener('click',()=>{
+  clearGap();
+  wavesurfer.pause();
+  wavesurfer.seekTo(0);
+  if(wavesurfer.getDuration()) timeLbl.textContent=`0:00 / ${fmt(wavesurfer.getDuration()||0)}`; else resetTime();
+  updatePlayBtn();
+});
+
+prev.addEventListener('click',()=>playlist.length&&prevTrack());
+next.addEventListener('click',()=>playlist.length&&nextTrack(true));
+speed.addEventListener('input',setSpeed);
+volumeSlider.addEventListener('input',e=>wavesurfer.setVolume(parseFloat(e.target.value)));
+gapSlider.addEventListener('input',e=>{
+  gap=parseFloat(e.target.value);
+  gapVal.textContent=gap.toFixed(1)+'s';
+});
+
+/* ---------- Wavesurfer Events ---------- */
+wavesurfer.on('play',updatePlayBtn);
+wavesurfer.on('pause',updatePlayBtn);
+wavesurfer.on('finish',()=>{
+  updatePlayBtn();
+  clearGap();
+  gapTimer=setTimeout(()=>nextTrack(),gap*1000);
+});
+wavesurfer.on('audioprocess',()=>{
+  const cur=wavesurfer.getCurrentTime()||0;
+  const dur=wavesurfer.getDuration()||0;
+  if(dur) timeLbl.textContent=`${fmt(cur)} / ${fmt(dur)}`;
+});
+wavesurfer.on('seek',()=>{
+  const cur=wavesurfer.getCurrentTime()||0;
+  const dur=wavesurfer.getDuration()||0;
+  if(dur) timeLbl.textContent=`${fmt(cur)} / ${fmt(dur)}`;
+});
+
+/* ---------- Library actions ---------- */
+addSel.onclick=()=>{
+  [...lib.querySelectorAll('input:checked')].forEach(cb=>{
+    playlist.push(TRACKS[cb.dataset.i]); cb.checked=false;
+  });
+  renderPlaylist();
+};
+addLocal.onclick=()=>picker.click();
+picker.onchange=e=>{
+  const f=e.target.files?.[0]; if(!f) return;
+  const o=URL.createObjectURL(f);
+  playlist.push({title:f.name,url:o,local:true});
+  renderPlaylist();
+};
+clearBtn.onclick=()=>{
+  clearGap();
+  playlist=[];
+  current=0;
+  renderPlaylist();
+  setTrack(0,false);
+};
+
+loopButton.addEventListener('click',()=>{
+  loopIndex=(loopIndex+1)%LOOP_MODES.length;
+  updateLoopBtn();
+});
+
+/* ---------- Keyboard ---------- */
+document.addEventListener('keydown',e=>{
+  if(['INPUT','TEXTAREA','SELECT','BUTTON'].includes(document.activeElement.tagName))return;
+  switch(e.key){
+    case' ':e.preventDefault();playPause.click();break;
+    case'ArrowRight':next.click();break;
+    case'ArrowLeft':prev.click();break;
+    case's':case'S':stopBtn.click();break;
+  }
+});
+
+/* ---------- Init ---------- */
+renderPlaylist();         // show playlist immediately
+updateLoopBtn();
+setTrack(0,false);        // load first track (no autoplay)
+</script>
+</body>
+</html>
