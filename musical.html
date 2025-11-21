@@ -123,223 +123,67 @@
 <script>
 /* ---------- Data (relative paths so they work on schmidt-education.com) ---------- */
 const TRACKS = [
-  {
-    "title": "1 Prologue: Invisible",
-    "url": "https://drive.google.com/uc?export=download&id=1flNpRL-EqxAeMKUHfiAIrsOz8TKQ5jpy"
-  },
-  {
-    "title": "2 Beetlejuice Appears",
-    "url": "https://drive.google.com/uc?export=download&id=1fB5DBzzaRKyQNtzODmLQ-ft41864YsOg"
-  },
-  {
-    "title": "3 The Whole \u201cBeing Dead\u201d Thing",
-    "url": "https://drive.google.com/uc?export=download&id=1fj_glg8m4qDpTN9dxsbLZEnpkUGbMpTq"
-  },
-  {
-    "title": "4 The Maitlands",
-    "url": "https://drive.google.com/uc?export=download&id=1K7Qa61fVzAg6I_e3gp_HjFJitmlG50kB"
-  },
-  {
-    "title": "5 Phone Ring",
-    "url": "https://drive.google.com/uc?export=download&id=1Cf0aEPXeTfcp6cbu_GxAj6m0mPchI1EQ"
-  },
-  {
-    "title": "6 Ready, Set, Not Yet",
-    "url": "https://drive.google.com/uc?export=download&id=1dHMj7_WKEGlpNWW3CNqpufmIZ_rFmyfX"
-  },
-  {
-    "title": "7 The Handbook",
-    "url": "https://drive.google.com/uc?export=download&id=1ree3A-rb_qwbWF2sDtXIvuoabCn6jpjH"
-  },
-  {
-    "title": "8 Shock",
-    "url": "https://drive.google.com/uc?export=download&id=1hOKTQyKNdysVdt-phAZFG5TJoVX_IN3t"
-  },
-  {
-    "title": "9 The Whole \u201cBeing Dead\u201d Thing (Part 2)",
-    "url": "https://drive.google.com/uc?export=download&id=12nBLNtbF8AflpqvpbxKA7MPKKJEJxsQK"
-  },
-  {
-    "title": "10 The Whole \u201cBeing Dead\u201d Thing (Part 3)",
-    "url": "https://drive.google.com/uc?export=download&id=1hVevprXnGHbgDgLonQEEeIUpyCtSqq1_"
-  },
-  {
-    "title": "11 The Deetzes",
-    "url": "https://drive.google.com/uc?export=download&id=1EEbYWVYMVtRNHNi-q6Q4UyZPfrUJPy7t"
-  },
-  {
-    "title": "12 Let\u2019s Clean Up",
-    "url": "https://drive.google.com/uc?export=download&id=1rodp2FaxHGjykDASGoqV8hFc7jkAp2ry"
-  },
-  {
-    "title": "13 Dead Mom",
-    "url": "https://drive.google.com/uc?export=download&id=1nYcDfpzqRyahjnd-J0Rk0WEY9FbVbSMF"
-  },
-  {
-    "title": "14 The Attic",
-    "url": "https://drive.google.com/uc?export=download&id=1Z5OU3p2xThZ9Iz2XypK5QjILCVQ_pifJ"
-  },
-  {
-    "title": "15 Sweat Lodge",
-    "url": "https://drive.google.com/uc?export=download&id=1Lruznc9AVe6CDuWYwzy_ITM2Umdr43P5"
-  },
-  {
-    "title": "16 No Reason",
-    "url": "https://drive.google.com/uc?export=download&id=1ANzyx5gIQCc70827BU1-yL-k2tysu3nC"
-  },
-  {
-    "title": "17 Ghosts",
-    "url": "https://drive.google.com/uc?export=download&id=13zDtQ1hdSfIZjJhmAGNQw_2XP5yoUHkJ"
-  },
-  {
-    "title": "18 Mama",
-    "url": "https://drive.google.com/uc?export=download&id=1_LMRyiJBUM57Xx6NJWUJBIW6vT3Plqyx"
-  },
-  {
-    "title": "19 Let\u2019s Scare My Dad",
-    "url": "https://drive.google.com/uc?export=download&id=100slqibImdVe2YL02zgvPQzJlKhPgOJi"
-  },
-  {
-    "title": "20 Diamond Ring",
-    "url": "https://drive.google.com/uc?export=download&id=1UG2ayiXMPtBR18ASp1kmdP2jwvRtR3gP"
-  },
-  {
-    "title": "21 Please Leave This House",
-    "url": "https://drive.google.com/uc?export=download&id=1v8GB-1hFviot-PClqsrZQ2lOzn67y7t7"
-  },
-  {
-    "title": "22 Invisible (Reprise)",
-    "url": "https://drive.google.com/uc?export=download&id=1YZ0qE1dymKa8xTIW-tmbRXh18uH2jacN"
-  },
-  {
-    "title": "23 Say My Name",
-    "url": "https://drive.google.com/uc?export=download&id=19-xSD_RxU7tWmLiB4Yd16dWIam_xCXzK"
-  },
-  {
-    "title": "24 The Dinner Party",
-    "url": "https://drive.google.com/uc?export=download&id=1uuGGApBBXTWZABXMRvc_QUE8Z7RcA12t"
-  },
-  {
-    "title": "25 Dinner Bell",
-    "url": "https://drive.google.com/uc?export=download&id=1oox2sbELygj9iFsyufSBpoaFLDG6vJnG"
-  },
-  {
-    "title": "26 Day-O (The Banana Boat Song)",
-    "url": "https://drive.google.com/uc?export=download&id=1vkFJEB-nHz0DpXh8KlxVuw_oBUI93A-m"
-  },
-  {
-    "title": "27 Showtime!",
-    "url": "https://drive.google.com/uc?export=download&id=1sEQCMuP-4er3McUUMwbLFdbGVZ7ls0wl"
-  },
-  {
-    "title": "28 Girl Scout",
-    "url": "https://drive.google.com/uc?export=download&id=1VxcjizGqJUKgJ8XY9ORsajqfNoCa5ZWj"
-  },
-  {
-    "title": "29 That Beautiful Sound",
-    "url": "https://drive.google.com/uc?export=download&id=1oubDFgGKiZPUr_4oIEC4zf9D5bbfMofd"
-  },
-  {
-    "title": "30 The Handbook 2",
-    "url": "https://drive.google.com/uc?export=download&id=1bER-vCF0C__TYkLtj6NLUzTFA7UxBj2i"
-  },
-  {
-    "title": "31 The Attic 2",
-    "url": "https://drive.google.com/uc?export=download&id=1Ng6BPmYvZEcWcmi8jYEgqCg6VAWMOBAc"
-  },
-  {
-    "title": "32 Adam Opens The Book",
-    "url": "https://drive.google.com/uc?export=download&id=1017PurlGZzwY8YW1KNY08FSCVkniglNV"
-  },
-  {
-    "title": "33 Netherworld 1",
-    "url": "https://drive.google.com/uc?export=download&id=16TjSSzhbjrDFlKOLHy9mAtVAZ82uOQxB"
-  },
-  {
-    "title": "34 A Very Deetz Return",
-    "url": "https://drive.google.com/uc?export=download&id=1IdHll5BfzZtZGpL9FQtmexd2ruuLZG6i"
-  },
-  {
-    "title": "35 Otho",
-    "url": "https://drive.google.com/uc?export=download&id=1C4AFwq4sw3dSyBenk0SgkB8p5VpvF3wT"
-  },
-  {
-    "title": "36 The Handbook 3",
-    "url": "https://drive.google.com/uc?export=download&id=1bELObHEvA8k7Our78irD9WR0APqyRazT"
-  },
-  {
-    "title": "37 The S\u00e9ance",
-    "url": "https://drive.google.com/uc?export=download&id=1LyBqIWQ8rnBJXMDVxZ5TY_XGpYhsmeHY"
-  },
-  {
-    "title": "38 Netherworld 2",
-    "url": "https://drive.google.com/uc?export=download&id=1cbA6HycmN-DeuEXEdbyAFDs5MtGIr4D8"
-  },
-  {
-    "title": "39 The Netherworld!",
-    "url": "https://drive.google.com/uc?export=download&id=1TXE04IOoa39ERJXXJqVVq-Wrdtfm_BoG"
-  },
-  {
-    "title": "40 What I Know Now",
-    "url": "https://drive.google.com/uc?export=download&id=1Zjsp2ADjPf-kgIfM73-u4Sv3Q_iD99l7"
-  },
-  {
-    "title": "41 Klaxon",
-    "url": "https://drive.google.com/uc?export=download&id=1W_mWEp97UaB20FIUiw9Sddkp_EHYbPd-"
-  },
-  {
-    "title": "42 The Netherworld Chase",
-    "url": "https://drive.google.com/uc?export=download&id=15xqVcme-tC5eHfrnWfzr6UMh0zr_srLO"
-  },
-  {
-    "title": "43 Home (Part 1)",
-    "url": "https://drive.google.com/uc?export=download&id=1XskbNBkIl7XxhrokoV8NvIubqJQGaegi"
-  },
-  {
-    "title": "44 Home (Part 2)",
-    "url": "https://drive.google.com/uc?export=download&id=11pS_U2sIQ4W3G_o4GzXHG62iqx_fXFl2"
-  },
-  {
-    "title": "45 Back Home",
-    "url": "https://drive.google.com/uc?export=download&id=1rTbIeZ64nsDTrOX0ZkECm01Hl8reZv6M"
-  },
-  {
-    "title": "46 Here Comes The\u2026",
-    "url": "https://drive.google.com/uc?export=download&id=1n-18k8_NgMzpCyuZWaacfIRO98nglNre"
-  },
-  {
-    "title": "47 Alive!",
-    "url": "https://drive.google.com/uc?export=download&id=1EE_POKHR3iNA6YDprrHUAl5v4EtWS0iR"
-  },
-  {
-    "title": "48 Netherworld 3",
-    "url": "https://drive.google.com/uc?export=download&id=1q-_aAGwzHfbU5JPuUpejL7UXgToZgdUy"
-  },
-  {
-    "title": "49 The Wasteland",
-    "url": "https://drive.google.com/uc?export=download&id=1RMy8Eo0ZA8_Ia_C-hxzTC0bwMOlPc1gc"
-  },
-  {
-    "title": "50 Yeehaw!",
-    "url": "https://drive.google.com/uc?export=download&id=1i8ZvITkX5Vh52OYTMWNETwMNVkRP-5z9"
-  },
-  {
-    "title": "51 Most Of All, Scarecrow",
-    "url": "https://drive.google.com/uc?export=download&id=1-MGexRR6Ry4wMCh2rEpiEKGVX-CPoMXK"
-  },
-  {
-    "title": "52 Jump In The Line",
-    "url": "https://drive.google.com/uc?export=download&id=1WQ1XH9S4Z4Z6tuzVn4ZgMw-yoYlHW20N"
-  },
-  {
-    "title": "53 Bows",
-    "url": "https://drive.google.com/uc?export=download&id=1yNkzYIjjty7GRIdhOPTAAj1JMYL1rnCT"
-  },
-  {
-    "title": "54 Exit Music",
-    "url": "https://drive.google.com/uc?export=download&id=1-SoXjLcycRz5E_cjv_MyQrl5k00S1vDm"
-  }
+  { title: "01 Prologue: Invisible", url: "Beetlejuice/01 Prologue_ Invisible.mp3" },
+  { title: "02 Beetlejuice Appears", url: "Beetlejuice/02 Beetlejuice Appears.mp3" },
+  { title: "03 The Whole 'Being Dead' Thing", url: "Beetlejuice/03 The Whole _Being Dead_ Thing.mp3" },
+  { title: "04 The Maitlands", url: "Beetlejuice/04 The Maitlands.mp3" },
+  { title: "05 Phone Ring", url: "Beetlejuice/05 Phone Ring.mp3" },
+  { title: "06 Ready, Set, Not Yet", url: "Beetlejuice/06 Ready, Set, Not Yet.mp3" },
+  { title: "07 The Handbook", url: "Beetlejuice/07 The Handbook.mp3" },
+  { title: "08 Shock", url: "Beetlejuice/08 Shock.mp3" },
+  { title: "09 The Whole 'Being Dead' Thing (Part 2)", url: "Beetlejuice/09 The Whole _Being Dead_ Thing (Part 2).mp3" },
+  { title: "10 The Whole 'Being Dead' Thing (Part 3)", url: "Beetlejuice/10 The Whole _Being Dead_ Thing (Part 3).mp3" },
+  
+  { title: "11 The Deetz’s", url: "Beetlejuice/11 The Deetz_s.mp3" },
+  { title: "12 Let's Clean Up", url: "Beetlejuice/12 Let_s Clean Up.mp3" },
+  { title: "13 Dead Mom", url: "Beetlejuice/13 Dead Mom.mp3" },
+  { title: "14 The Attic", url: "Beetlejuice/14 The Attic.mp3" },
+  { title: "15 Sweat Lodge", url: "Beetlejuice/15 Sweat Lodge.mp3" },
+  { title: "16 No Reason", url: "Beetlejuice/16 No Reason.mp3" },
+  { title: "17 Ghosts", url: "Beetlejuice/17 Ghosts.mp3" },
+  { title: "18 Mama", url: "Beetlejuice/18 Mama.mp3" },
+  { title: "19 Let's Scare My Dad", url: "Beetlejuice/19 Let_s Scare My Dad.mp3" },
+  { title: "20 Diamond Ring", url: "Beetlejuice/20 Diamond Ring.mp3" },
+
+  { title: "21 Please Leave This House", url: "Beetlejuice/21 Please Leave This House.mp3" },
+  { title: "22 Invisible (Reprise)", url: "Beetlejuice/22 Invisible (Reprise).mp3" },
+  { title: "23 Say My Name", url: "Beetlejuice/23 Say My Name.mp3" },
+  { title: "24 The Dinner Party", url: "Beetlejuice/24 The Dinner Party.mp3" },
+  { title: "25 Dinner Bell", url: "Beetlejuice/25 Dinner Bell.mp3" },
+  { title: "26 Day-O (The Banana Boat Song)", url: "Beetlejuice/26 Day-O (The Banana Boat Song).mp3" },
+  { title: "27 Showtime!", url: "Beetlejuice/27 Showtime!.mp3" },
+  { title: "28 Girl Scout", url: "Beetlejuice/28 Girl Scout.mp3" },
+  { title: "29 That Beautiful Sound", url: "Beetlejuice/29 That Beautiful Sound.mp3" },
+  { title: "30 The Handbook 2", url: "Beetlejuice/30 The Handbook 2.mp3" },
+
+  { title: "31 The Attic 2", url: "Beetlejuice/31 The Attic 2.mp3" },
+  { title: "32 Adam Opens The Book", url: "Beetlejuice/32 Adam Opens The Book.mp3" },
+  { title: "33 Netherworld 1", url: "Beetlejuice/33 Netherworld 1.mp3" },
+  { title: "34 A Very Deetz Return", url: "Beetlejuice/34 A Very Deetz Return.mp3" },
+  { title: "35 Otho", url: "Beetlejuice/35 Otho.mp3" },
+  { title: "36 The Handbook 3", url: "Beetlejuice/36 The Handbook 3.mp3" },
+  { title: "37 The Séance", url: "Beetlejuice/37 The S├⌐ance.mp3" },
+  { title: "38 Netherworld 2", url: "Beetlejuice/38 Netherworld 2.mp3" },
+  { title: "39 The Netherworld!", url: "Beetlejuice/39 The Netherworld!.mp3" },
+  { title: "40 What I Know Now", url: "Beetlejuice/40 What I Know Now.mp3" },
+
+  { title: "41 Klaxon", url: "Beetlejuice/41 Klaxon.mp3" },
+  { title: "42 The Netherworld Chase", url: "Beetlejuice/42 The Netherworld Chase.mp3" },
+  { title: "43 Home (Part 1)", url: "Beetlejuice/43 Home (Part 1).mp3" },
+  { title: "44 Home (Part 2)", url: "Beetlejuice/44 Home (Part 2).mp3" },
+  { title: "45 Back Home", url: "Beetlejuice/45 Back Home.mp3" },
+  { title: "46 Here Comes The....", url: "Beetlejuice/46 Here Comes The....mp3" },
+  { title: "47 Alive!", url: "Beetlejuice/47 Alive!.mp3" },
+  { title: "48 Netherworld 3", url: "Beetlejuice/48 Netherworld 3.mp3" },
+  { title: "49 The Wasteland", url: "Beetlejuice/49 The Wasteland.mp3" },
+  { title: "50 Yeehaw!", url: "Beetlejuice/50 Yeehaw!.mp3" },
+
+  { title: "51 Most Of All, Scarecrow", url: "Beetlejuice/51 Most Of All, Scarecrow.mp3" },
+  { title: "52 Jump In The Line", url: "Beetlejuice/52 Jump In The Line.mp3" },
+  { title: "53 Bows", url: "Beetlejuice/53 Bows.mp3" },
+  { title: "54 Exit Music", url: "Beetlejuice/54 Exit Music.mp3" }
 ];
+
 
 /* ---------- Elements ---------- */
 const lib=document.getElementById('library');
