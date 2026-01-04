@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RGBW DMX Color Picker</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #111;
+      color: #eee;
+      padding: 20px;
+    }
+    .preview {
+      width: 200px;
+      height: 200px;
+      margin-top: 20px;
+      border: 2px solid #444;
+      background: black;
+    }
+    .dmx {
+      margin-top: 20px;
+      font-size: 1.1em;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Blizzard LB Par Quad RGBW</h1>
+
+  <label>
+    Pick Color:
+    <input type="color" id="colorPicker" value="#ff0000">
+  </label>
+
+  <div class="preview" id="preview"></div>
+
+  <div class="dmx" id="dmxOutput"></div>
+
+  <script src="rgbw.js"></script>
+
+</body>
+</html>
