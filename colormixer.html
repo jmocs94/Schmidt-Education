@@ -3,41 +3,99 @@
 <head>
   <meta charset="UTF-8">
   <title>RGBW DMX Color Picker</title>
+
   <style>
     body {
-      font-family: sans-serif;
+      font-family: system-ui, sans-serif;
       background: #111;
       color: #eee;
       padding: 20px;
+      max-width: 600px;
     }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    .controls {
+      margin-top: 20px;
+    }
+
     .preview {
-      width: 200px;
-      height: 200px;
+      width: 220px;
+      height: 220px;
       margin-top: 20px;
       border: 2px solid #444;
       background: black;
     }
+
     .dmx {
       margin-top: 20px;
       font-size: 1.1em;
       line-height: 1.6;
     }
+
+    label {
+      font-weight: bold;
+    }
   </style>
 </head>
+
 <body>
 
-  <h1>Blizzard LB Par Quad RGBW</h1>
+  <h1>RGBW DMX Color Picker</h1>
+  <p>Fixture: Blizzard LB Par Quad RGBW</p>
 
-  <label>
-    Pick Color:
+  <div class="controls">
+    <label for="colorPicker">Pick Color:</label><br>
     <input type="color" id="colorPicker" value="#ff0000">
-  </label>
+  </div>
 
   <div class="preview" id="preview"></div>
 
   <div class="dmx" id="dmxOutput"></div>
 
-  <script src="rgbw.js"></script>
+  <script>
+    const picker = document.getElementById("colorPicker");
+    const preview = document.getElementById("preview");
+    const output = document.getElementById("dmxOutput");
+
+    picker.addEventListener("input", updateColor);
+
+    function updateColor() {
+      const rgb = hexToRgb(picker.value);
+
+      // RGBW extraction
+      const white = Math.min(rgb.r, rgb.g, rgb.b);
+
+      const r = rgb.r - white;
+      const g = rgb.g - white;
+      const b = rgb.b - white;
+      const w = white;
+
+      preview.style.backgroundColor = picker.value;
+
+      output.innerHTML = `
+        <strong>DMX Values</strong><br>
+        Red: ${r}<br>
+        Green: ${g}<br>
+        Blue: ${b}<br>
+        White: ${w}
+      `;
+    }
+
+    function hexToRgb(hex) {
+      const num = parseInt(hex.slice(1), 16);
+      return {
+        r: (num >> 16) & 255,
+        g: (num >> 8) & 255,
+        b: num & 255
+      };
+    }
+
+    // Initialize on page load
+    updateColor();
+  </script>
 
 </body>
 </html>
