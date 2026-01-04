@@ -1,101 +1,190 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>RGBW DMX Color Picker</title>
+<meta charset="UTF-8">
+<title>RGBW DMX Color Wheel</title>
 
-  <style>
-    body {
-      font-family: system-ui, sans-serif;
-      background: #111;
-      color: #eee;
-      padding: 20px;
-      max-width: 600px;
-    }
+<style>
+  body {
+    font-family: system-ui, sans-serif;
+    background: #111;
+    color: #eee;
+    padding: 20px;
+    max-width: 700px;
+  }
 
-    h1 {
-      margin-bottom: 10px;
-    }
+  canvas {
+    cursor: crosshair;
+    display: block;
+    margin-top: 20px;
+  }
 
-    .controls {
-      margin-top: 20px;
-    }
+  .preview {
+    width: 180px;
+    height: 180px;
+    margin-top: 20px;
+    border: 2px solid #444;
+    background: black;
+  }
 
-    .preview {
-      width: 220px;
-      height: 220px;
-      margin-top: 20px;
-      border: 2px solid #444;
-      background: black;
-    }
+  .dmx {
+    margin-top: 20px;
+    font-size: 1.1em;
+    line-height: 1.8;
+  }
 
-    .dmx {
-      margin-top: 20px;
-      font-size: 1.1em;
-      line-height: 1.6;
-    }
-
-    label {
-      font-weight: bold;
-    }
-  </style>
+  input[type="color"] {
+    margin-top: 10px;
+  }
+</style>
 </head>
 
 <body>
 
-  <h1>RGBW DMX Color Picker</h1>
-  <p>Fixture: Blizzard LB Par Quad RGBW</p>
+<h1>RGBW DMX Color Wheel</h1>
+<p>Fixture: Blizzard LB Par Quad RGBW</p>
 
-  <div class="controls">
-    <label for="colorPicker">Pick Color:</label><br>
-    <input type="color" id="colorPicker" value="#ff0000">
-  </div>
+<canvas id="wheel" width="360" height="360"></canvas>
 
-  <div class="preview" id="preview"></div>
+<label>Eyedropper:
+  <input type="color" id="colorPicker">
+</label>
 
-  <div class="dmx" id="dmxOutput"></div>
+<div class="preview" id="preview"></div>
+<div class="dmx" id="dmxOutput"></div>
 
-  <script>
-    const picker = document.getElementById("colorPicker");
-    const preview = document.getElementById("preview");
-    const output = document.getElementById("dmxOutput");
+<script>
+const canvas = document.getElementById("wheel");
+const ctx = canvas.getContext("2d");
+const picker = document.getElementById("colorPicker");
+const preview = document.getElementById("preview");
+const output = document.getElementById("dmxOutput");
 
-    picker.addEventListener("input", updateColor);
+const size = canvas.width;
+const center = size / 2;
+const radius = center;
+const whiteRadius = 40;
 
-    function updateColor() {
-      const rgb = hexToRgb(picker.value);
+// Draw true HSV wheel with radial saturation fade
+function drawWheel() {
+  const image = ctx.createImageData(size, size);
+  const data = image.data;
 
-      // RGBW extraction
-      const white = Math.min(rgb.r, rgb.g, rgb.b);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const dx = x - center;
+      const dy = y - center;
+      const dist = Math.sqrt(dx * dx + dy * dy);
 
-      const r = rgb.r - white;
-      const g = rgb.g - white;
-      const b = rgb.b - white;
-      const w = white;
+      const index = (y * size + x) * 4;
 
-      preview.style.backgroundColor = picker.value;
+      if (dist > radius) {
+        data[index + 3] = 0;
+        continue;
+      }
 
-      output.innerHTML = `
-        <strong>DMX Values</strong><br>
-        Red: ${r}<br>
-        Green: ${g}<br>
-        Blue: ${b}<br>
-        White: ${w}
-      `;
+      if (dist < whiteRadius) {
+        data[index] = 255;
+        data[index + 1] = 255;
+        data[index + 2] = 255;
+        data[index + 3] = 255;
+        continue;
+      }
+
+      const hue = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+      const saturation = dist / radius;
+      const value = 1;
+
+      const rgb = hsvToRgb(hue, saturation, value);
+
+      data[index] = rgb.r;
+      data[index + 1] = rgb.g;
+      data[index + 2] = rgb.b;
+      data[index + 3] = 255;
     }
+  }
+  ctx.putImageData(image, 0, 0);
+}
+drawWheel();
 
-    function hexToRgb(hex) {
-      const num = parseInt(hex.slice(1), 16);
-      return {
-        r: (num >> 16) & 255,
-        g: (num >> 8) & 255,
-        b: num & 255
-      };
-    }
+// Click handling
+canvas.addEventListener("click", e => {
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.floor(e.clientX - rect.left);
+  const y = Math.floor(e.clientY - rect.top);
 
-    // Initialize on page load
-    updateColor();
-  </script>
+  const dx = x - center;
+  const dy = y - center;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+
+  if (dist > radius) return;
+
+  if (dist < whiteRadius) {
+    updateFromRGB(255, 255, 255);
+    return;
+  }
+
+  const pixel = ctx.getImageData(x, y, 1, 1).data;
+  updateFromRGB(pixel[0], pixel[1], pixel[2]);
+});
+
+// Eyedropper input
+picker.addEventListener("input", () => {
+  const rgb = hexToRgb(picker.value);
+  updateFromRGB(rgb.r, rgb.g, rgb.b);
+});
+
+function updateFromRGB(r, g, b) {
+  const white = Math.min(r, g, b);
+
+  const dmx = {
+    r: r - white,
+    g: g - white,
+    b: b - white,
+    w: white
+  };
+
+  preview.style.backgroundColor = `rgb(${r},${g},${b})`;
+
+  output.innerHTML = `
+    <strong>DMX Output (RGBW Mode)</strong><br>
+    Ch 1 – Red: ${dmx.r}<br>
+    Ch 2 – Green: ${dmx.g}<br>
+    Ch 3 – Blue: ${dmx.b}<br>
+    Ch 4 – White: ${dmx.w}
+  `;
+}
+
+function hsvToRgb(h, s, v) {
+  const c = v * s;
+  const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+  const m = v - c;
+
+  let r = 0, g = 0, b = 0;
+
+  if (h < 60) [r, g, b] = [c, x, 0];
+  else if (h < 120) [r, g, b] = [x, c, 0];
+  else if (h < 180) [r, g, b] = [0, c, x];
+  else if (h < 240) [r, g, b] = [0, x, c];
+  else if (h < 300) [r, g, b] = [x, 0, c];
+  else [r, g, b] = [c, 0, x];
+
+  return {
+    r: Math.round((r + m) * 255),
+    g: Math.round((g + m) * 255),
+    b: Math.round((b + m) * 255)
+  };
+}
+
+function hexToRgb(hex) {
+  const num = parseInt(hex.slice(1), 16);
+  return {
+    r: (num >> 16) & 255,
+    g: (num >> 8) & 255,
+    b: num & 255
+  };
+}
+</script>
 
 </body>
 </html>
