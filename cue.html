@@ -422,7 +422,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh
       <div class="lib-item" style="display:block;cursor:default"><div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>Now Playing</strong> shows the current cue. <strong>Up Next</strong> shows the next cue and its note. Right-click a cue name to edit its note, or press <strong>N</strong> to edit the current cue note. Double-click a cue name to rename it.</div></div>
       <div class="lib-item" style="display:block;cursor:default"><div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>SFX Bank</strong> uses keys 0 through 9. Empty slots can take a <strong>local file</strong> or a <strong>URL</strong>. <strong>OVR</strong> overlaps repeated presses. <strong>RST</strong> restarts from the beginning. <strong>LOOP</strong> repeats until the same key is pressed again.</div></div>
       <div class="lib-item" style="display:block;cursor:default"><div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>Prev</strong> moves back. <strong>Stop</strong> stops and rewinds the current cue. <strong>Panic</strong> silences everything, including SFX. <strong>Print / Export</strong> opens a printer-friendly cue sheet.</div></div>
-      <div class="lib-item" style="display:block;cursor:default"><div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>Icons:</strong> globe = web file, monitor = local file loaded this session, warning = offline and needs to be located. Google Drive links must be shared broadly enough for playback, and even then they should always be tested before rehearsal or performance. The app will try to convert common Drive share links into direct audio links.</div></div>
+      <div class="lib-item" style="display:block;cursor:default"><div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>Icons:</strong> globe = web file, monitor = local file loaded this session, warning = offline and needs to be located. <strong>Google Drive URLs are not supported</strong> for web playback in this app because browser security usually blocks them. Use local files, a CDN, or GitHub raw links instead.</div></div>
+      <div class="lib-item" style="display:block;cursor:default"><div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>GitHub tip:</strong> use the file's <strong>raw</strong> URL, not the normal GitHub page. In GitHub, open the file and copy the <strong>Raw</strong> link. Good format: <code style="color:var(--accent)">https://raw.githubusercontent.com/OWNER/REPO/BRANCH/path/to/file.mp3</code>. Avoid <code style="color:var(--accent)">github.com/.../blob/...</code> links.</div></div>
+      <div class="lib-item" style="display:block;cursor:default"><div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>Hosting tip:</strong> a CDN or your own website/server is the most reliable choice for web audio. GitHub raw links may work, but always test before rehearsal or performance.</div></div>
     </div>
     <div class="modal-footer">
       <button class="mfbtn primary" id="helpGotIt">Got it</button>
@@ -445,7 +447,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh
         <span class="lib-item-name" style="color:var(--text)">Audio URL</span>
         <input id="urlCueLink" type="url" placeholder="https://...mp3 or Google Drive share link" style="background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);padding:.55rem .7rem;outline:none;font:inherit;">
       </label>
-      <div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text2)">Tip: Google Drive links must be shared so other people can access them. The app will try to convert common Drive share links into direct audio links.</div>
+      <div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text2)">Tip: Google Drive URLs are not supported here. Use a CDN, your own site, or a GitHub raw file URL instead.</div>
     </div>
     <div class="modal-footer">
       <button class="mfbtn secondary" id="urlCancel">Cancel</button>
@@ -470,7 +472,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh
         <span class="lib-item-name" style="color:var(--text)">Audio URL</span>
         <input id="sfxUrlLink" type="url" placeholder="https://...mp3 or Google Drive share link" style="background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);padding:.55rem .7rem;outline:none;font:inherit;">
       </label>
-      <div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text2)">Tip: Google Drive links must be shared so other people can access them. Test playback before rehearsal or performance.</div>
+      <div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text2)">Tip: Google Drive URLs are not supported here. Use a CDN, your own site, or a GitHub raw file URL instead. Test playback before rehearsal or performance.</div>
     </div>
     <div class="modal-footer">
       <button class="mfbtn secondary" id="sfxUrlCancel">Cancel</button>
@@ -550,18 +552,34 @@ function normalizeSharedAudioUrl(url){
   if(!trimmed) return '';
   try{
     const u=new URL(trimmed);
-    if(u.hostname.includes('drive.google.com')){
-      let id='';
-      const match=u.pathname.match(/\/file\/d\/([^/]+)/);
-      if(match) id=match[1];
-      if(!id) id=u.searchParams.get('id')||'';
-      if(id) return `https://drive.google.com/uc?export=download&id=${id}`;
+
+    if(u.hostname === 'github.com'){
+      const parts=u.pathname.split('/').filter(Boolean);
+
+      // /owner/repo/blob/branch/path/to/file
+      if(parts.length >= 5 && parts[2] === 'blob'){
+        const owner=parts[0];
+        const repo=parts[1];
+        const branch=parts[3];
+        const filePath=parts.slice(4).join('/');
+        return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${filePath}`;
+      }
+
+      // /owner/repo/raw/refs/heads/branch/path/to/file
+      if(parts.length >= 7 && parts[2] === 'raw' && parts[3] === 'refs' && parts[4] === 'heads'){
+        const owner=parts[0];
+        const repo=parts[1];
+        const branch=parts[5];
+        const filePath=parts.slice(6).join('/');
+        return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${filePath}`;
+      }
     }
+
     return trimmed;
   }catch{return trimmed;}
 }
 function isProbablyAudioUrl(url){
-  return /\.(mp3|wav|ogg|flac|aac|m4a)(\?|#|$)/i.test(url) || /drive\.google\.com/i.test(url);
+  return /\.(mp3|wav|ogg|flac|aac|m4a)(\?|#|$)/i.test(url) || /raw\.githubusercontent\.com|github\.com/i.test(url);
 }
 
 function isOffline(cue){ return cue && cue.url===''; }
@@ -981,6 +999,7 @@ document.getElementById('sfxUrlAdd').addEventListener('click',()=>{
   const raw=document.getElementById('sfxUrlLink').value.trim();
   if(sfxUrlTargetIndex<0){closeSFXUrlModal();return;}
   if(!raw){toast('Paste an audio URL first',2200,true);return;}
+  if(/drive\.google\.com/i.test(raw)){toast('Google Drive URLs are not supported. Use a CDN or a GitHub raw link instead.',4200,true);return;}
   const normalized=normalizeSharedAudioUrl(raw);
   const title=(document.getElementById('sfxUrlName').value.trim()||inferTitleFromUrl(raw));
   const filename=decodeURIComponent((raw.split('/').pop()||'').split('?')[0]||title);
@@ -989,7 +1008,7 @@ document.getElementById('sfxUrlAdd').addEventListener('click',()=>{
   sfxSlots[sfxUrlTargetIndex]={name:title,url:normalized,filename,playMode:old.playMode||'restart',loop:!!old.loop,activeAudios:[]};
   renderSFX();
   closeSFXUrlModal();
-  toast(isProbablyAudioUrl(raw)?'URL SFX added':'URL SFX added — test playback before show',3200,!isProbablyAudioUrl(raw));
+  if(/github\.com|raw\.githubusercontent\.com/i.test(raw)){toast('GitHub URL SFX added. Use the Raw file URL and test before show use.',3600,false);} else {toast(isProbablyAudioUrl(raw)?'URL SFX added':'URL SFX added — test playback before show',3200,!isProbablyAudioUrl(raw));}
 });
 document.getElementById('sfxUrlLink').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();document.getElementById('sfxUrlAdd').click();}});
 document.getElementById('sfxUrlName').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();document.getElementById('sfxUrlAdd').click();}});
@@ -1010,12 +1029,13 @@ document.getElementById('urlModal').addEventListener('click',e=>{if(e.target===d
 document.getElementById('urlAdd').addEventListener('click',()=>{
   const raw=document.getElementById('urlCueLink').value.trim();
   if(!raw){toast('Paste an audio URL first',2200,true);return;}
+  if(/drive\.google\.com/i.test(raw)){toast('Google Drive URLs are not supported. Use a CDN or a GitHub raw link instead.',4200,true);return;}
   const normalized=normalizeSharedAudioUrl(raw);
   const title=(document.getElementById('urlCueName').value.trim()||inferTitleFromUrl(raw));
   const filename=decodeURIComponent((raw.split('/').pop()||'').split('?')[0]||title);
   cues.push({title,url:normalized,filename,mode:'manual',vol:1,note:''});
   renderCues();updateStatus();closeUrlModal();
-  toast(isProbablyAudioUrl(raw)?'URL cue added':'URL added — test playback before show',3200,!isProbablyAudioUrl(raw));
+  if(/github\.com|raw\.githubusercontent\.com/i.test(raw)){toast('GitHub URL added. Use the Raw file URL and test before show use.',3600,false);} else {toast(isProbablyAudioUrl(raw)?'URL cue added':'URL added — test playback before show',3200,!isProbablyAudioUrl(raw));}
 });
 document.getElementById('urlCueLink').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();document.getElementById('urlAdd').click();}});
 document.getElementById('urlCueName').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();document.getElementById('urlAdd').click();}});
