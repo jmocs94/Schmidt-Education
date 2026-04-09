@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Theater Cue Player v2</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/tone@15.1.22/build/Tone.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0f12;--surface:#161920;--surface2:#1e2229;--surface3:#252b35;
+  --border:#2a3040;--border2:#3a4558;--text:#e8ecf2;--text2:#8a94a6;--text3:#4a5568;
+  --go:#22c55e;--go-glow:rgba(34,197,94,0.18);--stop:#ef4444;
+  --now:#f59e0b;--next:#3b82f6;--accent:#a78bfa;--offline:#ef4444;
+  --mono:'JetBrains Mono',monospace;--sans:'DM Sans',sans-serif;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+.header{display:flex;align-items:center;justify-content:space-between;padding:.45rem .9rem;background:var(--surface);border-bottom:1px solid var(--border);gap:.6rem;flex-shrink:0;flex-wrap:wrap;}
+.header-left{display:flex;flex-direction:column;gap:.08rem;}
+.header-title{font-family:var(--mono);font-size:.78rem;font-weight:700;color:var(--accent);letter-spacing:.08em;text-transform:uppercase;}
+.header-show{font-family:var(--mono);font-size:.65rem;color:var(--text3);letter-spacing:.05em;}
+.header-actions{display:flex;gap:.35rem;align-items:center;flex-wrap:wrap;}
+.hbtn{font-family:var(--mono);font-size:.67rem;font-weight:500;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:.28rem .55rem;cursor:pointer;letter-spacing:.04em;transition:color .15s,border-color .15s,background .15s;white-space:nowrap;}
+.hbtn:hover{color:var(--text);border-color:var(--border2);background:var(--surface3);}
+.hbtn-show{border-color:rgba(245,158,11,.4);color:var(--now);font-weight:700;}
+.hbtn-show:hover{border-color:var(--now);background:rgba(245,158,11,.1);color:var(--now);}
+.hbtn-folder{border-color:rgba(167,139,250,.4);color:var(--accent);}
+.hbtn-folder:hover{border-color:var(--accent);background:rgba(167,139,250,.1);}
+.hbtn-export{border-color:rgba(59,130,246,.3);color:#60a5fa;}
+.hbtn-export:hover{border-color:var(--next);background:rgba(59,130,246,.08);}
+.offline-banner{display:none;background:rgba(239,68,68,.09);border-bottom:1px solid rgba(239,68,68,.28);padding:.42rem .9rem;flex-shrink:0;}
+.offline-banner.visible{display:flex;align-items:flex-start;gap:.6rem;}
+.offline-banner-text{flex:1;font-family:var(--mono);font-size:.67rem;}
+.offline-banner-title{font-weight:700;color:#fca5a5;letter-spacing:.05em;text-transform:uppercase;margin-bottom:.15rem;}
+.offline-files{color:#f87171;font-size:.63rem;line-height:1.55;}
+.offline-dismiss{background:none;border:none;color:#f87171;cursor:pointer;font-size:.95rem;padding:.1rem .3rem;border-radius:3px;flex-shrink:0;}
+.offline-dismiss:hover{background:rgba(239,68,68,.15);}
+.main{display:grid;grid-template-columns:1fr 330px;flex:1;min-height:0;overflow:hidden;}
+@media(max-width:860px){.main{grid-template-columns:1fr;overflow-y:auto;}}
+.left-col{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border);}
+.cue-panel{display:flex;flex-direction:column;flex:1;min-height:0;}
+.cue-list-header{display:grid;grid-template-columns:36px 1fr 16px 54px 64px 44px 38px 32px;padding:.38rem .75rem;background:var(--surface2);border-bottom:1px solid var(--border);font-family:var(--mono);font-size:.58rem;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;}
+.cue-list{flex:1;overflow-y:auto;overflow-x:hidden;}
+.cue-list::-webkit-scrollbar{width:3px;}
+.cue-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.cue-row{display:grid;grid-template-columns:36px 1fr 16px 54px 64px 44px 38px 32px;align-items:center;padding:.42rem .75rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;position:relative;}
+.cue-row:hover{background:var(--surface2);}
+.cue-row.is-now{background:rgba(245,158,11,.07);border-left:3px solid var(--now);padding-left:calc(.75rem - 3px);}
+.cue-row.is-next{background:rgba(59,130,246,.05);border-left:3px solid var(--next);padding-left:calc(.75rem - 3px);}
+.cue-row.is-done{opacity:.33;}
+.cue-row.is-offline{background:rgba(239,68,68,.04);}
+.cue-row.flash-offline{animation:flash-red .5s ease;}
+@keyframes flash-red{0%,100%{background:rgba(239,68,68,.04);}50%{background:rgba(239,68,68,.22);}}
+.cue-num{font-family:var(--mono);font-size:.63rem;color:var(--text3);font-weight:500;user-select:none;}
+.cue-row.is-now .cue-num{color:var(--now);}
+.cue-row.is-next .cue-num{color:var(--next);}
+.cue-row.is-offline .cue-num{color:var(--offline);opacity:.65;}
+.cue-name-wrap{display:flex;flex-direction:column;overflow:hidden;padding-right:.35rem;gap:.04rem;}
+.cue-name{font-size:.78rem;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cue-row.is-now .cue-name{color:var(--now);}
+.cue-row.is-next .cue-name{color:var(--next);}
+.cue-row.is-done .cue-name{color:var(--text3);}
+.cue-row.is-offline .cue-name{color:#f87171;}
+.cue-name-input{font-family:var(--sans);font-size:.78rem;font-weight:500;background:var(--surface3);border:1px solid var(--accent);border-radius:3px;color:var(--text);padding:.08rem .28rem;width:100%;outline:none;}
+.cue-note-preview{font-size:.62rem;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:italic;line-height:1.2;}
+.cue-row.is-now .cue-note-preview{color:rgba(245,158,11,.5);}
+.cue-row.is-next .cue-note-preview{color:rgba(59,130,246,.5);}
+.rescue-btn{font-family:var(--mono);font-size:.56rem;font-weight:600;border:1px solid rgba(239,68,68,.4);color:#f87171;border-radius:3px;padding:.12rem .3rem;cursor:pointer;background:none;transition:all .15s;white-space:nowrap;margin-top:.1rem;width:fit-content;}
+.rescue-btn:hover{background:rgba(239,68,68,.12);border-color:var(--offline);}
+.cue-src{display:flex;align-items:center;justify-content:center;}
+.src-icon{width:12px;height:12px;flex-shrink:0;opacity:.32;}
+.cue-row.is-now .src-icon{opacity:.65;}
+.cue-row.is-offline .src-icon{opacity:1;}
+.cue-mode{display:flex;align-items:center;justify-content:center;}
+.mode-pill{font-family:var(--mono);font-size:.56rem;font-weight:700;letter-spacing:.04em;border-radius:3px;padding:.14rem .28rem;cursor:pointer;border:1px solid transparent;transition:all .15s;user-select:none;}
+.mode-pill.auto{background:rgba(59,130,246,.12);color:#60a5fa;border-color:rgba(59,130,246,.25);}
+.mode-pill.manual{background:rgba(245,158,11,.1);color:#fbbf24;border-color:rgba(245,158,11,.22);}
+.mode-pill:hover{filter:brightness(1.2);}
+.cue-vol{display:flex;align-items:center;gap:.22rem;}
+.cue-vol input[type=range]{-webkit-appearance:none;width:34px;height:3px;background:var(--border2);border-radius:2px;outline:none;cursor:pointer;}
+.cue-vol input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:9px;height:9px;border-radius:50%;background:var(--text2);cursor:pointer;}
+.cue-row.is-now .cue-vol input[type=range]::-webkit-slider-thumb{background:var(--now);}
+.cue-row.is-next .cue-vol input[type=range]::-webkit-slider-thumb{background:var(--next);}
+.cue-vol-label{font-family:var(--mono);font-size:.58rem;color:var(--text3);width:22px;text-align:right;}
+.cue-pitch,.cue-loop{display:flex;align-items:center;justify-content:center;}
+.pitch-pill,.loop-mini{font-family:var(--mono);font-size:.54rem;font-weight:700;letter-spacing:.02em;border-radius:3px;padding:.14rem .24rem;cursor:pointer;border:1px solid rgba(167,139,250,.25);background:rgba(167,139,250,.08);color:var(--accent);transition:all .12s;user-select:none;min-width:32px;text-align:center;}
+.pitch-pill:hover{filter:brightness(1.15);border-color:var(--accent);}
+.loop-mini{border-color:rgba(74,85,104,.35);background:rgba(74,85,104,.15);color:var(--text3);}
+.loop-mini.on{border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.14);color:#86efac;}
+.loop-mini:hover{filter:brightness(1.15);}
+.cue-del{display:flex;align-items:center;justify-content:center;}
+.del-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:.72rem;padding:.18rem;border-radius:3px;line-height:1;transition:color .15s,background .15s;}
+.del-btn:hover{color:var(--stop);background:rgba(239,68,68,.1);}
+.sfx-panel{flex-shrink:0;border-top:1px solid var(--border);background:var(--surface);padding:.5rem .75rem;}
+.sfx-title{font-family:var(--mono);font-size:.6rem;font-weight:700;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem;}
+.sfx-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:.3rem;}
+.sfx-slot{background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:.32rem .38rem;display:flex;flex-direction:column;gap:.18rem;position:relative;transition:border-color .15s,background .15s;cursor:pointer;}
+.sfx-slot.has-file{border-color:var(--border2);}
+.sfx-slot.is-playing{border-color:var(--go);background:rgba(34,197,94,.06);}
+.sfx-slot.is-offline{border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.04);}
+.sfx-key{font-family:var(--mono);font-size:.58rem;font-weight:700;color:var(--text3);background:var(--surface3);border-radius:2px;padding:.03rem .22rem;display:inline-block;width:fit-content;}
+.sfx-slot.has-file .sfx-key{color:var(--accent);}
+.sfx-slot.is-playing .sfx-key{color:var(--go);}
+.sfx-slot.is-offline .sfx-key{color:var(--offline);}
+.sfx-name{font-size:.62rem;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25;}
+.sfx-slot.has-file .sfx-name{color:var(--text);}
+.sfx-slot.is-offline .sfx-name{color:#f87171;}
+.sfx-empty{font-size:.6rem;color:var(--text3);font-style:italic;}
+.sfx-controls{display:flex;gap:.2rem;flex-wrap:wrap;}
+.sfx-mini-btn{font-family:var(--mono);font-size:.5rem;font-weight:700;border-radius:2px;padding:.08rem .22rem;cursor:pointer;border:1px solid var(--border);background:var(--surface3);color:var(--text3);transition:all .12s;letter-spacing:.03em;}
+.sfx-mini-btn.active{background:rgba(167,139,250,.15);border-color:var(--accent);color:var(--accent);}
+.sfx-mini-btn:hover{border-color:var(--border2);color:var(--text);}
+.sfx-clear{position:absolute;top:.18rem;right:.18rem;background:none;border:none;color:var(--text3);cursor:pointer;font-size:.6rem;opacity:0;transition:opacity .15s;padding:.08rem;}
+.sfx-slot:hover .sfx-clear{opacity:.55;}
+.sfx-clear:hover{opacity:1!important;color:var(--stop);}
+.right-panel{display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;}
+.right-panel::-webkit-scrollbar{width:3px;}
+.right-panel::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.status-section{padding:.65rem .85rem;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
+.status-block{padding:.48rem .65rem;border-radius:6px;margin-bottom:.4rem;}
+.status-block:last-child{margin-bottom:0;}
+.status-block.now-block{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);}
+.status-block.next-block{background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.14);}
+.status-label{font-family:var(--mono);font-size:.56rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.22rem;}
+.now-block .status-label{color:var(--now);}
+.next-block .status-label{color:var(--next);}
+.status-name{font-size:.88rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.now-block .status-name{color:var(--text);}
+.next-block .status-name{color:var(--text2);}
+.status-note{font-size:.7rem;color:var(--text2);margin-top:.22rem;font-style:italic;line-height:1.4;word-break:break-word;}
+.next-block .status-note{color:rgba(59,130,246,.65);}
+.status-mode{font-family:var(--mono);font-size:.58rem;margin-top:.18rem;}
+.now-block .status-mode{color:rgba(245,158,11,.5);}
+.next-block .status-mode{color:rgba(59,130,246,.4);}
+.progress-section{padding:.48rem .85rem;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
+.time-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.3rem;}
+.time-current{font-family:var(--mono);font-size:1.2rem;font-weight:700;color:var(--now);letter-spacing:.04em;}
+.time-total{font-family:var(--mono);font-size:.72rem;color:var(--text3);}
+.progress-wrap{width:100%;height:12px;border-radius:999px;background:var(--surface2);overflow:hidden;border:1px solid var(--border);}
+.progress-bar{height:100%;width:0%;background:linear-gradient(90deg,var(--now),var(--next));}
+.preroll-bar-wrap{height:3px;background:var(--border);border-radius:2px;margin-top:.3rem;display:none;}
+.preroll-bar-wrap.active{display:block;}
+.preroll-bar{height:3px;background:var(--next);border-radius:2px;width:100%;transition:width linear;}
+.go-section{padding:.6rem .85rem;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
+.go-btn{width:100%;padding:.85rem;font-family:var(--mono);font-size:1.35rem;font-weight:700;letter-spacing:.15em;color:#fff;background:rgba(34,197,94,.12);border:2px solid var(--go);border-radius:7px;cursor:pointer;transition:background .12s,box-shadow .12s,transform .08s;}
+.go-btn:hover{background:rgba(34,197,94,.22);box-shadow:0 0 18px var(--go-glow);}
+.go-btn:active{transform:scale(.98);}
+.go-btn.playing{animation:pulse-go 1.8s ease-in-out infinite;}
+.go-btn.offline-flash{animation:flash-go-red .45s ease;}
+@keyframes pulse-go{0%,100%{box-shadow:0 0 8px var(--go-glow);}50%{box-shadow:0 0 22px rgba(34,197,94,.32);}}
+@keyframes flash-go-red{0%,100%{border-color:var(--go);background:rgba(34,197,94,.12);}50%{border-color:var(--offline);background:rgba(239,68,68,.18);}}
+.go-label{display:block;font-size:1.35rem;margin-bottom:.08rem;}
+.go-sub{display:block;font-size:.56rem;letter-spacing:.1em;color:rgba(255,255,255,.32);}
+.transport{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.38rem;padding:.55rem .85rem;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
+.tbtn{font-family:var(--mono);font-size:.65rem;font-weight:600;letter-spacing:.05em;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:.48rem .4rem;cursor:pointer;text-align:center;transition:all .12s;}
+.tbtn:hover{color:var(--text);border-color:var(--border2);background:var(--surface3);}
+.tbtn.danger{color:#fca5a5;border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.06);}
+.tbtn.danger:hover{background:rgba(239,68,68,.14);border-color:var(--stop);}
+.global-controls{padding:.55rem .85rem;background:var(--surface);border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:.4rem;flex-shrink:0;}
+.ctrl-row{display:flex;align-items:center;gap:.55rem;}
+.ctrl-label{font-family:var(--mono);font-size:.58rem;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;width:46px;flex-shrink:0;}
+.ctrl-slider{-webkit-appearance:none;flex:1;height:3px;background:var(--border2);border-radius:2px;outline:none;cursor:pointer;}
+.ctrl-slider::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--text2);cursor:pointer;}
+.ctrl-slider:hover::-webkit-slider-thumb{background:var(--text);}
+.ctrl-val{font-family:var(--mono);font-size:.63rem;color:var(--text2);width:80px;text-align:right;flex-shrink:0;}
+.hotkeys{padding:.55rem .85rem;background:var(--surface);flex-shrink:0;}
+.hotkeys-title{font-family:var(--mono);font-size:.56rem;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.38rem;}
+.hk-grid{display:grid;grid-template-columns:1fr 1fr;gap:.2rem .65rem;}
+.hk-row{display:flex;align-items:center;gap:.32rem;}
+.hk-key{font-family:var(--mono);font-size:.56rem;font-weight:700;background:var(--surface3);border:1px solid var(--border2);border-radius:3px;padding:.06rem .28rem;color:var(--text2);white-space:nowrap;flex-shrink:0;}
+.hk-desc{font-size:.65rem;color:var(--text3);}
+.note-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;align-items:center;justify-content:center;}
+.note-modal-overlay.open{display:flex;}
+.note-modal{background:var(--surface);border:1px solid var(--border2);border-radius:10px;width:min(430px,92vw);padding:1rem;display:flex;flex-direction:column;gap:.65rem;}
+.note-modal-title{font-family:var(--mono);font-size:.72rem;font-weight:700;color:var(--text);letter-spacing:.06em;text-transform:uppercase;}
+.note-modal-cue{font-size:.8rem;color:var(--text2);margin-top:.08rem;}
+.note-textarea{background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-family:var(--sans);font-size:.83rem;padding:.55rem .7rem;resize:vertical;min-height:72px;outline:none;line-height:1.5;width:100%;}
+.note-textarea:focus{border-color:var(--accent);}
+.note-modal-foot{display:flex;gap:.45rem;justify-content:flex-end;}
+.nmbtn{font-family:var(--mono);font-size:.68rem;font-weight:600;padding:.38rem .8rem;border-radius:5px;cursor:pointer;border:1px solid var(--border2);transition:all .12s;}
+.nmbtn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+.nmbtn.primary:hover{filter:brightness(1.1);}
+.nmbtn.secondary{background:var(--surface2);color:var(--text2);}
+.nmbtn.secondary:hover{background:var(--surface3);color:var(--text);}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:10px;width:min(520px,94vw);max-height:76vh;display:flex;flex-direction:column;overflow:hidden;}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:.7rem .95rem;border-bottom:1px solid var(--border);flex-shrink:0;}
+.modal-title{font-family:var(--mono);font-size:.75rem;font-weight:700;color:var(--text);letter-spacing:.06em;text-transform:uppercase;}
+.modal-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:1rem;padding:.18rem .38rem;border-radius:4px;transition:color .12s,background .12s;}
+.modal-close:hover{color:var(--text);background:var(--surface3);}
+.modal-body{flex:1;overflow-y:auto;padding:.35rem 0;}
+.modal-body::-webkit-scrollbar{width:3px;}
+.modal-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.lib-item{display:flex;align-items:center;gap:.55rem;padding:.42rem .95rem;cursor:pointer;transition:background .1s;border-bottom:1px solid var(--border);}
+.lib-item:hover{background:var(--surface2);}
+.lib-item-name{font-size:.78rem;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.modal-footer{padding:.55rem .95rem;border-top:1px solid var(--border);display:flex;gap:.4rem;justify-content:flex-end;flex-shrink:0;}
+.mfbtn{font-family:var(--mono);font-size:.68rem;font-weight:600;padding:.38rem .8rem;border-radius:5px;cursor:pointer;border:1px solid var(--border2);transition:all .12s;}
+.mfbtn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+.mfbtn.primary:hover{filter:brightness(1.1);}
+.mfbtn.secondary{background:var(--surface2);color:var(--text2);}
+.mfbtn.secondary:hover{background:var(--surface3);color:var(--text);}
+.toast{position:fixed;bottom:1rem;left:50%;transform:translateX(-50%) translateY(8px);background:var(--surface3);border:1px solid var(--border2);border-radius:6px;padding:.42rem .9rem;font-family:var(--mono);font-size:.68rem;color:var(--text);opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:300;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.error{border-color:rgba(239,68,68,.5);color:#fca5a5;background:rgba(239,68,68,.1);}
+@media print{
+  body{background:#fff;color:#000;font-family:sans-serif;height:auto;overflow:auto;}
+  .header,.right-panel,.sfx-panel,.offline-banner,.toast,.modal-overlay,.note-modal-overlay{display:none!important;}
+  .main{display:block;}
+  .left-col{border:none;}
+  .cue-panel{overflow:visible;}
+  .cue-list{overflow:visible;max-height:none;}
+  .print-header{display:block!important;}
+  .cue-row{border-bottom:1px solid #ddd;padding:.4rem .5rem;break-inside:avoid;}
+  .cue-row.is-done{opacity:1;}
+  .del-btn,.rescue-btn,.cue-vol input,.mode-pill,.src-icon,.cue-src{display:none!important;}
+  .cue-vol-label,.cue-name,.cue-num,.cue-note-preview{color:#000!important;}
+  .cue-note-preview{color:#444!important;font-style:italic;}
+  .sfx-print{display:block!important;padding:1rem 0;}
+}
+.print-header{display:none;padding:.8rem 0 .6rem;border-bottom:2px solid #000;margin-bottom:.4rem;}
+.print-header h1{font-size:1.15rem;font-weight:700;}
+.print-header p{font-size:.82rem;color:#444;margin-top:.18rem;}
+.sfx-print{display:none;}
+.sfx-print-title{font-size:.9rem;font-weight:700;margin:.8rem 0 .3rem;}
+.sfx-print-row{font-size:.8rem;color:#333;line-height:1.7;}
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="header-left">
+    <div class="header-title">Theater Cue Player v2</div>
+    <div class="header-show">Tone.js pitch-shift engine + per-cue metadata</div>
+  </div>
+  <div class="header-actions">
+    <button class="hbtn hbtn-show" id="btnHelp">Help</button>
+    <button class="hbtn" id="btnAddLocal">+ File</button>
+    <button class="hbtn" id="btnAddUrl">+ URL</button>
+    <button class="hbtn hbtn-folder" id="btnLoadFolder">📁 Load Folder</button>
+    <button class="hbtn" id="btnSave">Save Show</button>
+    <button class="hbtn" id="btnLoad">Load Show</button>
+    <button class="hbtn hbtn-export" id="btnExport">Print / Export</button>
+    <button class="hbtn" id="btnClear">Clear</button>
+  </div>
+</header>
+
+<div class="offline-banner" id="offlineBanner">
+  <div class="offline-banner-text">
+    <div class="offline-banner-title">⚠ Offline Files Detected — Load Folder to reconnect</div>
+    <div class="offline-files" id="offlineFileList"></div>
+  </div>
+  <button class="offline-dismiss" id="offlineDismiss">✕</button>
+</div>
+
+<div class="main">
+  <div class="left-col">
+    <div class="cue-panel">
+      <div class="cue-list-header">
+        <span>#</span><span>Cue Name / Note</span><span></span><span>Mode</span><span>Vol</span><span>Pitch</span><span>Loop</span><span></span>
+      </div>
+      <div class="print-header">
+        <h1>Theater Cue Player v2 — Cue Sheet</h1>
+        <p id="printMeta"></p>
+      </div>
+      <ul class="cue-list" id="cueList"></ul>
+      <div class="sfx-print" id="sfxPrint">
+        <div class="sfx-print-title">SFX Bank</div>
+        <div id="sfxPrintRows"></div>
+      </div>
+    </div>
+
+    <div class="sfx-panel">
+      <div class="sfx-title">SFX Bank — keys 0 – 9</div>
+      <div class="sfx-grid" id="sfxGrid"></div>
+    </div>
+  </div>
+
+  <aside class="right-panel">
+    <div class="status-section">
+      <div class="status-block now-block">
+        <div class="status-label">▶ Now Playing</div>
+        <div class="status-name" id="nowName">—</div>
+        <div class="status-note" id="nowNote" style="display:none"></div>
+        <div class="status-mode" id="nowMode"></div>
+      </div>
+      <div class="status-block next-block">
+        <div class="status-label">⏭ Up Next</div>
+        <div class="status-name" id="nextName">—</div>
+        <div class="status-note" id="nextNote" style="display:none"></div>
+        <div class="status-mode" id="nextMode"></div>
+        <div class="preroll-bar-wrap" id="prerollWrap"><div class="preroll-bar" id="prerollBar"></div></div>
+      </div>
+    </div>
+
+    <div class="progress-section">
+      <div class="time-row">
+        <span class="time-current" id="timeCurrent">0:00</span>
+        <span class="time-total" id="timeTotal">/ 0:00</span>
+      </div>
+      <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+    </div>
+
+    <div class="go-section">
+      <button class="go-btn" id="goBtn">
+        <span class="go-label">GO</span>
+        <span class="go-sub">SPACE — advance &amp; play</span>
+      </button>
+    </div>
+
+    <div class="transport">
+      <button class="tbtn" id="btnPrev">⏮ PREV</button>
+      <button class="tbtn" id="btnStop">⏹ STOP</button>
+      <button class="tbtn danger" id="btnPanic">✕ PANIC</button>
+    </div>
+
+    <div class="global-controls">
+      <div class="ctrl-row">
+        <span class="ctrl-label">Master</span>
+        <input class="ctrl-slider" type="range" id="masterVol" min="0" max="1" step="0.01" value="1"/>
+        <span class="ctrl-val" id="masterVolVal">100%</span>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">Gap</span>
+        <input class="ctrl-slider" type="range" id="gapSlider" min="0" max="5" step="0.1" value="0"/>
+        <span class="ctrl-val" id="gapVal">0.0s</span>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">Pitch</span>
+        <span class="ctrl-val" id="pitchInfo" style="width:auto;text-align:left;">Current cue</span>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">Loop</span>
+        <span class="ctrl-val" id="loopInfo" style="width:auto;text-align:left;">Per cue</span>
+      </div>
+    </div>
+
+    <div class="hotkeys">
+      <div class="hotkeys-title">Keyboard Shortcuts</div>
+      <div class="hk-grid">
+        <div class="hk-row"><span class="hk-key">Space</span><span class="hk-desc">GO / advance</span></div>
+        <div class="hk-row"><span class="hk-key">Esc</span><span class="hk-desc">Panic stop</span></div>
+        <div class="hk-row"><span class="hk-key">→</span><span class="hk-desc">Skip to next</span></div>
+        <div class="hk-row"><span class="hk-key">←</span><span class="hk-desc">Go to prev</span></div>
+        <div class="hk-row"><span class="hk-key">P</span><span class="hk-desc">Pause / resume</span></div>
+        <div class="hk-row"><span class="hk-key">S</span><span class="hk-desc">Stop + rewind</span></div>
+        <div class="hk-row"><span class="hk-key">M</span><span class="hk-desc">Toggle cue mode</span></div>
+        <div class="hk-row"><span class="hk-key">N</span><span class="hk-desc">Edit note</span></div>
+        <div class="hk-row"><span class="hk-key">L</span><span class="hk-desc">Toggle current cue loop</span></div>
+        <div class="hk-row"><span class="hk-key">0–9</span><span class="hk-desc">Fire SFX</span></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<div class="note-modal-overlay" id="noteModal">
+  <div class="note-modal">
+    <div>
+      <div class="note-modal-title">Edit Cue Note</div>
+      <div class="note-modal-cue" id="noteModalCueName"></div>
+    </div>
+    <textarea class="note-textarea" id="noteTextarea" placeholder="e.g. Lights fade · Barbara enters SR · Director cue"></textarea>
+    <div class="note-modal-foot">
+      <button class="nmbtn secondary" id="noteCancel">Cancel</button>
+      <button class="nmbtn primary" id="noteSave">Save Note</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="helpModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">How to Use Theater Cue Player v2</span>
+      <button class="modal-close" id="helpClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="lib-item" style="display:block;cursor:default"><div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>What this is:</strong> a show-control page for students with per-cue volume, per-cue loop, and a better pitch-shift engine for music cues.</div></div>
+      <div class="lib-item" style="display:block;cursor:default"><div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>+ File</strong> adds one audio file as a cue. <strong>+ URL</strong> adds a cue from a direct web link. <strong>Load Folder</strong> loads a whole folder of audio and can reconnect saved cues and SFX by filename.</div></div>
+      <div class="lib-item" style="display:block;cursor:default"><div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>Save Show</strong> saves your cue list, notes, levels, pitch, loop settings, SFX setup, and any web URLs as JSON. <strong>Load Show</strong> restores it. If local files are missing, the app marks them offline so you can reconnect them.</div></div>
+      <div class="lib-item" style="display:block;cursor:default"><div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>GO</strong> always advances to the next cue and plays it. <strong>AUTO</strong> cues continue after the set gap. <strong>MAN</strong> cues wait for the next GO.</div></div>
+      <div class="lib-item" style="display:block;cursor:default"><div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>Per-cue controls:</strong> each row stores its own volume, pitch, and loop state. Click the <strong>pitch</strong> button to cycle semitone shifts. Click the <strong>L</strong> loop button to toggle loop for that cue. The button turns green when loop is on.</div></div>
+      <div class="lib-item" style="display:block;cursor:default"><div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>Now Playing</strong> shows the current cue. <strong>Up Next</strong> shows the next cue and its note. Right-click a cue name to edit its note, or press <strong>N</strong> to edit the current cue note. Double-click a cue name to rename it.</div></div>
+      <div class="lib-item" style="display:block;cursor:default"><div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>SFX Bank</strong> uses keys 0 through 9. Empty slots can take a <strong>local file</strong> or a <strong>URL</strong>. <strong>OVR</strong> overlaps repeated presses. <strong>RST</strong> restarts from the beginning. <strong>LOOP</strong> repeats until the same key is pressed again.</div></div>
+      <div class="lib-item" style="display:block;cursor:default"><div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>Icons:</strong> globe = web file, monitor = local file loaded this session, warning = offline and needs to be located. <strong>Google Drive URLs are not supported</strong> here. Use local files, a CDN, or GitHub raw links instead.</div></div>
+      <div class="lib-item" style="display:block;cursor:default"><div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>GitHub tip:</strong> use the file’s <strong>Raw</strong> URL, not the normal file page. Good format: <code style="color:var(--accent)">https://raw.githubusercontent.com/OWNER/REPO/BRANCH/path/to/file.mp3</code>. Avoid <code style="color:var(--accent)">github.com/.../blob/...</code>.</div></div>
+      <div class="lib-item" style="display:block;cursor:default"><div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>Hosting tip:</strong> a CDN or your own website/server is the most reliable choice for web audio. GitHub raw links can work, but test before rehearsal or performance.</div></div>
+    </div>
+    <div class="modal-footer">
+      <button class="mfbtn primary" id="helpGotIt">Got it</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="urlModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Add Cue from URL</span>
+      <button class="modal-close" id="urlModalClose">✕</button>
+    </div>
+    <div class="modal-body" style="padding:.85rem .95rem;display:flex;flex-direction:column;gap:.65rem;">
+      <label style="display:flex;flex-direction:column;gap:.25rem;">
+        <span class="lib-item-name" style="color:var(--text)">Cue name</span>
+        <input id="urlCueName" type="text" placeholder="Optional title" style="background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);padding:.55rem .7rem;outline:none;font:inherit;">
+      </label>
+      <label style="display:flex;flex-direction:column;gap:.25rem;">
+        <span class="lib-item-name" style="color:var(--text)">Audio URL</span>
+        <input id="urlCueLink" type="url" placeholder="https://...mp3 or GitHub raw link" style="background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);padding:.55rem .7rem;outline:none;font:inherit;">
+      </label>
+      <div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text2)">Tip: Google Drive URLs are not supported here. Use a CDN, your own site, or a GitHub raw file URL instead.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="mfbtn secondary" id="urlCancel">Cancel</button>
+      <button class="mfbtn primary" id="urlAdd">Add URL Cue</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="sfxUrlModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Add SFX from URL</span>
+      <button class="modal-close" id="sfxUrlModalClose">✕</button>
+    </div>
+    <div class="modal-body" style="padding:.85rem .95rem;display:flex;flex-direction:column;gap:.65rem;">
+      <div class="lib-item-name" id="sfxUrlSlotLabel" style="color:var(--text2)">SFX slot</div>
+      <label style="display:flex;flex-direction:column;gap:.25rem;">
+        <span class="lib-item-name" style="color:var(--text)">SFX name</span>
+        <input id="sfxUrlName" type="text" placeholder="Optional title" style="background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);padding:.55rem .7rem;outline:none;font:inherit;">
+      </label>
+      <label style="display:flex;flex-direction:column;gap:.25rem;">
+        <span class="lib-item-name" style="color:var(--text)">Audio URL</span>
+        <input id="sfxUrlLink" type="url" placeholder="https://...mp3 or GitHub raw link" style="background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);padding:.55rem .7rem;outline:none;font:inherit;">
+      </label>
+      <div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text2)">Tip: Google Drive URLs are not supported here. Use a CDN, your own site, or a GitHub raw file URL instead. Test playback before rehearsal or performance.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="mfbtn secondary" id="sfxUrlCancel">Cancel</button>
+      <button class="mfbtn primary" id="sfxUrlAdd">Add URL SFX</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="localFilePicker" accept="audio/*" style="display:none"/>
+<input type="file" id="loadFilePicker" accept=".json" style="display:none"/>
+<input type="file" id="folderPicker" webkitdirectory multiple accept="audio/*" style="display:none"/>
+<input type="file" id="rescuePicker" accept="audio/*" style="display:none"/>
+<div class="toast" id="toast"></div>
+
+<script>
+let cues=[];
+let current=0, loading=false, loadedIndex=-1;
+let gap=0, gapTimer=null;
+const PITCH_STEPS=[-12,-7,-5,-2,0,2,5,7,12];
+const localFileMap={};
+const sfxSlots=Array.from({length:10},()=>({name:'',url:'',filename:'',playMode:'restart',loop:false,activeAudios:[]}));
+let rescueTarget=null;
+let noteTargetIndex=-1;
+let sfxUrlTargetIndex=-1;
+
+let player=null;
+let pitchShiftNode=null;
+let outputGain=null;
+let activeCueDuration=0;
+let isPlaying=false;
+let pauseOffset=0;
+let startedAt=0;
+let finishHandled=false;
+let audioUnlocked=false;
+
+const cueListEl=document.getElementById('cueList');
+const goBtn=document.getElementById('goBtn');
+const nowName=document.getElementById('nowName');
+const nextName=document.getElementById('nextName');
+const nowNote=document.getElementById('nowNote');
+const nextNote=document.getElementById('nextNote');
+const nowMode=document.getElementById('nowMode');
+const nextMode=document.getElementById('nextMode');
+const prerollWrap=document.getElementById('prerollWrap');
+const prerollBar=document.getElementById('prerollBar');
+const timeCur=document.getElementById('timeCurrent');
+const timeTot=document.getElementById('timeTotal');
+const progressBar=document.getElementById('progressBar');
+const masterVol=document.getElementById('masterVol');
+const masterVolVal=document.getElementById('masterVolVal');
+const gapSlider=document.getElementById('gapSlider');
+const gapVal=document.getElementById('gapVal');
+const pitchInfo=document.getElementById('pitchInfo');
+const loopInfo=document.getElementById('loopInfo');
+
+const fmt=s=>`${Math.floor(Math.max(0,s)/60)}:${String(Math.floor(Math.max(0,s)%60)).padStart(2,'0')}`;
+let toastTimer=null;
+function toast(msg,dur=2400,err=false){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.toggle('error',err); el.classList.add('show');
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),dur);
+}
+
+async function ensureAudio(){
+  if(audioUnlocked) return;
+  await Tone.start();
+  audioUnlocked=true;
+}
+
+function clearGap(){
+  if(gapTimer){clearTimeout(gapTimer);gapTimer=null;}
+  stopPreroll();
+}
+
+function inferTitleFromUrl(url){
+  try{
+    const u=new URL(url);
+    const raw=(u.pathname.split('/').pop()||'').split('?')[0];
+    return decodeURIComponent(raw||'Web Cue').replace(/\.[^.]+$/,'') || 'Web Cue';
+  }catch{return 'Web Cue';}
+}
+function normalizeSharedAudioUrl(url){
+  const trimmed=(url||'').trim();
+  if(!trimmed) return '';
+  try{
+    const u=new URL(trimmed);
+    if(u.hostname === 'github.com'){
+      const parts=u.pathname.split('/').filter(Boolean);
+      if(parts.length >= 5 && parts[2] === 'blob'){
+        const owner=parts[0], repo=parts[1], branch=parts[3], filePath=parts.slice(4).join('/');
+        return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${filePath}`;
+      }
+      if(parts.length >= 7 && parts[2] === 'raw' && parts[3] === 'refs' && parts[4] === 'heads'){
+        const owner=parts[0], repo=parts[1], branch=parts[5], filePath=parts.slice(6).join('/');
+        return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${filePath}`;
+      }
+    }
+    return trimmed;
+  }catch{return trimmed;}
+}
+function isProbablyAudioUrl(url){
+  return /\.(mp3|wav|ogg|flac|aac|m4a)(\?|#|$)/i.test(url) || /raw\.githubusercontent\.com|github\.com/i.test(url);
+}
+function isOffline(cue){ return cue && cue.url===''; }
+function isSFXOffline(slot){ return slot.filename && slot.url===''; }
+function formatPitch(semi){
+  semi=Number(semi||0);
+  return semi===0?'0':(semi>0?`+${semi}`:`${semi}`);
+}
+function cycleCuePitch(index){
+  const cue=cues[index]; if(!cue) return;
+  const currentPitch=Number(cue.pitch||0);
+  const idx=PITCH_STEPS.indexOf(currentPitch);
+  cue.pitch=PITCH_STEPS[(idx+1+PITCH_STEPS.length)%PITCH_STEPS.length];
+  if(index===loadedIndex && pitchShiftNode) pitchShiftNode.pitch = cue.pitch || 0;
+  renderCues(); updateStatus();
+  toast(`Pitch: ${formatPitch(cue.pitch)} st`);
+}
+function toggleCueLoop(index){
+  const cue=cues[index]; if(!cue) return;
+  cue.loop=!cue.loop;
+  if(index===loadedIndex && player) player.loop = !!cue.loop;
+  renderCues(); updateStatus();
+  toast(`Loop ${cue.loop?'on':'off'} for cue`);
+}
+function currentCue(){ return cues[current] || null; }
+function currentPlaybackOffset(){
+  if(isPlaying) return Math.max(0, Tone.now() - startedAt);
+  return pauseOffset;
+}
+function destroyEngine(){
+  try{ if(player){ player.stop(); player.dispose(); } }catch(e){}
+  try{ if(pitchShiftNode){ pitchShiftNode.dispose(); } }catch(e){}
+  try{ if(outputGain){ outputGain.dispose(); } }catch(e){}
+  player=null; pitchShiftNode=null; outputGain=null;
+  activeCueDuration=0; pauseOffset=0; startedAt=0; finishHandled=false;
+}
+function applyCueParams(){
+  const cue=cues[loadedIndex];
+  if(!cue) return;
+  if(outputGain) outputGain.gain.value = parseFloat(masterVol.value) * (cue.vol ?? 1);
+  if(pitchShiftNode) pitchShiftNode.pitch = cue.pitch || 0;
+  if(player) player.loop = !!cue.loop;
+}
+function updateGoBtn(){ goBtn.classList.toggle('playing',isPlaying); }
+
+function startPreroll(ms){
+  stopPreroll();
+  if(ms<=0) return;
+  prerollWrap.classList.add('active');
+  prerollBar.style.transition='none';
+  prerollBar.style.width='100%';
+  prerollBar.getBoundingClientRect();
+  prerollBar.style.transition=`width ${ms}ms linear`;
+  prerollBar.style.width='0%';
+}
+function stopPreroll(){
+  prerollWrap.classList.remove('active');
+  prerollBar.style.transition='none';
+  prerollBar.style.width='100%';
+}
+
+function updateStatus(){
+  const nc=cues[current]||null, nx=cues[current+1]||null;
+  nowName.textContent=nc?nc.title:'—';
+  if(nc&&nc.note){nowNote.textContent=nc.note;nowNote.style.display='block';}
+  else nowNote.style.display='none';
+  nowMode.textContent=nc?(isOffline(nc)?'⚠ OFFLINE — locate file':nc.mode==='auto'?'● Auto-advance':'● Waiting for GO'):'';
+  nextName.textContent=nx?nx.title:(cues.length?'End of show':'—');
+  if(nx&&nx.note){nextNote.textContent=nx.note;nextNote.style.display='block';}
+  else nextNote.style.display='none';
+  nextMode.textContent=nx?(isOffline(nx)?'⚠ OFFLINE':nx.mode==='auto'?'Auto':'Manual GO'):'';
+  pitchInfo.textContent=nc?`${formatPitch(nc.pitch||0)} st`:'Current cue';
+  loopInfo.textContent=nc?(nc.loop?'On':'Off'):'Per cue';
+}
+
+function showOfflineBanner(files){
+  if(!files.length){hideBanner();return;}
+  document.getElementById('offlineFileList').textContent=
+    files.slice(0,10).join(' · ')+(files.length>10?` · +${files.length-10} more`:'');
+  document.getElementById('offlineBanner').classList.add('visible');
+}
+function hideBanner(){document.getElementById('offlineBanner').classList.remove('visible');}
+document.getElementById('offlineDismiss').addEventListener('click',hideBanner);
+
+function renderCues(){
+  cueListEl.innerHTML='';
+  cues.forEach((c,i)=>{
+    const done=i<current,isNow=i===current,isNext=i===current+1;
+    const offline=isOffline(c),isLocal=(c.url||'').startsWith('blob:');
+    const li=document.createElement('li');
+    li.className='cue-row'+(isNow?' is-now':'')+(isNext?' is-next':'')+(done?' is-done':'')+(offline?' is-offline':'');
+
+    const num=document.createElement('span'); num.className='cue-num'; num.textContent=String(i+1).padStart(2,'0');
+
+    const nw=document.createElement('div'); nw.className='cue-name-wrap';
+    const ne=document.createElement('span'); ne.className='cue-name'; ne.textContent=c.title; ne.title='Double-click to rename · Right-click to edit note';
+    ne.addEventListener('dblclick',e=>{e.stopPropagation();startRename(i,ne,c);});
+    nw.appendChild(ne);
+    if(c.note){
+      const np=document.createElement('span'); np.className='cue-note-preview'; np.textContent=c.note; nw.appendChild(np);
+    }
+    if(offline){
+      const rb=document.createElement('button');
+      rb.className='rescue-btn'; rb.textContent='Locate file'; rb.title='Find: '+(c.filename||c.title);
+      rb.addEventListener('click',e=>{e.stopPropagation();openRescue('cue',i);});
+      nw.appendChild(rb);
+    }
+    nw.addEventListener('contextmenu',e=>{e.preventDefault();openNoteModal(i);});
+
+    const sd=document.createElement('div'); sd.className='cue-src';
+    sd.innerHTML=offline
+      ?`<svg class="src-icon" viewBox="0 0 16 16" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round" title="Offline"><circle cx="8" cy="8" r="6"/><line x1="8" y1="5" x2="8" y2="8.5"/><circle cx="8" cy="11" r=".65" fill="#ef4444" stroke="none"/></svg>`
+      :isLocal
+      ?`<svg class="src-icon" viewBox="0 0 16 16" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" title="Local file"><rect x="2" y="3" width="12" height="9" rx="1.5"/><path d="M5 12v1h6v-1"/><path d="M2 9h12"/></svg>`
+      :`<svg class="src-icon" viewBox="0 0 16 16" fill="none" stroke="var(--next)" stroke-width="1.5" stroke-linecap="round" title="Web"><circle cx="8" cy="8" r="6"/><path d="M8 2c-2 2-2 8 0 12M8 2c2 2 2 8 0 12M2 8h12"/></svg>`;
+
+    const md=document.createElement('div'); md.className='cue-mode';
+    const pill=document.createElement('span'); pill.className='mode-pill '+c.mode; pill.textContent=c.mode==='auto'?'AUTO':'MAN';
+    pill.addEventListener('click',e=>{e.stopPropagation();cues[i].mode=cues[i].mode==='auto'?'manual':'auto';renderCues();updateStatus();});
+    md.appendChild(pill);
+
+    const vd=document.createElement('div'); vd.className='cue-vol';
+    const vs=document.createElement('input'); vs.type='range';vs.min=0;vs.max=1;vs.step=0.05;vs.value=c.vol ?? 1;
+    const vl=document.createElement('span'); vl.className='cue-vol-label'; vl.textContent=Math.round((c.vol ?? 1)*100)+'%';
+    vs.addEventListener('input',e=>{e.stopPropagation();cues[i].vol=parseFloat(e.target.value);vl.textContent=Math.round(cues[i].vol*100)+'%';if(i===loadedIndex)applyCueParams();});
+    vd.append(vs,vl);
+
+    const pd=document.createElement('div'); pd.className='cue-pitch';
+    const pp=document.createElement('span'); pp.className='pitch-pill'; pp.textContent=formatPitch(c.pitch||0);
+    pp.title='Click to cycle semitone shifts';
+    pp.addEventListener('click',e=>{e.stopPropagation();cycleCuePitch(i);});
+    pd.appendChild(pp);
+
+    const ld=document.createElement('div'); ld.className='cue-loop';
+    const lb=document.createElement('span'); lb.className='loop-mini'+(c.loop?' on':''); lb.textContent='L';
+    lb.title='Toggle loop for this cue';
+    lb.addEventListener('click',e=>{e.stopPropagation();toggleCueLoop(i);});
+    ld.appendChild(lb);
+
+    const dd=document.createElement('div'); dd.className='cue-del';
+    const db=document.createElement('button'); db.className='del-btn'; db.textContent='✕';
+    db.addEventListener('click',e=>{e.stopPropagation();removeCue(i);});
+    dd.appendChild(db);
+
+    li.append(num,nw,sd,md,vd,pd,ld,dd);
+    li.addEventListener('click',e=>{if(e.target.closest('.del-btn,.rescue-btn,.mode-pill,.cue-vol,.cue-pitch,.cue-loop,.cue-name,.pitch-pill,.loop-mini'))return;jumpTo(i,false);});
+    li.addEventListener('dblclick',e=>{if(e.target.closest('.del-btn,.rescue-btn,.mode-pill,.cue-vol,.cue-pitch,.cue-loop,.cue-name,.pitch-pill,.loop-mini'))return;jumpTo(i,true);});
+    cueListEl.appendChild(li);
+  });
+  const ae=cueListEl.querySelector('.is-now');
+  if(ae) ae.scrollIntoView({block:'nearest',behavior:'smooth'});
+}
+
+function startRename(i,nameEl,cue){
+  const inp=document.createElement('input');
+  inp.className='cue-name-input'; inp.value=cue.title;
+  nameEl.replaceWith(inp); inp.focus(); inp.select();
+  const commit=()=>{const v=inp.value.trim();if(v)cues[i].title=v;renderCues();updateStatus();};
+  inp.addEventListener('blur',commit);
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();inp.blur();}
+    if(e.key==='Escape'){inp.value=cue.title;inp.blur();}
+    e.stopPropagation();
+  });
+}
+
+function openNoteModal(i){
+  noteTargetIndex=i;
+  document.getElementById('noteModalCueName').textContent=cues[i].title;
+  document.getElementById('noteTextarea').value=cues[i].note||'';
+  document.getElementById('noteModal').classList.add('open');
+  setTimeout(()=>document.getElementById('noteTextarea').focus(),40);
+}
+function closeNoteModal(){document.getElementById('noteModal').classList.remove('open');noteTargetIndex=-1;}
+document.getElementById('noteSave').addEventListener('click',()=>{
+  if(noteTargetIndex>=0){cues[noteTargetIndex].note=document.getElementById('noteTextarea').value.trim();renderCues();updateStatus();}
+  closeNoteModal();
+});
+document.getElementById('noteCancel').addEventListener('click',closeNoteModal);
+document.getElementById('noteModal').addEventListener('click',e=>{if(e.target===document.getElementById('noteModal'))closeNoteModal();});
+
+function openRescue(type,index){rescueTarget={type,index};document.getElementById('rescuePicker').click();}
+document.getElementById('rescuePicker').addEventListener('change',e=>{
+  const f=e.target.files?.[0];if(!f||!rescueTarget)return;
+  const url=URL.createObjectURL(f); localFileMap[f.name]=url;
+  if(rescueTarget.type==='cue'){
+    cues[rescueTarget.index].url=url; cues[rescueTarget.index].filename=f.name;
+    renderCues(); updateStatus();
+    if(rescueTarget.index===current) loadCue(current,false);
+  }else{
+    sfxSlots[rescueTarget.index].url=url; sfxSlots[rescueTarget.index].filename=f.name;
+    renderSFX();
+  }
+  toast('Located: '+f.name); rescueTarget=null; e.target.value='';
+});
+
+function flashOffline(i){
+  goBtn.classList.remove('offline-flash');void goBtn.offsetWidth;goBtn.classList.add('offline-flash');
+  setTimeout(()=>goBtn.classList.remove('offline-flash'),500);
+  const rows=cueListEl.querySelectorAll('.cue-row');
+  if(rows[i]){rows[i].classList.remove('flash-offline');void rows[i].offsetWidth;rows[i].classList.add('flash-offline');setTimeout(()=>rows[i].classList.remove('flash-offline'),600);}
+}
+
+async function loadCue(i, autoplay=false){
+  if(!cues.length || i<0 || i>=cues.length) return;
+  const cue=cues[i];
+  if(isOffline(cue)){flashOffline(i);toast('Cue is offline — use Locate File or Load Folder',3500,true);return;}
+  clearGap();
+  await ensureAudio();
+  current=i; loading=true; loadedIndex=-1;
+  timeCur.textContent='0:00'; timeTot.textContent='/ 0:00'; progressBar.style.width='0%';
+  renderCues(); updateStatus();
+
+  destroyEngine();
+  outputGain = new Tone.Gain(1).toDestination();
+  pitchShiftNode = new Tone.PitchShift({pitch: cue.pitch || 0});
+  pitchShiftNode.connect(outputGain);
+
+  player = new Tone.Player({
+    url: cue.url,
+    loop: !!cue.loop,
+    autostart: false,
+    onload: () => {
+      loading=false; loadedIndex=i; activeCueDuration=player.buffer ? player.buffer.duration : 0;
+      pauseOffset=0; finishHandled=false;
+      timeTot.textContent='/ '+fmt(activeCueDuration||0);
+      applyCueParams();
+      updateStatus();
+      if(autoplay) startCurrentCue(0);
+    },
+    onerror: () => {
+      loading=false;
+      toast('Error loading cue audio',2800,true);
+    }
+  });
+  player.connect(pitchShiftNode);
+}
+
+async function startCurrentCue(offset=0){
+  if(loadedIndex<0 || !player) return;
+  await ensureAudio();
+  try{
+    player.start(undefined, Math.max(0, offset));
+    pauseOffset=Math.max(0, offset);
+    startedAt=Tone.now()-pauseOffset;
+    isPlaying=true;
+    finishHandled=false;
+    updateGoBtn();
+  }catch(err){
+    toast('Playback failed',2200,true);
+  }
+}
+function pauseCurrentCue(){
+  if(!player || !isPlaying) return;
+  pauseOffset=currentPlaybackOffset();
+  player.stop();
+  isPlaying=false;
+  updateGoBtn();
+}
+function stopCurrentCue(){
+  clearGap();
+  if(player) player.stop();
+  pauseOffset=0; isPlaying=false; finishHandled=false;
+  timeCur.textContent='0:00'; progressBar.style.width='0%';
+  updateGoBtn();
+}
+function handleCueFinished(){
+  if(finishHandled) return;
+  finishHandled=true;
+  isPlaying=false; pauseOffset=0; updateGoBtn();
+  const c=cues[current]; if(!c) return;
+  if(c.loop) return;
+  if(c.mode==='auto'){
+    if(gap>0) startPreroll(gap*1000);
+    gapTimer=setTimeout(()=>{stopPreroll(); advance();},gap*1000);
+  }
+}
+
+function jumpTo(i,play=false){clearGap();loadCue(i,play);}
+
+function go(){
+  if(!cues.length || loading) return;
+  if(loadedIndex===-1){
+    const c=cues[current];
+    if(isOffline(c)){flashOffline(current);toast('Cue is offline — load folder first',3000,true);return;}
+    loadCue(current,true); return;
+  }
+  advance();
+}
+function advance(){
+  clearGap();
+  const nx=current+1;
+  if(nx<cues.length){
+    if(isOffline(cues[nx])){flashOffline(nx);toast('Next cue is offline — load folder first',3000,true);return;}
+    loadCue(nx,true);
+  }else{
+    stopCurrentCue();
+    toast('End of show');
+  }
+}
+function removeCue(i){
+  if(i<0||i>=cues.length)return;
+  const removingActive=i===current;
+  cues.splice(i,1);
+  if(cues.length===0){
+    current=0; loadedIndex=-1; destroyEngine(); isPlaying=false;
+    renderCues(); updateStatus(); return;
+  }
+  if(removingActive){
+    current=Math.min(i,cues.length-1);
+    loadCue(current,false);
+  }else{
+    if(i<current) current--;
+    if(i<loadedIndex) loadedIndex--;
+    renderCues(); updateStatus();
+  }
+}
+
+function renderSFX(){
+  const grid=document.getElementById('sfxGrid'); grid.innerHTML='';
+  sfxSlots.forEach((slot,i)=>{
+    const hasFile=!!slot.url||!!slot.filename;
+    const isOff=isSFXOffline(slot);
+    const isActive=slot.activeAudios.length>0;
+    const div=document.createElement('div');
+    div.className='sfx-slot'+(hasFile?' has-file':'')+(isActive?' is-playing':'')+(isOff?' is-offline':'');
+
+    const key=document.createElement('span'); key.className='sfx-key'; key.textContent=i;
+    const nm=document.createElement('div');
+    const ctrl=document.createElement('div'); ctrl.className='sfx-controls';
+
+    if(!slot.name&&!slot.filename){
+      nm.className='sfx-empty'; nm.textContent='choose file or URL';
+      const fileBtn=document.createElement('button'); fileBtn.className='sfx-mini-btn'; fileBtn.textContent='FILE';
+      fileBtn.addEventListener('click',e=>{e.stopPropagation();openSFXPicker(i);});
+      const urlBtn=document.createElement('button'); urlBtn.className='sfx-mini-btn'; urlBtn.textContent='URL';
+      urlBtn.addEventListener('click',e=>{e.stopPropagation();openSFXUrlModal(i);});
+      ctrl.append(fileBtn,urlBtn);
+    }else{
+      nm.className='sfx-name'; nm.textContent=slot.name||slot.filename;
+      nm.title=slot.name||slot.filename;
+      div.addEventListener('click',()=>fireSFX(i));
+    }
+
+    if(hasFile){
+      const mb=document.createElement('button'); mb.className='sfx-mini-btn';
+      mb.textContent=slot.playMode==='overlap'?'OVR':'RST';
+      mb.addEventListener('click',e=>{e.stopPropagation();sfxSlots[i].playMode=sfxSlots[i].playMode==='overlap'?'restart':'overlap';renderSFX();});
+
+      const lb=document.createElement('button'); lb.className='sfx-mini-btn'+(slot.loop?' active':'');
+      lb.textContent='LOOP';
+      lb.addEventListener('click',e=>{e.stopPropagation();sfxSlots[i].loop=!sfxSlots[i].loop;sfxSlots[i].activeAudios.forEach(a=>a.loop=sfxSlots[i].loop);renderSFX();});
+
+      const ub=document.createElement('button'); ub.className='sfx-mini-btn'; ub.textContent='URL';
+      ub.addEventListener('click',e=>{e.stopPropagation();openSFXUrlModal(i);});
+      ctrl.append(mb,lb,ub);
+
+      if(isOff){
+        const rb=document.createElement('button'); rb.className='sfx-mini-btn'; rb.textContent='LOCATE';
+        rb.addEventListener('click',e=>{e.stopPropagation();openRescue('sfx',i);});
+        ctrl.appendChild(rb);
+      }
+
+      const clr=document.createElement('button'); clr.className='sfx-clear'; clr.textContent='✕';
+      clr.addEventListener('click',e=>{
+        e.stopPropagation();
+        sfxSlots[i].activeAudios.forEach(a=>{a.pause();a.currentTime=0;});
+        sfxSlots[i]={name:'',url:'',filename:'',playMode:'restart',loop:false,activeAudios:[]};
+        renderSFX();
+      });
+      div.appendChild(clr);
+    }
+
+    div.append(key,nm,ctrl); grid.appendChild(div);
+  });
+
+  const rows=document.getElementById('sfxPrintRows');
+  rows.innerHTML='';
+  sfxSlots.forEach((s,i)=>{
+    if(s.name||s.filename){
+      const r=document.createElement('div'); r.className='sfx-print-row';
+      r.textContent=`[${i}] ${s.name||s.filename} — ${s.playMode.toUpperCase()}${s.loop?' LOOP':''}`;
+      rows.appendChild(r);
+    }
+  });
+}
+function openSFXPicker(i){
+  const tmp=document.createElement('input'); tmp.type='file'; tmp.accept='audio/*'; tmp.style.display='none';
+  tmp.addEventListener('change',e=>{
+    const f=e.target.files?.[0]; if(!f) return;
+    const url=URL.createObjectURL(f); localFileMap[f.name]=url;
+    sfxSlots[i].url=url; sfxSlots[i].filename=f.name; if(!sfxSlots[i].name) sfxSlots[i].name=f.name.replace(/\.[^.]+$/,'');
+    renderSFX(); document.body.removeChild(tmp);
+  });
+  document.body.appendChild(tmp); tmp.click();
+}
+function fireSFX(i){
+  const s=sfxSlots[i];
+  if(!s.url&&!s.filename)return;
+  if(s.url===''){toast('SFX '+i+' offline — locate file',2500,true);return;}
+  if(!s.url){toast('SFX '+i+': no audio loaded',2000,true);return;}
+  if(s.loop&&s.activeAudios.length>0){
+    s.activeAudios.forEach(a=>{a.pause();a.currentTime=0;}); s.activeAudios=[]; renderSFX(); return;
+  }
+  if(s.playMode==='restart'&&s.activeAudios.length>0){
+    s.activeAudios.forEach(a=>{a.pause();a.currentTime=0;}); s.activeAudios=[];
+  }
+  const audio=new Audio(s.url);
+  audio.loop=s.loop; audio.volume=parseFloat(masterVol.value);
+  audio.play().catch(()=>toast('SFX '+i+' playback failed',2000,true));
+  s.activeAudios.push(audio); renderSFX();
+  if(!s.loop){
+    audio.addEventListener('ended',()=>{s.activeAudios=s.activeAudios.filter(a=>a!==audio);renderSFX();});
+  }
+}
+
+document.addEventListener('keydown',e=>{
+  const tag=document.activeElement.tagName;
+  const inText=['INPUT','TEXTAREA','SELECT'].includes(tag);
+  if(!inText){
+    const digitMatch=e.code && e.code.match(/^(Digit|Numpad)([0-9])$/);
+    if(digitMatch){e.preventDefault();fireSFX(Number(digitMatch[2]));return;}
+    if(/^[0-9]$/.test(e.key)){e.preventDefault();fireSFX(Number(e.key));return;}
+  }
+  if(inText)return;
+  switch(e.key){
+    case ' ':e.preventDefault();go();break;
+    case 'ArrowRight':e.preventDefault();clearGap();advance();break;
+    case 'ArrowLeft':
+      e.preventDefault();clearGap();
+      if(currentPlaybackOffset()>2){ stopCurrentCue(); loadCue(current,false); break; }
+      if(current>0) loadCue(current-1,isPlaying);
+      break;
+    case 's':case 'S': stopCurrentCue(); break;
+    case 'p':case 'P':
+      if(isPlaying) pauseCurrentCue();
+      else if(loadedIndex>=0) startCurrentCue(pauseOffset);
+      break;
+    case 'Escape': panic(); break;
+    case 'm':case 'M':
+      if(cues[current]){cues[current].mode=cues[current].mode==='auto'?'manual':'auto';renderCues();updateStatus();toast('Mode: '+cues[current].mode.toUpperCase());}
+      break;
+    case 'n':case 'N': if(cues[current]) openNoteModal(current); break;
+    case 'l':case 'L': if(cues[current]) toggleCueLoop(current); break;
+  }
+});
+
+function openHelp(){document.getElementById('helpModal').classList.add('open');}
+function closeHelp(){document.getElementById('helpModal').classList.remove('open');}
+document.getElementById('btnHelp').addEventListener('click',openHelp);
+document.getElementById('helpClose').addEventListener('click',closeHelp);
+document.getElementById('helpGotIt').addEventListener('click',closeHelp);
+document.getElementById('helpModal').addEventListener('click',e=>{if(e.target===document.getElementById('helpModal'))closeHelp();});
+
+function openSFXUrlModal(i){
+  sfxUrlTargetIndex=i;
+  document.getElementById('sfxUrlSlotLabel').textContent='SFX slot '+i;
+  document.getElementById('sfxUrlName').value=sfxSlots[i].name||'';
+  document.getElementById('sfxUrlLink').value=sfxSlots[i].url && !sfxSlots[i].url.startsWith('blob:') ? sfxSlots[i].url : '';
+  document.getElementById('sfxUrlModal').classList.add('open');
+  setTimeout(()=>document.getElementById('sfxUrlLink').focus(),30);
+}
+function closeSFXUrlModal(){
+  document.getElementById('sfxUrlModal').classList.remove('open');
+  document.getElementById('sfxUrlName').value=''; document.getElementById('sfxUrlLink').value=''; sfxUrlTargetIndex=-1;
+}
+document.getElementById('sfxUrlModalClose').addEventListener('click',closeSFXUrlModal);
+document.getElementById('sfxUrlCancel').addEventListener('click',closeSFXUrlModal);
+document.getElementById('sfxUrlModal').addEventListener('click',e=>{if(e.target===document.getElementById('sfxUrlModal'))closeSFXUrlModal();});
+document.getElementById('sfxUrlAdd').addEventListener('click',()=>{
+  const raw=document.getElementById('sfxUrlLink').value.trim();
+  if(sfxUrlTargetIndex<0){closeSFXUrlModal();return;}
+  if(!raw){toast('Paste an audio URL first',2200,true);return;}
+  if(/drive\.google\.com/i.test(raw)){toast('Google Drive URLs are not supported. Use a CDN or a GitHub raw link instead.',4200,true);return;}
+  const normalized=normalizeSharedAudioUrl(raw);
+  const title=(document.getElementById('sfxUrlName').value.trim()||inferTitleFromUrl(raw));
+  const filename=decodeURIComponent((raw.split('/').pop()||'').split('?')[0]||title);
+  const old=sfxSlots[sfxUrlTargetIndex];
+  old.activeAudios.forEach(a=>{a.pause();a.currentTime=0;});
+  sfxSlots[sfxUrlTargetIndex]={name:title,url:normalized,filename,playMode:old.playMode||'restart',loop:!!old.loop,activeAudios:[]};
+  renderSFX(); closeSFXUrlModal();
+  if(/github\.com|raw\.githubusercontent\.com/i.test(raw)){toast('GitHub URL SFX added. Use the Raw file URL and test before show use.',3600,false);}
+  else {toast(isProbablyAudioUrl(raw)?'URL SFX added':'URL SFX added — test playback before show',3200,!isProbablyAudioUrl(raw));}
+});
+document.getElementById('sfxUrlLink').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();document.getElementById('sfxUrlAdd').click();}});
+document.getElementById('sfxUrlName').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();document.getElementById('sfxUrlAdd').click();}});
+
+function openUrlModal(){ document.getElementById('urlModal').classList.add('open'); setTimeout(()=>document.getElementById('urlCueLink').focus(),30); }
+function closeUrlModal(){ document.getElementById('urlModal').classList.remove('open'); document.getElementById('urlCueName').value=''; document.getElementById('urlCueLink').value=''; }
+document.getElementById('btnAddUrl').addEventListener('click',openUrlModal);
+document.getElementById('urlModalClose').addEventListener('click',closeUrlModal);
+document.getElementById('urlCancel').addEventListener('click',closeUrlModal);
+document.getElementById('urlModal').addEventListener('click',e=>{if(e.target===document.getElementById('urlModal'))closeUrlModal();});
+document.getElementById('urlAdd').addEventListener('click',()=>{
+  const raw=document.getElementById('urlCueLink').value.trim();
+  if(!raw){toast('Paste an audio URL first',2200,true);return;}
+  if(/drive\.google\.com/i.test(raw)){toast('Google Drive URLs are not supported. Use a CDN or a GitHub raw link instead.',4200,true);return;}
+  const normalized=normalizeSharedAudioUrl(raw);
+  const title=(document.getElementById('urlCueName').value.trim()||inferTitleFromUrl(raw));
+  const filename=decodeURIComponent((raw.split('/').pop()||'').split('?')[0]||title);
+  cues.push({title,url:normalized,filename,mode:'manual',vol:1,pitch:0,loop:false,note:''});
+  renderCues(); updateStatus(); closeUrlModal();
+  if(/github\.com|raw\.githubusercontent\.com/i.test(raw)){toast('GitHub URL added. Use the Raw file URL and test before show use.',3600,false);}
+  else {toast(isProbablyAudioUrl(raw)?'URL cue added':'URL added — test playback before show',3200,!isProbablyAudioUrl(raw));}
+});
+document.getElementById('urlCueLink').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();document.getElementById('urlAdd').click();}});
+document.getElementById('urlCueName').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();document.getElementById('urlAdd').click();}});
+
+document.getElementById('btnAddLocal').addEventListener('click',()=>document.getElementById('localFilePicker').click());
+document.getElementById('localFilePicker').addEventListener('change',e=>{
+  const f=e.target.files?.[0]; if(!f)return;
+  const url=URL.createObjectURL(f); localFileMap[f.name]=url;
+  cues.push({title:f.name.replace(/\.[^.]+$/,''),url,filename:f.name,mode:'manual',vol:1,pitch:0,loop:false,note:''});
+  renderCues(); updateStatus(); toast('Added: '+f.name); e.target.value='';
+});
+
+document.getElementById('btnLoadFolder').addEventListener('click',()=>document.getElementById('folderPicker').click());
+document.getElementById('folderPicker').addEventListener('change',e=>{
+  const files=Array.from(e.target.files||[]); if(!files.length)return;
+  Object.values(localFileMap).forEach(u=>URL.revokeObjectURL(u));
+  Object.keys(localFileMap).forEach(k=>delete localFileMap[k]);
+  files.forEach(f=>{
+    if(!f.type.startsWith('audio/')&&!/\.(mp3|wav|ogg|flac|aac|m4a)$/i.test(f.name))return;
+    localFileMap[f.name]=URL.createObjectURL(f);
+  });
+  const loaded=Object.keys(localFileMap).length;
+  if(cues.length===0){
+    Object.keys(localFileMap).sort().forEach(fn=>{
+      cues.push({title:fn.replace(/\.[^.]+$/,''),url:localFileMap[fn],filename:fn,mode:'manual',vol:1,pitch:0,loop:false,note:''});
+    });
+    current=0; renderCues(); updateStatus(); renderSFX(); toast(loaded+' files loaded from folder'); e.target.value=''; return;
+  }
+  let matched=0; const missing=[];
+  cues.forEach(c=>{
+    if(c.filename&&localFileMap[c.filename]){c.url=localFileMap[c.filename]; matched++;}
+    else if(c.filename&&c.url==='') missing.push(c.filename);
+  });
+  sfxSlots.forEach(s=>{ if(s.filename&&localFileMap[s.filename]) s.url=localFileMap[s.filename]; });
+  renderCues(); updateStatus(); renderSFX();
+  if(missing.length) showOfflineBanner(missing); else hideBanner();
+  if(cues.length && !isOffline(cues[current])) loadCue(current,false);
+  toast(`${matched} matched`+(missing.length?`, ${missing.length} offline`:'')); e.target.value='';
+});
+
+document.getElementById('btnSave').addEventListener('click',()=>{
+  const data={
+    show:'Untitled Show',version:4,current,gap,
+    masterVol:parseFloat(masterVol.value),
+    cues:cues.map(c=>({title:c.title,url:c.url.startsWith('blob:')?'':c.url,filename:c.filename||'',mode:c.mode,vol:c.vol,pitch:c.pitch||0,loop:!!c.loop,note:c.note||''})),
+    sfx:sfxSlots.map(s=>({name:s.name,filename:s.filename,url:s.url.startsWith('blob:')?'':s.url,playMode:s.playMode,loop:s.loop}))
+  };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='theater-cue-show-v2.json'; a.click();
+  toast('Show file saved');
+});
+document.getElementById('btnLoad').addEventListener('click',()=>document.getElementById('loadFilePicker').click());
+document.getElementById('loadFilePicker').addEventListener('change',e=>{
+  const f=e.target.files?.[0]; if(!f)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(!data.cues) throw new Error('Invalid');
+      cues=data.cues.map(c=>({title:c.title||'',url:c.url||'',filename:c.filename||'',mode:c.mode||'manual',vol:c.vol??1,pitch:Number(c.pitch||0),loop:!!c.loop,note:c.note||''}));
+      sfxSlots.forEach((slot,i)=>{
+        const s=(data.sfx&&data.sfx[i])||{};
+        slot.activeAudios.forEach(a=>{a.pause();a.currentTime=0;});
+        sfxSlots[i]={name:s.name||'',url:s.url||'',filename:s.filename||'',playMode:s.playMode||'restart',loop:!!s.loop,activeAudios:[]};
+      });
+      current=data.current||0; gap=data.gap||0;
+      if(data.masterVol!==undefined){masterVol.value=data.masterVol;masterVolVal.textContent=Math.round(data.masterVol*100)+'%';}
+      gapSlider.value=gap; gapVal.textContent=gap.toFixed(1)+'s';
+      renderCues(); updateStatus(); renderSFX();
+      const offFiles=[...cues.filter(c=>isOffline(c)).map(c=>c.filename),...sfxSlots.filter(s=>isSFXOffline(s)).map(s=>s.filename)].filter(Boolean);
+      if(offFiles.length){showOfflineBanner(offFiles);toast(offFiles.length+' file(s) offline — click 📁 Load Folder',4000,true);}
+      else {hideBanner(); if(cues.length) loadCue(current,false);}
+      toast('Show loaded: '+(data.show||'unknown'));
+    }catch(err){toast('Error loading show file',2500,true);}
+  };
+  reader.readAsText(f); e.target.value='';
+});
+
+document.getElementById('btnExport').addEventListener('click',()=>{
+  document.getElementById('printMeta').textContent=`${cues.length} cues · ${new Date().toLocaleDateString()}`;
+  window.print();
+});
+document.getElementById('btnClear').addEventListener('click',()=>{
+  if(!confirm('Clear all cues and SFX?'))return;
+  clearGap(); destroyEngine();
+  cues=[]; current=0; loadedIndex=-1; isPlaying=false;
+  sfxSlots.forEach((s,i)=>{s.activeAudios.forEach(a=>a.pause()); sfxSlots[i]={name:'',url:'',filename:'',playMode:'restart',loop:false,activeAudios:[]};});
+  updateGoBtn(); renderCues(); updateStatus(); renderSFX(); hideBanner();
+});
+function panic(){
+  clearGap(); stopCurrentCue();
+  sfxSlots.forEach(s=>{s.activeAudios.forEach(a=>{a.pause();a.currentTime=0;});s.activeAudios=[];});
+  renderSFX();
+  toast('PANIC — all audio silenced',2500,true);
+}
+
+document.getElementById('btnPanic').addEventListener('click',panic);
+document.getElementById('btnStop').addEventListener('click',()=>stopCurrentCue());
+document.getElementById('btnPrev').addEventListener('click',()=>{
+  if(!cues.length)return; clearGap();
+  if(currentPlaybackOffset()>2){ stopCurrentCue(); loadCue(current,false); return; }
+  if(current>0) loadCue(current-1,isPlaying);
+});
+goBtn.addEventListener('click',()=>go());
+masterVol.addEventListener('input',()=>{masterVolVal.textContent=Math.round(parseFloat(masterVol.value)*100)+'%'; if(loadedIndex>=0) applyCueParams();});
+gapSlider.addEventListener('input',()=>{gap=parseFloat(gapSlider.value);gapVal.textContent=gap.toFixed(1)+'s';});
+
+setInterval(()=>{
+  if(isPlaying && loadedIndex>=0){
+    const t=currentPlaybackOffset();
+    timeCur.textContent=fmt(t);
+    timeTot.textContent='/ '+fmt(activeCueDuration||0);
+    if(activeCueDuration>0){
+      const pct=Math.min(100,(t/activeCueDuration)*100);
+      progressBar.style.width=pct+'%';
+      const cue=cues[loadedIndex];
+      if(!cue.loop && !finishHandled && t >= activeCueDuration-0.05){
+        handleCueFinished();
+      }
+    }
+  }
+},100);
+
+renderCues(); updateStatus(); renderSFX();
+setTimeout(openHelp,150);
+</script>
+</body>
+</html>
