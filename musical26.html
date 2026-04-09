@@ -1,12 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="robots" content="noindex">
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Beetlejuice JR — Show Cue Player</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
-<script src="https://unpkg.com/wavesurfer.js@7"></script>
+<script src="https://unpkg.com/tone@15.1.22/build/Tone.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -20,7 +19,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh
 
 /* HEADER */
 .header{display:flex;align-items:center;justify-content:space-between;padding:.45rem .9rem;background:var(--surface);border-bottom:1px solid var(--border);gap:.6rem;flex-shrink:0;flex-wrap:wrap;}
-.header-left{display:flex;flex-direction:column;gap:.08rem;}
+.header-left{display:flex;flex-direction:column;gap:.06rem;}
 .header-title{font-family:var(--mono);font-size:.78rem;font-weight:700;color:var(--accent);letter-spacing:.08em;text-transform:uppercase;}
 .header-show{font-family:var(--mono);font-size:.65rem;color:var(--text3);letter-spacing:.05em;}
 .header-actions{display:flex;gap:.35rem;align-items:center;flex-wrap:wrap;}
@@ -32,6 +31,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh
 .hbtn-folder:hover{border-color:var(--accent);background:rgba(167,139,250,.1);}
 .hbtn-export{border-color:rgba(59,130,246,.3);color:#60a5fa;}
 .hbtn-export:hover{border-color:var(--next);background:rgba(59,130,246,.08);}
+.unsaved-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--now);margin-left:.3rem;vertical-align:middle;opacity:0;transition:opacity .2s;}
+.unsaved-dot.visible{opacity:1;}
 
 /* OFFLINE BANNER */
 .offline-banner{display:none;background:rgba(239,68,68,.09);border-bottom:1px solid rgba(239,68,68,.28);padding:.42rem .9rem;flex-shrink:0;}
@@ -49,12 +50,12 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh
 
 /* CUE LIST */
 .cue-panel{display:flex;flex-direction:column;flex:1;min-height:0;}
-.cue-list-header{display:grid;grid-template-columns:36px 1fr 16px 54px 64px 32px;padding:.38rem .75rem;background:var(--surface2);border-bottom:1px solid var(--border);font-family:var(--mono);font-size:.58rem;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;}
+.cue-list-header{display:grid;grid-template-columns:36px 1fr 16px 52px 60px 38px 38px 30px 32px;padding:.38rem .75rem;background:var(--surface2);border-bottom:1px solid var(--border);font-family:var(--mono);font-size:.58rem;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;}
 .cue-list{flex:1;overflow-y:auto;overflow-x:hidden;}
 .cue-list::-webkit-scrollbar{width:3px;}
 .cue-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
 
-.cue-row{display:grid;grid-template-columns:36px 1fr 16px 54px 64px 32px;align-items:center;padding:.42rem .75rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;position:relative;}
+.cue-row{display:grid;grid-template-columns:36px 1fr 16px 52px 60px 38px 38px 30px 32px;align-items:center;padding:.42rem .75rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;position:relative;}
 .cue-row:hover{background:var(--surface2);}
 .cue-row.is-now{background:rgba(245,158,11,.07);border-left:3px solid var(--now);padding-left:calc(.75rem - 3px);}
 .cue-row.is-next{background:rgba(59,130,246,.05);border-left:3px solid var(--next);padding-left:calc(.75rem - 3px);}
@@ -68,7 +69,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh
 .cue-row.is-next .cue-num{color:var(--next);}
 .cue-row.is-offline .cue-num{color:var(--offline);opacity:.65;}
 
-.cue-name-wrap{display:flex;flex-direction:column;overflow:hidden;padding-right:.35rem;gap:.04rem;}
+.cue-name-wrap{display:flex;flex-direction:column;overflow:hidden;padding-right:.3rem;gap:.04rem;}
 .cue-name{font-size:.78rem;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .cue-row.is-now .cue-name{color:var(--now);}
 .cue-row.is-next .cue-name{color:var(--next);}
@@ -98,6 +99,12 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh
 .cue-row.is-now .cue-vol input[type=range]::-webkit-slider-thumb{background:var(--now);}
 .cue-row.is-next .cue-vol input[type=range]::-webkit-slider-thumb{background:var(--next);}
 .cue-vol-label{font-family:var(--mono);font-size:.58rem;color:var(--text3);width:22px;text-align:right;}
+
+/* per-cue meta pills (speed, pitch, loop) */
+.cue-meta-pill{font-family:var(--mono);font-size:.54rem;font-weight:700;letter-spacing:.02em;border-radius:3px;padding:.14rem .24rem;cursor:pointer;border:1px solid rgba(167,139,250,.22);background:rgba(167,139,250,.07);color:var(--accent);transition:all .12s;user-select:none;text-align:center;display:flex;align-items:center;justify-content:center;}
+.cue-meta-pill:hover{filter:brightness(1.18);border-color:var(--accent);}
+.cue-meta-pill.loop-on{border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.12);color:#86efac;}
+.cue-meta-pill.neutral{border-color:rgba(74,85,104,.35);background:rgba(74,85,104,.12);color:var(--text3);}
 
 .cue-del{display:flex;align-items:center;justify-content:center;}
 .del-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:.72rem;padding:.18rem;border-radius:3px;line-height:1;transition:color .15s,background .15s;}
@@ -149,18 +156,18 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh
 .status-mode{font-family:var(--mono);font-size:.58rem;margin-top:.18rem;}
 .now-block .status-mode{color:rgba(245,158,11,.5);}
 .next-block .status-mode{color:rgba(59,130,246,.4);}
+.status-meta{font-family:var(--mono);font-size:.58rem;margin-top:.12rem;color:var(--text3);display:flex;gap:.5rem;}
 
-/* PREROLL */
-.preroll-bar-wrap{height:3px;background:var(--border);border-radius:2px;margin-top:.3rem;display:none;}
-.preroll-bar-wrap.active{display:block;}
-.preroll-bar{height:3px;background:var(--next);border-radius:2px;width:100%;transition:width linear;}
-
-/* WAVEFORM */
-.wave-section{padding:.48rem .85rem;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
+/* PROGRESS */
+.progress-section{padding:.48rem .85rem;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
 .time-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.3rem;}
 .time-current{font-family:var(--mono);font-size:1.2rem;font-weight:700;color:var(--now);letter-spacing:.04em;}
 .time-total{font-family:var(--mono);font-size:.72rem;color:var(--text3);}
-#waveform{width:100%;height:48px;border-radius:4px;overflow:hidden;background:var(--surface2);}
+.progress-wrap{width:100%;height:10px;border-radius:999px;background:var(--surface2);overflow:hidden;border:1px solid var(--border);cursor:pointer;}
+.progress-bar{height:100%;width:0%;background:linear-gradient(90deg,var(--now),var(--next));transition:width .1s linear;pointer-events:none;}
+.preroll-bar-wrap{height:3px;background:var(--border);border-radius:2px;margin-top:.3rem;display:none;}
+.preroll-bar-wrap.active{display:block;}
+.preroll-bar{height:3px;background:var(--next);border-radius:2px;width:100%;transition:width linear;}
 
 /* GO */
 .go-section{padding:.6rem .85rem;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
@@ -188,10 +195,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh
 .ctrl-slider{-webkit-appearance:none;flex:1;height:3px;background:var(--border2);border-radius:2px;outline:none;cursor:pointer;}
 .ctrl-slider::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--text2);cursor:pointer;}
 .ctrl-slider:hover::-webkit-slider-thumb{background:var(--text);}
-.ctrl-val{font-family:var(--mono);font-size:.63rem;color:var(--text2);width:34px;text-align:right;flex-shrink:0;}
-.loop-pill{font-family:var(--mono);font-size:.6rem;font-weight:600;padding:.22rem .55rem;border-radius:3px;cursor:pointer;background:var(--surface3);border:1px solid var(--border2);color:var(--text2);transition:all .12s;letter-spacing:.04em;}
-.loop-pill:hover{color:var(--text);border-color:var(--accent);}
-.loop-pill.active{background:rgba(167,139,250,.12);border-color:var(--accent);color:var(--accent);}
+.ctrl-val{font-family:var(--mono);font-size:.63rem;color:var(--text2);width:80px;text-align:right;flex-shrink:0;}
 
 /* HOTKEYS */
 .hotkeys{padding:.55rem .85rem;background:var(--surface);flex-shrink:0;}
@@ -200,6 +204,33 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh
 .hk-row{display:flex;align-items:center;gap:.32rem;}
 .hk-key{font-family:var(--mono);font-size:.56rem;font-weight:700;background:var(--surface3);border:1px solid var(--border2);border-radius:3px;padding:.06rem .28rem;color:var(--text2);white-space:nowrap;flex-shrink:0;}
 .hk-desc{font-size:.65rem;color:var(--text3);}
+
+/* MODALS */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:10px;width:min(520px,94vw);max-height:80vh;display:flex;flex-direction:column;overflow:hidden;}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:.7rem .95rem;border-bottom:1px solid var(--border);flex-shrink:0;}
+.modal-title{font-family:var(--mono);font-size:.75rem;font-weight:700;color:var(--text);letter-spacing:.06em;text-transform:uppercase;}
+.modal-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:1rem;padding:.18rem .38rem;border-radius:4px;transition:color .12s,background .12s;}
+.modal-close:hover{color:var(--text);background:var(--surface3);}
+.modal-body{flex:1;overflow-y:auto;padding:.35rem 0;}
+.modal-body.padded{padding:.85rem .95rem;display:flex;flex-direction:column;gap:.65rem;}
+.modal-body::-webkit-scrollbar{width:3px;}
+.modal-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.lib-item{display:flex;align-items:center;gap:.55rem;padding:.42rem .95rem;cursor:pointer;transition:background .1s;border-bottom:1px solid var(--border);}
+.lib-item:hover{background:var(--surface2);}
+.lib-item input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px;cursor:pointer;flex-shrink:0;}
+.lib-item-name{font-size:.78rem;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.modal-footer{padding:.55rem .95rem;border-top:1px solid var(--border);display:flex;gap:.4rem;justify-content:flex-end;flex-shrink:0;}
+.mfbtn{font-family:var(--mono);font-size:.68rem;font-weight:600;padding:.38rem .8rem;border-radius:5px;cursor:pointer;border:1px solid var(--border2);transition:all .12s;}
+.mfbtn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+.mfbtn.primary:hover{filter:brightness(1.1);}
+.mfbtn.secondary{background:var(--surface2);color:var(--text2);}
+.mfbtn.secondary:hover{background:var(--surface3);color:var(--text);}
+.modal-input{background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);padding:.55rem .7rem;outline:none;font:inherit;width:100%;}
+.modal-input:focus{border-color:var(--accent);}
+.modal-label{font-size:.78rem;color:var(--text);margin-bottom:.25rem;display:block;}
+.modal-hint{font-size:.72rem;color:var(--text2);line-height:1.55;}
 
 /* NOTE MODAL */
 .note-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;align-items:center;justify-content:center;}
@@ -215,28 +246,6 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh
 .nmbtn.primary:hover{filter:brightness(1.1);}
 .nmbtn.secondary{background:var(--surface2);color:var(--text2);}
 .nmbtn.secondary:hover{background:var(--surface3);color:var(--text);}
-
-/* LIBRARY MODAL */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;}
-.modal-overlay.open{display:flex;}
-.modal{background:var(--surface);border:1px solid var(--border2);border-radius:10px;width:min(490px,94vw);max-height:76vh;display:flex;flex-direction:column;overflow:hidden;}
-.modal-header{display:flex;align-items:center;justify-content:space-between;padding:.7rem .95rem;border-bottom:1px solid var(--border);flex-shrink:0;}
-.modal-title{font-family:var(--mono);font-size:.75rem;font-weight:700;color:var(--text);letter-spacing:.06em;text-transform:uppercase;}
-.modal-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:1rem;padding:.18rem .38rem;border-radius:4px;transition:color .12s,background .12s;}
-.modal-close:hover{color:var(--text);background:var(--surface3);}
-.modal-body{flex:1;overflow-y:auto;padding:.35rem 0;}
-.modal-body::-webkit-scrollbar{width:3px;}
-.modal-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
-.lib-item{display:flex;align-items:center;gap:.55rem;padding:.42rem .95rem;cursor:pointer;transition:background .1s;border-bottom:1px solid var(--border);}
-.lib-item:hover{background:var(--surface2);}
-.lib-item input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px;cursor:pointer;flex-shrink:0;}
-.lib-item-name{font-size:.78rem;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.modal-footer{padding:.55rem .95rem;border-top:1px solid var(--border);display:flex;gap:.4rem;justify-content:flex-end;flex-shrink:0;}
-.mfbtn{font-family:var(--mono);font-size:.68rem;font-weight:600;padding:.38rem .8rem;border-radius:5px;cursor:pointer;border:1px solid var(--border2);transition:all .12s;}
-.mfbtn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
-.mfbtn.primary:hover{filter:brightness(1.1);}
-.mfbtn.secondary{background:var(--surface2);color:var(--text2);}
-.mfbtn.secondary:hover{background:var(--surface3);color:var(--text);}
 
 /* TOAST */
 .toast{position:fixed;bottom:1rem;left:50%;transform:translateX(-50%) translateY(8px);background:var(--surface3);border:1px solid var(--border2);border-radius:6px;padding:.42rem .9rem;font-family:var(--mono);font-size:.68rem;color:var(--text);opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:300;white-space:nowrap;}
@@ -258,6 +267,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh
   .cue-vol-label,.cue-name,.cue-num,.cue-note-preview{color:#000!important;}
   .cue-note-preview{color:#444!important;font-style:italic;}
   .sfx-print{display:block!important;padding:1rem 0;}
+  .cue-meta-pill{color:#000!important;background:none!important;border:1px solid #ccc!important;}
 }
 .print-header{display:none;padding:.8rem 0 .6rem;border-bottom:2px solid #000;margin-bottom:.4rem;}
 .print-header h1{font-size:1.15rem;font-weight:700;}
@@ -276,10 +286,12 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh
   </div>
   <div class="header-actions">
     <button class="hbtn hbtn-show" id="btnLoadShow">Beetlejuice JR</button>
+    <button class="hbtn" id="btnHelp">Help</button>
     <button class="hbtn" id="btnLibrary">+ Add Cues</button>
     <button class="hbtn" id="btnAddLocal">+ File</button>
+    <button class="hbtn" id="btnAddUrl">+ URL</button>
     <button class="hbtn hbtn-folder" id="btnLoadFolder">📁 Load Folder</button>
-    <button class="hbtn" id="btnSave">Save Show</button>
+    <button class="hbtn" id="btnSave">Save Show <span class="unsaved-dot" id="unsavedDot"></span></button>
     <button class="hbtn" id="btnLoad">Load Show</button>
     <button class="hbtn hbtn-export" id="btnExport">Print / Export</button>
     <button class="hbtn" id="btnClear">Clear</button>
@@ -298,20 +310,18 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh
   <div class="left-col">
     <div class="cue-panel">
       <div class="cue-list-header">
-        <span>#</span><span>Cue Name / Note</span><span></span><span>Mode</span><span>Vol</span><span></span>
+        <span>#</span><span>Cue Name / Note</span><span></span><span>Mode</span><span>Vol</span><span>Spd</span><span>Pitch</span><span>L</span><span></span>
       </div>
       <div class="print-header">
         <h1>Beetlejuice JR — Cue Sheet</h1>
         <p id="printMeta"></p>
       </div>
       <ul class="cue-list" id="cueList"></ul>
-      <!-- SFX print section (hidden on screen) -->
       <div class="sfx-print" id="sfxPrint">
         <div class="sfx-print-title">SFX Bank</div>
         <div id="sfxPrintRows"></div>
       </div>
     </div>
-
     <div class="sfx-panel">
       <div class="sfx-title">SFX Bank — keys 0 – 9</div>
       <div class="sfx-grid" id="sfxGrid"></div>
@@ -324,23 +334,27 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh
         <div class="status-label">▶ Now Playing</div>
         <div class="status-name" id="nowName">—</div>
         <div class="status-note" id="nowNote" style="display:none"></div>
+        <div class="status-meta" id="nowMeta"></div>
         <div class="status-mode" id="nowMode"></div>
       </div>
       <div class="status-block next-block">
         <div class="status-label">⏭ Up Next</div>
         <div class="status-name" id="nextName">—</div>
         <div class="status-note" id="nextNote" style="display:none"></div>
+        <div class="status-meta" id="nextMeta"></div>
         <div class="status-mode" id="nextMode"></div>
         <div class="preroll-bar-wrap" id="prerollWrap"><div class="preroll-bar" id="prerollBar"></div></div>
       </div>
     </div>
 
-    <div class="wave-section">
+    <div class="progress-section">
       <div class="time-row">
         <span class="time-current" id="timeCurrent">0:00</span>
         <span class="time-total" id="timeTotal">/ 0:00</span>
       </div>
-      <div id="waveform"></div>
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
     </div>
 
     <div class="go-section">
@@ -363,18 +377,17 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh
         <span class="ctrl-val" id="masterVolVal">100%</span>
       </div>
       <div class="ctrl-row">
-        <span class="ctrl-label">Speed</span>
-        <input class="ctrl-slider" type="range" id="speedSlider" min="0.5" max="1.5" step="0.05" value="1"/>
-        <span class="ctrl-val" id="speedVal">1.00×</span>
-      </div>
-      <div class="ctrl-row">
         <span class="ctrl-label">Gap</span>
         <input class="ctrl-slider" type="range" id="gapSlider" min="0" max="5" step="0.1" value="0"/>
         <span class="ctrl-val" id="gapVal">0.0s</span>
       </div>
       <div class="ctrl-row">
-        <span class="ctrl-label">Loop</span>
-        <button class="loop-pill" id="loopBtn">Off</button>
+        <span class="ctrl-label">Cue Spd</span>
+        <span class="ctrl-val" id="cueSpeedInfo" style="width:auto;text-align:left;color:var(--text3);">per cue</span>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">Cue Pitch</span>
+        <span class="ctrl-val" id="cuePitchInfo" style="width:auto;text-align:left;color:var(--text3);">per cue</span>
       </div>
     </div>
 
@@ -389,7 +402,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh
         <div class="hk-row"><span class="hk-key">S</span><span class="hk-desc">Stop + rewind</span></div>
         <div class="hk-row"><span class="hk-key">M</span><span class="hk-desc">Toggle cue mode</span></div>
         <div class="hk-row"><span class="hk-key">N</span><span class="hk-desc">Edit note</span></div>
-        <div class="hk-row"><span class="hk-key">L</span><span class="hk-desc">Cycle loop</span></div>
+        <div class="hk-row"><span class="hk-key">L</span><span class="hk-desc">Toggle cue loop</span></div>
         <div class="hk-row"><span class="hk-key">0–9</span><span class="hk-desc">Fire SFX</span></div>
       </div>
     </div>
@@ -411,6 +424,29 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh
   </div>
 </div>
 
+<!-- Help modal -->
+<div class="modal-overlay" id="helpModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">How to Use — Beetlejuice JR Cue Player</span>
+      <button class="modal-close" id="helpClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="lib-item" style="display:block;cursor:default"><div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>Getting started:</strong> click <strong>Beetlejuice JR</strong> to load all 54 tracks from the web. Or click <strong>📁 Load Folder</strong> to load audio from your computer — no internet needed.</div></div>
+      <div class="lib-item" style="display:block;cursor:default"><div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>GO</strong> (Space bar) always advances to the next cue and plays it. <strong>AUTO</strong> cues continue automatically after the gap. <strong>MAN</strong> cues wait for the next GO.</div></div>
+      <div class="lib-item" style="display:block;cursor:default"><div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>Per-cue controls:</strong> each row has its own volume, speed, pitch, and loop. <strong>Speed</strong> changes tempo without affecting pitch. <strong>Pitch</strong> cycles semitone shifts. <strong>L</strong> toggles loop (green = on).</div></div>
+      <div class="lib-item" style="display:block;cursor:default"><div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>Notes:</strong> right-click a cue name to add a note (or press <strong>N</strong>). The note for <em>Up Next</em> shows in the panel on the right so the operator always knows what's coming.</div></div>
+      <div class="lib-item" style="display:block;cursor:default"><div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>Local files:</strong> use <strong>Load Folder</strong> to load a whole folder at once. <strong>Save Show</strong> stores filenames so you can reload with Load Folder next time. Files marked ⚠ are offline — use <em>Locate file</em> or Load Folder to reconnect.</div></div>
+      <div class="lib-item" style="display:block;cursor:default"><div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>SFX Bank:</strong> keys 0–9 fire sound effects. Each slot has OVR (overlap), RST (restart), and LOOP modes. PANIC (Esc) kills everything instantly.</div></div>
+      <div class="lib-item" style="display:block;cursor:default"><div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>URL cues:</strong> use <strong>+ URL</strong> to add a cue from a web link. GitHub raw file links work well. Google Drive links are <em>not</em> supported — use a CDN or GitHub raw URL instead.</div></div>
+      <div class="lib-item" style="display:block;cursor:default"><div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>Unsaved changes</strong> are shown as an amber dot next to Save Show. The page will warn you before closing if you have unsaved changes.</div></div>
+    </div>
+    <div class="modal-footer">
+      <button class="mfbtn primary" id="helpGotIt">Got it</button>
+    </div>
+  </div>
+</div>
+
 <!-- Library modal -->
 <div class="modal-overlay" id="libraryModal">
   <div class="modal">
@@ -426,6 +462,45 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh
   </div>
 </div>
 
+<!-- URL cue modal -->
+<div class="modal-overlay" id="urlModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Add Cue from URL</span>
+      <button class="modal-close" id="urlModalClose">✕</button>
+    </div>
+    <div class="modal-body padded">
+      <label><span class="modal-label">Cue name</span><input id="urlCueName" type="text" class="modal-input" placeholder="Optional title"/></label>
+      <label><span class="modal-label">Audio URL</span><input id="urlCueLink" type="url" class="modal-input" placeholder="https://…mp3 or GitHub raw link"/></label>
+      <div class="modal-hint">GitHub tip: use the <strong>Raw</strong> URL, not the normal file page. Google Drive is not supported.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="mfbtn secondary" id="urlCancel">Cancel</button>
+      <button class="mfbtn primary" id="urlAdd">Add URL Cue</button>
+    </div>
+  </div>
+</div>
+
+<!-- SFX URL modal -->
+<div class="modal-overlay" id="sfxUrlModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Add SFX from URL</span>
+      <button class="modal-close" id="sfxUrlClose">✕</button>
+    </div>
+    <div class="modal-body padded">
+      <div class="modal-hint" id="sfxUrlSlotLabel" style="color:var(--text2)"></div>
+      <label><span class="modal-label">SFX name</span><input id="sfxUrlName" type="text" class="modal-input" placeholder="Optional title"/></label>
+      <label><span class="modal-label">Audio URL</span><input id="sfxUrlLink" type="url" class="modal-input" placeholder="https://…mp3 or GitHub raw link"/></label>
+      <div class="modal-hint">Google Drive is not supported. Use a CDN, your own site, or a GitHub raw file URL.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="mfbtn secondary" id="sfxUrlCancel">Cancel</button>
+      <button class="mfbtn primary" id="sfxUrlAdd">Add URL SFX</button>
+    </div>
+  </div>
+</div>
+
 <input type="file" id="localFilePicker" accept="audio/*" style="display:none"/>
 <input type="file" id="loadFilePicker" accept=".json" style="display:none"/>
 <input type="file" id="folderPicker" webkitdirectory multiple accept="audio/*" style="display:none"/>
@@ -433,7 +508,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh
 <div class="toast" id="toast"></div>
 
 <script>
-/* ── LIBRARY ── */
+/* ═══════════════════════════════════════
+   LIBRARY DATA
+═══════════════════════════════════════ */
 const LIBRARY=[
   {title:"01 Prologue: Invisible",url:"BeetlejuiceJR/01 Prologue_ Invisible.mp3"},
   {title:"02 Beetlejuice Appears",url:"BeetlejuiceJR/02 Beetlejuice Appears.mp3"},
@@ -491,46 +568,108 @@ const LIBRARY=[
   {title:"54 Exit Music",url:"BeetlejuiceJR/54 Exit Music.mp3"}
 ];
 
-/* ── STATE ── */
+/* ═══════════════════════════════════════
+   CONSTANTS
+═══════════════════════════════════════ */
+const PITCH_STEPS=[-12,-7,-5,-2,0,2,5,7,12];
+const SPEED_STEPS=[0.5,0.6,0.7,0.75,0.8,0.85,0.9,0.95,1.0,1.05,1.1,1.15,1.2,1.25,1.5,2.0];
+
+/* ═══════════════════════════════════════
+   STATE
+═══════════════════════════════════════ */
+// cue: { title, url, filename, mode, vol, speed, pitch, loop, note }
 let cues=[];
-let current=0, isPlaying=false, loading=false, loadedIndex=-1;
+let current=0, loading=false, loadedIndex=-1;
 let gap=0, gapTimer=null;
-const LOOP_LABELS=['Off','Track','All'];
-let loopMode=0;
 const localFileMap={};
 const sfxSlots=Array.from({length:10},()=>({name:'',url:'',filename:'',playMode:'restart',loop:false,activeAudios:[]}));
 let rescueTarget=null;
 let noteTargetIndex=-1;
+let sfxUrlTargetIndex=-1;
+let unsavedChanges=false;
 
-/* ── WAVESURFER ── */
-const ws=WaveSurfer.create({
-  container:'#waveform',waveColor:'#2a3040',progressColor:'#f59e0b',
-  cursorColor:'#f59e0b',height:48,barWidth:2,barRadius:2,cursorWidth:2,responsive:true
-});
+/* ═══════════════════════════════════════
+   TONE.JS ENGINE
+═══════════════════════════════════════ */
+let player=null;
+let pitchShift=null;
+let outputGain=null;
+let activeDuration=0;
+let isPlaying=false;
+let pauseOffset=0;
+let startedAt=0;
+let finishHandled=false;
+let audioUnlocked=false;
 
-/* ── ELEMENTS ── */
+async function ensureAudio(){
+  if(audioUnlocked) return;
+  await Tone.start();
+  audioUnlocked=true;
+}
+
+function destroyEngine(){
+  try{if(player){player.stop();player.dispose();}}catch(e){}
+  try{if(pitchShift){pitchShift.dispose();}}catch(e){}
+  try{if(outputGain){outputGain.dispose();}}catch(e){}
+  player=null; pitchShift=null; outputGain=null;
+  activeDuration=0; pauseOffset=0; startedAt=0; finishHandled=false;
+}
+
+function applyCueParams(){
+  const cue=cues[loadedIndex]; if(!cue) return;
+  if(outputGain) outputGain.gain.value=parseFloat(masterVol.value)*(cue.vol??1);
+  if(pitchShift) pitchShift.pitch=cue.pitch||0;
+  // speed without pitch: set playbackRate and compensate pitch
+  // Tone.js Player.playbackRate changes tempo AND pitch
+  // We compensate by adjusting PitchShift by -semitones_from_speed
+  if(player){
+    const spd=cue.speed||1;
+    player.playbackRate=spd;
+    // semitones added by speed change: 12 * log2(speed)
+    const spdSemis=12*Math.log2(spd);
+    // total pitch shift = desired pitch - compensation
+    if(pitchShift) pitchShift.pitch=(cue.pitch||0)-spdSemis;
+  }
+  if(player) player.loop=!!cue.loop;
+}
+
+function currentOffset(){
+  if(isPlaying) return Math.max(0,Tone.now()-startedAt);
+  return pauseOffset;
+}
+
+/* ═══════════════════════════════════════
+   ELEMENTS
+═══════════════════════════════════════ */
 const cueListEl=document.getElementById('cueList');
 const goBtn=document.getElementById('goBtn');
 const nowName=document.getElementById('nowName');
 const nextName=document.getElementById('nextName');
 const nowNote=document.getElementById('nowNote');
 const nextNote=document.getElementById('nextNote');
+const nowMeta=document.getElementById('nowMeta');
+const nextMeta=document.getElementById('nextMeta');
 const nowMode=document.getElementById('nowMode');
 const nextMode=document.getElementById('nextMode');
 const prerollWrap=document.getElementById('prerollWrap');
 const prerollBar=document.getElementById('prerollBar');
 const timeCur=document.getElementById('timeCurrent');
 const timeTot=document.getElementById('timeTotal');
+const progressBar=document.getElementById('progressBar');
 const masterVol=document.getElementById('masterVol');
 const masterVolVal=document.getElementById('masterVolVal');
-const speedSlider=document.getElementById('speedSlider');
-const speedVal=document.getElementById('speedVal');
 const gapSlider=document.getElementById('gapSlider');
 const gapVal=document.getElementById('gapVal');
-const loopBtn=document.getElementById('loopBtn');
+const cueSpeedInfo=document.getElementById('cueSpeedInfo');
+const cuePitchInfo=document.getElementById('cuePitchInfo');
 
-/* ── HELPERS ── */
-const fmt=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+/* ═══════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════ */
+const fmt=s=>`${Math.floor(Math.max(0,s)/60)}:${String(Math.floor(Math.max(0,s)%60)).padStart(2,'0')}`;
+const fmtPitch=s=>{s=Number(s||0);return s===0?'0st':(s>0?`+${s}st`:`${s}st`);};
+const fmtSpeed=s=>`${Number(s||1).toFixed(2)}×`;
+
 let toastTimer=null;
 function toast(msg,dur=2400,err=false){
   const el=document.getElementById('toast');
@@ -539,93 +678,153 @@ function toast(msg,dur=2400,err=false){
   toastTimer=setTimeout(()=>el.classList.remove('show'),dur);
 }
 
+function markUnsaved(){
+  unsavedChanges=true;
+  document.getElementById('unsavedDot').classList.add('visible');
+}
+function markSaved(){
+  unsavedChanges=false;
+  document.getElementById('unsavedDot').classList.remove('visible');
+}
+
 function clearGap(){
   if(gapTimer){clearTimeout(gapTimer);gapTimer=null;}
   stopPreroll();
 }
+function isOffline(cue){return cue&&cue.url==='';}
+function isSFXOffline(slot){return slot.filename&&slot.url==='';}
 
-// A cue is offline only if its URL is an empty string
-// (blob: = local loaded this session; non-empty non-blob = web URL; empty = needs folder)
-function isOffline(cue){ return cue && cue.url===''; }
-function isSFXOffline(slot){ return slot.filename && slot.url===''; }
+function inferTitle(url){
+  try{
+    const u=new URL(url);
+    const raw=(u.pathname.split('/').pop()||'').split('?')[0];
+    return decodeURIComponent(raw||'Web Cue').replace(/\.[^.]+$/,'')||'Web Cue';
+  }catch{return 'Web Cue';}
+}
+function normalizeUrl(url){
+  const t=(url||'').trim(); if(!t) return '';
+  try{
+    const u=new URL(t);
+    if(u.hostname==='github.com'){
+      const p=u.pathname.split('/').filter(Boolean);
+      if(p.length>=5&&p[2]==='blob') return `https://raw.githubusercontent.com/${p[0]}/${p[1]}/${p[3]}/${p.slice(4).join('/')}`;
+      if(p.length>=7&&p[2]==='raw'&&p[3]==='refs'&&p[4]==='heads') return `https://raw.githubusercontent.com/${p[0]}/${p[1]}/${p[5]}/${p.slice(6).join('/')}`;
+    }
+  }catch{}
+  return t;
+}
 
-/* ── PREROLL ── */
+/* ═══════════════════════════════════════
+   PREROLL BAR
+═══════════════════════════════════════ */
 function startPreroll(ms){
-  stopPreroll();
-  if(ms<=0) return;
+  stopPreroll(); if(ms<=0) return;
   prerollWrap.classList.add('active');
-  prerollBar.style.transition='none';
-  prerollBar.style.width='100%';
+  prerollBar.style.transition='none'; prerollBar.style.width='100%';
   prerollBar.getBoundingClientRect();
-  prerollBar.style.transition=`width ${ms}ms linear`;
-  prerollBar.style.width='0%';
+  prerollBar.style.transition=`width ${ms}ms linear`; prerollBar.style.width='0%';
 }
 function stopPreroll(){
   prerollWrap.classList.remove('active');
-  prerollBar.style.transition='none';
-  prerollBar.style.width='100%';
+  prerollBar.style.transition='none'; prerollBar.style.width='100%';
 }
 
-/* ── VOLUME ── */
-function applyVolume(){
-  const master=parseFloat(masterVol.value);
-  const cv=(cues[loadedIndex]||{vol:1}).vol;
-  ws.setVolume(master*cv);
-}
-
-/* ── STATUS ── */
+/* ═══════════════════════════════════════
+   STATUS PANEL
+═══════════════════════════════════════ */
 function updateStatus(){
   const nc=cues[current]||null, nx=cues[current+1]||null;
   nowName.textContent=nc?nc.title:'—';
   if(nc&&nc.note){nowNote.textContent=nc.note;nowNote.style.display='block';}
   else nowNote.style.display='none';
+
+  // meta line: speed + pitch for now/next
+  const metaStr=c=>{
+    if(!c) return '';
+    const parts=[];
+    if((c.speed||1)!==1) parts.push(fmtSpeed(c.speed));
+    if(c.pitch) parts.push(fmtPitch(c.pitch));
+    if(c.loop) parts.push('LOOP');
+    return parts.join(' · ');
+  };
+  nowMeta.textContent=metaStr(nc);
+  nextMeta.textContent=metaStr(nx);
+
   nowMode.textContent=nc?(isOffline(nc)?'⚠ OFFLINE — locate file':nc.mode==='auto'?'● Auto-advance':'● Waiting for GO'):'';
   nextName.textContent=nx?nx.title:(cues.length?'End of show':'—');
   if(nx&&nx.note){nextNote.textContent=nx.note;nextNote.style.display='block';}
   else nextNote.style.display='none';
   nextMode.textContent=nx?(isOffline(nx)?'⚠ OFFLINE':nx.mode==='auto'?'Auto':'Manual GO'):'';
+
+  // global info rows
+  cueSpeedInfo.textContent=nc?fmtSpeed(nc.speed||1):'per cue';
+  cuePitchInfo.textContent=nc?fmtPitch(nc.pitch||0):'per cue';
 }
 
-/* ── OFFLINE BANNER ── */
+/* ═══════════════════════════════════════
+   OFFLINE BANNER
+═══════════════════════════════════════ */
 function showOfflineBanner(files){
   if(!files.length){hideBanner();return;}
-  document.getElementById('offlineFileList').textContent=
-    files.slice(0,10).join(' · ')+(files.length>10?` · +${files.length-10} more`:'');
+  document.getElementById('offlineFileList').textContent=files.slice(0,10).join(' · ')+(files.length>10?` · +${files.length-10} more`:'');
   document.getElementById('offlineBanner').classList.add('visible');
 }
 function hideBanner(){document.getElementById('offlineBanner').classList.remove('visible');}
 document.getElementById('offlineDismiss').addEventListener('click',hideBanner);
 
-/* ── RENDER CUES ── */
+/* ═══════════════════════════════════════
+   PER-CUE CYCLE HELPERS
+═══════════════════════════════════════ */
+function cycleCueSpeed(i){
+  const cue=cues[i]; if(!cue) return;
+  const cur=cue.speed||1;
+  const idx=SPEED_STEPS.findIndex(s=>Math.abs(s-cur)<0.001);
+  cue.speed=SPEED_STEPS[(idx+1)%SPEED_STEPS.length];
+  if(i===loadedIndex) applyCueParams();
+  renderCues(); updateStatus(); markUnsaved();
+  toast(`Speed: ${fmtSpeed(cue.speed)}`);
+}
+function cycleCuePitch(i){
+  const cue=cues[i]; if(!cue) return;
+  const cur=Number(cue.pitch||0);
+  const idx=PITCH_STEPS.indexOf(cur);
+  cue.pitch=PITCH_STEPS[(idx+1)%PITCH_STEPS.length];
+  if(i===loadedIndex) applyCueParams();
+  renderCues(); updateStatus(); markUnsaved();
+  toast(`Pitch: ${fmtPitch(cue.pitch)}`);
+}
+function toggleCueLoop(i){
+  const cue=cues[i]; if(!cue) return;
+  cue.loop=!cue.loop;
+  if(i===loadedIndex&&player) player.loop=cue.loop;
+  renderCues(); updateStatus(); markUnsaved();
+  toast(`Loop ${cue.loop?'on':'off'}`);
+}
+
+/* ═══════════════════════════════════════
+   RENDER CUE LIST
+═══════════════════════════════════════ */
 function renderCues(){
   cueListEl.innerHTML='';
   cues.forEach((c,i)=>{
-    const done=i<current,isNow=i===current,isNext=i===current+1;
-    const offline=isOffline(c),isLocal=c.url.startsWith('blob:');
+    const done=i<current, isNow=i===current, isNext=i===current+1;
+    const offline=isOffline(c), isLocal=(c.url||'').startsWith('blob:');
+
     const li=document.createElement('li');
     li.className='cue-row'+(isNow?' is-now':'')+(isNext?' is-next':'')+(done?' is-done':'')+(offline?' is-offline':'');
     li.dataset.index=i;
 
     // num
-    const num=document.createElement('span');
-    num.className='cue-num';
-    num.textContent=String(i+1).padStart(2,'0');
+    const num=document.createElement('span'); num.className='cue-num'; num.textContent=String(i+1).padStart(2,'0');
 
-    // name+note wrap
-    const nw=document.createElement('div');
-    nw.className='cue-name-wrap';
-    const ne=document.createElement('span');
-    ne.className='cue-name'; ne.textContent=c.title; ne.title='Double-click to rename · Right-click to edit note';
+    // name + note wrap
+    const nw=document.createElement('div'); nw.className='cue-name-wrap';
+    const ne=document.createElement('span'); ne.className='cue-name'; ne.textContent=c.title; ne.title='Double-click to rename · Right-click to edit note';
     ne.addEventListener('dblclick',e=>{e.stopPropagation();startRename(i,ne,c);});
     nw.appendChild(ne);
-    if(c.note){
-      const np=document.createElement('span');
-      np.className='cue-note-preview'; np.textContent=c.note;
-      nw.appendChild(np);
-    }
+    if(c.note){const np=document.createElement('span');np.className='cue-note-preview';np.textContent=c.note;nw.appendChild(np);}
     if(offline){
-      const rb=document.createElement('button');
-      rb.className='rescue-btn'; rb.textContent='Locate file'; rb.title='Find: '+(c.filename||c.title);
+      const rb=document.createElement('button'); rb.className='rescue-btn'; rb.textContent='Locate file';
       rb.addEventListener('click',e=>{e.stopPropagation();openRescue('cue',i);});
       nw.appendChild(rb);
     }
@@ -641,17 +840,39 @@ function renderCues(){
 
     // mode
     const md=document.createElement('div'); md.className='cue-mode';
-    const pill=document.createElement('span');
-    pill.className='mode-pill '+c.mode; pill.textContent=c.mode==='auto'?'AUTO':'MAN';
-    pill.addEventListener('click',e=>{e.stopPropagation();cues[i].mode=cues[i].mode==='auto'?'manual':'auto';renderCues();updateStatus();});
+    const pill=document.createElement('span'); pill.className='mode-pill '+c.mode; pill.textContent=c.mode==='auto'?'AUTO':'MAN';
+    pill.addEventListener('click',e=>{e.stopPropagation();cues[i].mode=cues[i].mode==='auto'?'manual':'auto';renderCues();updateStatus();markUnsaved();});
     md.appendChild(pill);
 
     // vol
     const vd=document.createElement('div'); vd.className='cue-vol';
-    const vs=document.createElement('input'); vs.type='range';vs.min=0;vs.max=1;vs.step=0.05;vs.value=c.vol;
-    const vl=document.createElement('span'); vl.className='cue-vol-label'; vl.textContent=Math.round(c.vol*100)+'%';
-    vs.addEventListener('input',e=>{e.stopPropagation();cues[i].vol=parseFloat(e.target.value);vl.textContent=Math.round(cues[i].vol*100)+'%';if(i===loadedIndex)applyVolume();});
+    const vs=document.createElement('input'); vs.type='range';vs.min=0;vs.max=1;vs.step=0.05;vs.value=c.vol??1;
+    const vl=document.createElement('span'); vl.className='cue-vol-label'; vl.textContent=Math.round((c.vol??1)*100)+'%';
+    vs.addEventListener('input',e=>{e.stopPropagation();cues[i].vol=parseFloat(e.target.value);vl.textContent=Math.round(cues[i].vol*100)+'%';if(i===loadedIndex)applyCueParams();markUnsaved();});
     vd.append(vs,vl);
+
+    // speed pill
+    const spd=document.createElement('div'); spd.style.cssText='display:flex;align-items:center;justify-content:center;';
+    const spp=document.createElement('span');
+    const spdVal=c.speed||1;
+    spp.className='cue-meta-pill'+(spdVal===1?' neutral':''); spp.textContent=fmtSpeed(spdVal); spp.title='Click to cycle speed (tempo without pitch change)';
+    spp.addEventListener('click',e=>{e.stopPropagation();cycleCueSpeed(i);});
+    spd.appendChild(spp);
+
+    // pitch pill
+    const pd=document.createElement('div'); pd.style.cssText='display:flex;align-items:center;justify-content:center;';
+    const pp=document.createElement('span');
+    const pitchVal=c.pitch||0;
+    pp.className='cue-meta-pill'+(pitchVal===0?' neutral':''); pp.textContent=fmtPitch(pitchVal); pp.title='Click to cycle semitone pitch shift';
+    pp.addEventListener('click',e=>{e.stopPropagation();cycleCuePitch(i);});
+    pd.appendChild(pp);
+
+    // loop pill
+    const ld=document.createElement('div'); ld.style.cssText='display:flex;align-items:center;justify-content:center;';
+    const lp=document.createElement('span');
+    lp.className='cue-meta-pill'+(c.loop?' loop-on':' neutral'); lp.textContent='L'; lp.title='Toggle loop for this cue';
+    lp.addEventListener('click',e=>{e.stopPropagation();toggleCueLoop(i);});
+    ld.appendChild(lp);
 
     // del
     const dd=document.createElement('div'); dd.className='cue-del';
@@ -659,21 +880,22 @@ function renderCues(){
     db.addEventListener('click',e=>{e.stopPropagation();removeCue(i);});
     dd.appendChild(db);
 
-    li.append(num,nw,sd,md,vd,dd);
-    li.addEventListener('click',e=>{if(e.target.closest('.del-btn,.rescue-btn,.mode-pill,.cue-vol,.cue-name'))return;jumpTo(i,false);});
-    li.addEventListener('dblclick',e=>{if(e.target.closest('.del-btn,.rescue-btn,.mode-pill,.cue-vol,.cue-name'))return;jumpTo(i,true);});
+    li.append(num,nw,sd,md,vd,spd,pd,ld,dd);
+    li.addEventListener('click',e=>{if(e.target.closest('.del-btn,.rescue-btn,.mode-pill,.cue-vol,.cue-meta-pill,.cue-name'))return;jumpTo(i,false);});
+    li.addEventListener('dblclick',e=>{if(e.target.closest('.del-btn,.rescue-btn,.mode-pill,.cue-vol,.cue-meta-pill,.cue-name'))return;jumpTo(i,true);});
     cueListEl.appendChild(li);
   });
   const ae=cueListEl.querySelector('.is-now');
   if(ae) ae.scrollIntoView({block:'nearest',behavior:'smooth'});
 }
 
-/* ── INLINE RENAME ── */
+/* ═══════════════════════════════════════
+   INLINE RENAME
+═══════════════════════════════════════ */
 function startRename(i,nameEl,cue){
-  const inp=document.createElement('input');
-  inp.className='cue-name-input'; inp.value=cue.title;
+  const inp=document.createElement('input'); inp.className='cue-name-input'; inp.value=cue.title;
   nameEl.replaceWith(inp); inp.focus(); inp.select();
-  const commit=()=>{const v=inp.value.trim();if(v)cues[i].title=v;renderCues();updateStatus();};
+  const commit=()=>{const v=inp.value.trim();if(v)cues[i].title=v;renderCues();updateStatus();markUnsaved();};
   inp.addEventListener('blur',commit);
   inp.addEventListener('keydown',e=>{
     if(e.key==='Enter'){e.preventDefault();inp.blur();}
@@ -682,7 +904,9 @@ function startRename(i,nameEl,cue){
   });
 }
 
-/* ── NOTE MODAL ── */
+/* ═══════════════════════════════════════
+   NOTE MODAL
+═══════════════════════════════════════ */
 function openNoteModal(i){
   noteTargetIndex=i;
   document.getElementById('noteModalCueName').textContent=cues[i].title;
@@ -692,30 +916,33 @@ function openNoteModal(i){
 }
 function closeNoteModal(){document.getElementById('noteModal').classList.remove('open');noteTargetIndex=-1;}
 document.getElementById('noteSave').addEventListener('click',()=>{
-  if(noteTargetIndex>=0){cues[noteTargetIndex].note=document.getElementById('noteTextarea').value.trim();renderCues();updateStatus();}
+  if(noteTargetIndex>=0){cues[noteTargetIndex].note=document.getElementById('noteTextarea').value.trim();renderCues();updateStatus();markUnsaved();}
   closeNoteModal();
 });
 document.getElementById('noteCancel').addEventListener('click',closeNoteModal);
 document.getElementById('noteModal').addEventListener('click',e=>{if(e.target===document.getElementById('noteModal'))closeNoteModal();});
 
-/* ── RESCUE ── */
+/* ═══════════════════════════════════════
+   RESCUE PICKER
+═══════════════════════════════════════ */
 function openRescue(type,index){rescueTarget={type,index};document.getElementById('rescuePicker').click();}
 document.getElementById('rescuePicker').addEventListener('change',e=>{
   const f=e.target.files?.[0];if(!f||!rescueTarget)return;
-  const url=URL.createObjectURL(f);
-  localFileMap[f.name]=url;
+  const url=URL.createObjectURL(f); localFileMap[f.name]=url;
   if(rescueTarget.type==='cue'){
-    cues[rescueTarget.index].url=url;cues[rescueTarget.index].filename=f.name;
-    renderCues();updateStatus();
-    if(rescueTarget.index===current)loadCue(current,false);
+    cues[rescueTarget.index].url=url; cues[rescueTarget.index].filename=f.name;
+    renderCues(); updateStatus();
+    if(rescueTarget.index===current) loadCue(current,false);
   }else{
-    sfxSlots[rescueTarget.index].url=url;sfxSlots[rescueTarget.index].filename=f.name;
+    sfxSlots[rescueTarget.index].url=url; sfxSlots[rescueTarget.index].filename=f.name;
     renderSFX();
   }
-  toast('Located: '+f.name);rescueTarget=null;e.target.value='';
+  toast('Located: '+f.name); rescueTarget=null; e.target.value=''; markUnsaved();
 });
 
-/* ── FLASH OFFLINE ── */
+/* ═══════════════════════════════════════
+   FLASH OFFLINE
+═══════════════════════════════════════ */
 function flashOffline(i){
   goBtn.classList.remove('offline-flash');void goBtn.offsetWidth;goBtn.classList.add('offline-flash');
   setTimeout(()=>goBtn.classList.remove('offline-flash'),500);
@@ -723,95 +950,202 @@ function flashOffline(i){
   if(rows[i]){rows[i].classList.remove('flash-offline');void rows[i].offsetWidth;rows[i].classList.add('flash-offline');setTimeout(()=>rows[i].classList.remove('flash-offline'),600);}
 }
 
-/* ── LOAD CUE ── */
-function loadCue(i,autoplay=false){
+/* ═══════════════════════════════════════
+   LOAD CUE (Tone.js engine)
+═══════════════════════════════════════ */
+async function loadCue(i,autoplay=false){
   if(!cues.length||i<0||i>=cues.length)return;
   const cue=cues[i];
   if(isOffline(cue)){flashOffline(i);toast('Cue is offline — use Locate File or Load Folder',3500,true);return;}
   clearGap();
-  current=i;loading=true;loadedIndex=-1;
-  timeCur.textContent='0:00';timeTot.textContent='/ 0:00';
-  renderCues();updateStatus();
-  ws.load(cue.url);
-  const onReady=()=>{
-    ws.un('ready',onReady);loading=false;loadedIndex=i;
-    ws.setPlaybackRate(parseFloat(speedSlider.value));
-    applyVolume();
-    timeTot.textContent='/ '+fmt(ws.getDuration()||0);
-    if(autoplay){ws.play();isPlaying=true;}
-    updateGoBtn();
-  };
-  ws.on('ready',onReady);
+  await ensureAudio();
+  current=i; loading=true; loadedIndex=-1;
+  timeCur.textContent='0:00'; timeTot.textContent='/ 0:00'; progressBar.style.width='0%';
+  renderCues(); updateStatus();
+  destroyEngine();
+
+  outputGain=new Tone.Gain(1).toDestination();
+  pitchShift=new Tone.PitchShift({pitch:0});
+  pitchShift.connect(outputGain);
+
+  player=new Tone.Player({
+    url:cue.url,
+    loop:!!cue.loop,
+    autostart:false,
+    onload:()=>{
+      loading=false; loadedIndex=i;
+      activeDuration=player.buffer?player.buffer.duration:0;
+      pauseOffset=0; finishHandled=false;
+      timeTot.textContent='/ '+fmt(activeDuration||0);
+      applyCueParams();
+      updateStatus();
+      if(autoplay) startCue(0);
+    },
+    onerror:()=>{loading=false;toast('Error loading audio',2800,true);}
+  });
+  player.connect(pitchShift);
 }
+
+async function startCue(offset=0){
+  if(loadedIndex<0||!player)return;
+  await ensureAudio();
+  try{
+    player.start(undefined,Math.max(0,offset));
+    pauseOffset=Math.max(0,offset);
+    startedAt=Tone.now()-pauseOffset;
+    isPlaying=true; finishHandled=false;
+    updateGoBtn();
+  }catch(err){toast('Playback failed',2200,true);}
+}
+function pauseCue(){
+  if(!player||!isPlaying)return;
+  pauseOffset=currentOffset(); player.stop(); isPlaying=false; updateGoBtn();
+}
+function stopCue(){
+  clearGap(); if(player)player.stop();
+  pauseOffset=0; isPlaying=false; finishHandled=false;
+  timeCur.textContent='0:00'; progressBar.style.width='0%';
+  updateGoBtn();
+}
+function handleFinished(){
+  if(finishHandled)return; finishHandled=true;
+  isPlaying=false; pauseOffset=0; updateGoBtn();
+  const c=cues[current]; if(!c||c.loop)return;
+  if(c.mode==='auto'){
+    if(gap>0) startPreroll(gap*1000);
+    gapTimer=setTimeout(()=>{stopPreroll();advance();},gap*1000);
+  }
+}
+
 function jumpTo(i,play=false){clearGap();loadCue(i,play);}
 
-/* ── GO / ADVANCE ── */
+/* ═══════════════════════════════════════
+   GO / ADVANCE
+═══════════════════════════════════════ */
 function go(){
   if(!cues.length||loading)return;
   if(loadedIndex===-1){
     const c=cues[current];
     if(isOffline(c)){flashOffline(current);toast('Cue is offline — load folder first',3000,true);return;}
-    loadCue(current,true);return;
+    loadCue(current,true); return;
   }
   advance();
 }
-
 function advance(){
   clearGap();
-  if(loopMode===1){ws.seekTo(0);ws.play();return;}
   const nx=current+1;
   if(nx<cues.length){
     if(isOffline(cues[nx])){flashOffline(nx);toast('Next cue is offline — load folder first',3000,true);return;}
     loadCue(nx,true);
-  }else if(loopMode===2&&cues.length>0){
-    loadCue(0,true);
   }else{
-    toast('End of show');isPlaying=false;updateGoBtn();
+    stopCue(); toast('End of show');
   }
 }
 
-function updateGoBtn(){goBtn.classList.toggle('playing',ws.isPlaying());}
+function updateGoBtn(){goBtn.classList.toggle('playing',isPlaying);}
 
-/* ── WAVESURFER EVENTS ── */
-ws.on('play',()=>{isPlaying=true;updateGoBtn();});
-ws.on('pause',()=>{isPlaying=false;updateGoBtn();});
-ws.on('audioprocess',()=>{const c=ws.getCurrentTime()||0,d=ws.getDuration()||0;timeCur.textContent=fmt(c);if(d)timeTot.textContent='/ '+fmt(d);});
-ws.on('seek',()=>{timeCur.textContent=fmt(ws.getCurrentTime()||0);});
-ws.on('finish',()=>{
-  isPlaying=false;updateGoBtn();clearGap();
-  const c=cues[current];if(!c)return;
-  if(loopMode===1){ws.seekTo(0);ws.play();return;}
-  if(c.mode==='auto'){
-    if(gap>0)startPreroll(gap*1000);
-    gapTimer=setTimeout(()=>{stopPreroll();advance();},gap*1000);
+/* ═══════════════════════════════════════
+   REMOVE CUE
+═══════════════════════════════════════ */
+function removeCue(i){
+  if(i<0||i>=cues.length)return;
+  const removingActive=i===current;
+  cues.splice(i,1); markUnsaved();
+  if(cues.length===0){current=0;loadedIndex=-1;destroyEngine();isPlaying=false;renderCues();updateStatus();return;}
+  if(removingActive){current=Math.min(i,cues.length-1);loadCue(current,false);}
+  else{if(i<current)current--;if(i<loadedIndex)loadedIndex--;renderCues();updateStatus();}
+}
+
+/* ═══════════════════════════════════════
+   PROGRESS TICKER + SEEK
+═══════════════════════════════════════ */
+setInterval(()=>{
+  if(isPlaying&&loadedIndex>=0){
+    const t=currentOffset(),d=activeDuration||0;
+    timeCur.textContent=fmt(t);
+    if(d) progressBar.style.width=Math.min(100,(t/d)*100)+'%';
+    const cue=cues[loadedIndex];
+    if(cue&&!cue.loop&&!finishHandled&&d>0&&t>=d-0.05) handleFinished();
+  }
+},100);
+
+// click progress bar to seek
+document.getElementById('progressWrap').addEventListener('click',e=>{
+  if(loadedIndex<0||activeDuration<=0)return;
+  const rect=e.currentTarget.getBoundingClientRect();
+  const pct=(e.clientX-rect.left)/rect.width;
+  const seekTo=Math.max(0,Math.min(activeDuration,pct*activeDuration));
+  if(isPlaying){
+    player.stop();
+    startCue(seekTo);
+  }else{
+    pauseOffset=seekTo;
+    timeCur.textContent=fmt(seekTo);
+    progressBar.style.width=Math.min(100,(seekTo/activeDuration)*100)+'%';
   }
 });
 
-/* ── TRANSPORT ── */
+/* ═══════════════════════════════════════
+   TRANSPORT
+═══════════════════════════════════════ */
 goBtn.addEventListener('click',go);
-document.getElementById('btnStop').addEventListener('click',()=>{clearGap();ws.pause();ws.seekTo(0);isPlaying=false;updateGoBtn();timeCur.textContent='0:00';});
+document.getElementById('btnStop').addEventListener('click',stopCue);
 document.getElementById('btnPrev').addEventListener('click',()=>{
-  if(!cues.length)return;clearGap();
-  if((ws.getCurrentTime()||0)>2){ws.seekTo(0);return;}
-  if(current>0)loadCue(current-1,ws.isPlaying());
-  else if(loopMode===2)loadCue(cues.length-1,ws.isPlaying());
+  if(!cues.length)return; clearGap();
+  if(currentOffset()>2){stopCue();loadCue(current,false);return;}
+  if(current>0) loadCue(current-1,isPlaying);
 });
-function panic(){
-  clearGap();ws.pause();ws.setVolume(0);
-  sfxSlots.forEach(s=>{s.activeAudios.forEach(a=>{a.pause();a.currentTime=0;});s.activeAudios=[];});
-  isPlaying=false;updateGoBtn();renderSFX();
-  toast('PANIC — all audio silenced',2500,true);
-  setTimeout(()=>applyVolume(),150);
-}
 document.getElementById('btnPanic').addEventListener('click',panic);
 
-/* ── CONTROLS ── */
-masterVol.addEventListener('input',()=>{masterVolVal.textContent=Math.round(parseFloat(masterVol.value)*100)+'%';applyVolume();});
-speedSlider.addEventListener('input',()=>{const v=parseFloat(speedSlider.value);speedVal.textContent=v.toFixed(2)+'×';ws.setPlaybackRate(v);});
-gapSlider.addEventListener('input',()=>{gap=parseFloat(gapSlider.value);gapVal.textContent=gap.toFixed(1)+'s';});
-loopBtn.addEventListener('click',()=>{loopMode=(loopMode+1)%3;loopBtn.textContent=LOOP_LABELS[loopMode];loopBtn.classList.toggle('active',loopMode!==0);});
+function panic(){
+  clearGap(); stopCue();
+  sfxSlots.forEach(s=>{s.activeAudios.forEach(a=>{a.pause();a.currentTime=0;});s.activeAudios=[];});
+  renderSFX(); toast('PANIC — all audio silenced',2500,true);
+}
 
-/* ── SFX ── */
+/* ═══════════════════════════════════════
+   GLOBAL CONTROLS
+═══════════════════════════════════════ */
+masterVol.addEventListener('input',()=>{
+  masterVolVal.textContent=Math.round(parseFloat(masterVol.value)*100)+'%';
+  if(loadedIndex>=0) applyCueParams();
+});
+gapSlider.addEventListener('input',()=>{gap=parseFloat(gapSlider.value);gapVal.textContent=gap.toFixed(1)+'s';});
+
+/* ═══════════════════════════════════════
+   KEYBOARD
+═══════════════════════════════════════ */
+document.addEventListener('keydown',e=>{
+  const tag=document.activeElement.tagName;
+  const inText=['INPUT','TEXTAREA','SELECT'].includes(tag);
+  if(!inText){
+    const dm=e.code&&e.code.match(/^(Digit|Numpad)([0-9])$/);
+    if(dm){e.preventDefault();fireSFX(Number(dm[2]));return;}
+    if(/^[0-9]$/.test(e.key)){e.preventDefault();fireSFX(Number(e.key));return;}
+  }
+  if(inText)return;
+  switch(e.key){
+    case ' ':e.preventDefault();go();break;
+    case 'ArrowRight':e.preventDefault();clearGap();advance();break;
+    case 'ArrowLeft':
+      e.preventDefault();clearGap();
+      if(currentOffset()>2){stopCue();loadCue(current,false);break;}
+      if(current>0) loadCue(current-1,isPlaying);
+      break;
+    case 's':case 'S':stopCue();break;
+    case 'p':case 'P':
+      if(isPlaying)pauseCue(); else if(loadedIndex>=0)startCue(pauseOffset); break;
+    case 'Escape':panic();break;
+    case 'm':case 'M':
+      if(cues[current]){cues[current].mode=cues[current].mode==='auto'?'manual':'auto';renderCues();updateStatus();markUnsaved();toast('Mode: '+cues[current].mode.toUpperCase());}break;
+    case 'n':case 'N':if(cues[current])openNoteModal(current);break;
+    case 'l':case 'L':if(cues[current])toggleCueLoop(current);break;
+  }
+});
+
+/* ═══════════════════════════════════════
+   SFX BANK
+═══════════════════════════════════════ */
 function renderSFX(){
   const grid=document.getElementById('sfxGrid'); grid.innerHTML='';
   sfxSlots.forEach((slot,i)=>{
@@ -823,41 +1157,44 @@ function renderSFX(){
 
     const key=document.createElement('span'); key.className='sfx-key'; key.textContent=i;
     const nm=document.createElement('div');
+    const ctrl=document.createElement('div'); ctrl.className='sfx-controls';
 
     if(!slot.name&&!slot.filename){
-      nm.className='sfx-empty'; nm.textContent='click to assign';
-      div.addEventListener('click',()=>openSFXPicker(i));
+      nm.className='sfx-empty'; nm.textContent='file or URL';
+      const fb=document.createElement('button'); fb.className='sfx-mini-btn'; fb.textContent='FILE';
+      fb.addEventListener('click',e=>{e.stopPropagation();openSFXPicker(i);});
+      const ub=document.createElement('button'); ub.className='sfx-mini-btn'; ub.textContent='URL';
+      ub.addEventListener('click',e=>{e.stopPropagation();openSFXUrlModal(i);});
+      ctrl.append(fb,ub);
     }else{
-      nm.className='sfx-name'; nm.textContent=slot.name||slot.filename;
-      nm.title=slot.name||slot.filename;
+      nm.className='sfx-name'; nm.textContent=slot.name||slot.filename; nm.title=slot.name||slot.filename;
       div.addEventListener('click',()=>fireSFX(i));
     }
 
-    const ctrl=document.createElement('div'); ctrl.className='sfx-controls';
     if(hasFile){
       const mb=document.createElement('button'); mb.className='sfx-mini-btn';
       mb.textContent=slot.playMode==='overlap'?'OVR':'RST';
-      mb.title=slot.playMode==='overlap'?'Overlap — press again to switch':'Restart — press again to switch';
-      mb.addEventListener('click',e=>{e.stopPropagation();sfxSlots[i].playMode=sfxSlots[i].playMode==='overlap'?'restart':'overlap';renderSFX();});
+      mb.addEventListener('click',e=>{e.stopPropagation();sfxSlots[i].playMode=sfxSlots[i].playMode==='overlap'?'restart':'overlap';renderSFX();markUnsaved();});
 
       const lb=document.createElement('button'); lb.className='sfx-mini-btn'+(slot.loop?' active':'');
       lb.textContent='LOOP';
-      lb.addEventListener('click',e=>{e.stopPropagation();sfxSlots[i].loop=!sfxSlots[i].loop;sfxSlots[i].activeAudios.forEach(a=>a.loop=sfxSlots[i].loop);renderSFX();});
+      lb.addEventListener('click',e=>{e.stopPropagation();sfxSlots[i].loop=!sfxSlots[i].loop;sfxSlots[i].activeAudios.forEach(a=>a.loop=sfxSlots[i].loop);renderSFX();markUnsaved();});
 
-      ctrl.append(mb,lb);
+      const ub=document.createElement('button'); ub.className='sfx-mini-btn'; ub.textContent='URL';
+      ub.addEventListener('click',e=>{e.stopPropagation();openSFXUrlModal(i);});
+      ctrl.append(mb,lb,ub);
 
       if(isOff){
         const rb=document.createElement('button'); rb.className='sfx-mini-btn'; rb.textContent='LOCATE';
         rb.addEventListener('click',e=>{e.stopPropagation();openRescue('sfx',i);});
         ctrl.appendChild(rb);
       }
-
-      const clr=document.createElement('button'); clr.className='sfx-clear'; clr.textContent='✕'; clr.title='Remove';
+      const clr=document.createElement('button'); clr.className='sfx-clear'; clr.textContent='✕';
       clr.addEventListener('click',e=>{
         e.stopPropagation();
         sfxSlots[i].activeAudios.forEach(a=>{a.pause();a.currentTime=0;});
         sfxSlots[i]={name:'',url:'',filename:'',playMode:'restart',loop:false,activeAudios:[]};
-        renderSFX();
+        renderSFX(); markUnsaved();
       });
       div.appendChild(clr);
     }
@@ -865,29 +1202,25 @@ function renderSFX(){
     div.append(key,nm,ctrl); grid.appendChild(div);
   });
 
-  // update print section
-  const rows=document.getElementById('sfxPrintRows');
-  if(rows){
-    rows.innerHTML='';
-    sfxSlots.forEach((s,i)=>{
-      if(s.name||s.filename){
-        const r=document.createElement('div'); r.className='sfx-print-row';
-        r.textContent=`[${i}] ${s.name||s.filename} — ${s.playMode.toUpperCase()}${s.loop?' LOOP':''}`;
-        rows.appendChild(r);
-      }
-    });
-  }
+  // print rows
+  const rows=document.getElementById('sfxPrintRows'); rows.innerHTML='';
+  sfxSlots.forEach((s,i)=>{
+    if(s.name||s.filename){
+      const r=document.createElement('div'); r.className='sfx-print-row';
+      r.textContent=`[${i}] ${s.name||s.filename} — ${s.playMode.toUpperCase()}${s.loop?' LOOP':''}`;
+      rows.appendChild(r);
+    }
+  });
 }
 
 function openSFXPicker(i){
   const tmp=document.createElement('input'); tmp.type='file'; tmp.accept='audio/*'; tmp.style.display='none';
   tmp.addEventListener('change',e=>{
-    const f=e.target.files?.[0];if(!f)return;
-    const url=URL.createObjectURL(f);
-    localFileMap[f.name]=url;
+    const f=e.target.files?.[0]; if(!f)return;
+    const url=URL.createObjectURL(f); localFileMap[f.name]=url;
     sfxSlots[i].url=url; sfxSlots[i].filename=f.name;
     if(!sfxSlots[i].name) sfxSlots[i].name=f.name.replace(/\.[^.]+$/,'');
-    renderSFX(); document.body.removeChild(tmp);
+    renderSFX(); markUnsaved(); document.body.removeChild(tmp);
   });
   document.body.appendChild(tmp); tmp.click();
 }
@@ -897,60 +1230,82 @@ function fireSFX(i){
   if(!s.url&&!s.filename)return;
   if(s.url===''){toast('SFX '+i+' offline — locate file',2500,true);return;}
   if(!s.url){toast('SFX '+i+': no audio loaded',2000,true);return;}
-  // loop toggle off
-  if(s.loop&&s.activeAudios.length>0){
-    s.activeAudios.forEach(a=>{a.pause();a.currentTime=0;}); s.activeAudios=[]; renderSFX(); return;
-  }
-  // restart mode
-  if(s.playMode==='restart'&&s.activeAudios.length>0){
-    s.activeAudios.forEach(a=>{a.pause();a.currentTime=0;}); s.activeAudios=[];
-  }
+  if(s.loop&&s.activeAudios.length>0){s.activeAudios.forEach(a=>{a.pause();a.currentTime=0;});s.activeAudios=[];renderSFX();return;}
+  if(s.playMode==='restart'&&s.activeAudios.length>0){s.activeAudios.forEach(a=>{a.pause();a.currentTime=0;});s.activeAudios=[];}
   const audio=new Audio(s.url);
   audio.loop=s.loop; audio.volume=parseFloat(masterVol.value);
-  audio.play().catch(()=>toast('SFX '+i+' playback failed',2000,true));
+  audio.play().catch(()=>toast('SFX '+i+' failed',2000,true));
   s.activeAudios.push(audio); renderSFX();
-  if(!s.loop){
-    audio.addEventListener('ended',()=>{s.activeAudios=s.activeAudios.filter(a=>a!==audio);renderSFX();});
-  }
+  if(!s.loop) audio.addEventListener('ended',()=>{s.activeAudios=s.activeAudios.filter(a=>a!==audio);renderSFX();});
 }
 
-/* ── REMOVE CUE ── */
-function removeCue(i){
-  if(i<0||i>=cues.length)return;
-  const wasPlaying=ws.isPlaying(),removingActive=i===current;
-  cues.splice(i,1);
-  if(cues.length===0){current=0;loadedIndex=-1;ws.pause();renderCues();updateStatus();return;}
-  if(removingActive){current=Math.min(i,cues.length-1);loadCue(current,wasPlaying);}
-  else{if(i<current)current--;if(i<loadedIndex)loadedIndex--;renderCues();updateStatus();}
+/* ═══════════════════════════════════════
+   SFX URL MODAL
+═══════════════════════════════════════ */
+function openSFXUrlModal(i){
+  sfxUrlTargetIndex=i;
+  document.getElementById('sfxUrlSlotLabel').textContent='SFX slot '+i;
+  document.getElementById('sfxUrlName').value=sfxSlots[i].name||'';
+  document.getElementById('sfxUrlLink').value=sfxSlots[i].url&&!sfxSlots[i].url.startsWith('blob:')?sfxSlots[i].url:'';
+  document.getElementById('sfxUrlModal').classList.add('open');
+  setTimeout(()=>document.getElementById('sfxUrlLink').focus(),30);
 }
-
-/* ── KEYBOARD ── */
-document.addEventListener('keydown',e=>{
-  const tag=document.activeElement.tagName;
-  const inText=['INPUT','TEXTAREA','SELECT'].includes(tag);
-  if(!inText&&/^[0-9]$/.test(e.key)){e.preventDefault();fireSFX(parseInt(e.key));return;}
-  if(inText)return;
-  switch(e.key){
-    case ' ':e.preventDefault();go();break;
-    case 'ArrowRight':e.preventDefault();clearGap();advance();break;
-    case 'ArrowLeft':
-      e.preventDefault();clearGap();
-      if((ws.getCurrentTime()||0)>2){ws.seekTo(0);break;}
-      if(current>0)loadCue(current-1,ws.isPlaying());
-      else if(loopMode===2)loadCue(cues.length-1,ws.isPlaying());
-      break;
-    case 's':case 'S':clearGap();ws.pause();ws.seekTo(0);isPlaying=false;updateGoBtn();timeCur.textContent='0:00';break;
-    case 'p':case 'P':if(ws.isPlaying())ws.pause();else if(loadedIndex>=0)ws.play();break;
-    case 'Escape':panic();break;
-    case 'm':case 'M':
-      if(cues[current]){cues[current].mode=cues[current].mode==='auto'?'manual':'auto';renderCues();updateStatus();toast('Mode: '+cues[current].mode.toUpperCase());}break;
-    case 'n':case 'N':if(cues[current])openNoteModal(current);break;
-    case 'l':case 'L':
-      loopMode=(loopMode+1)%3;loopBtn.textContent=LOOP_LABELS[loopMode];loopBtn.classList.toggle('active',loopMode!==0);toast('Loop: '+LOOP_LABELS[loopMode]);break;
-  }
+function closeSFXUrlModal(){
+  document.getElementById('sfxUrlModal').classList.remove('open');
+  document.getElementById('sfxUrlName').value=''; document.getElementById('sfxUrlLink').value=''; sfxUrlTargetIndex=-1;
+}
+document.getElementById('sfxUrlClose').addEventListener('click',closeSFXUrlModal);
+document.getElementById('sfxUrlCancel').addEventListener('click',closeSFXUrlModal);
+document.getElementById('sfxUrlModal').addEventListener('click',e=>{if(e.target===document.getElementById('sfxUrlModal'))closeSFXUrlModal();});
+document.getElementById('sfxUrlAdd').addEventListener('click',()=>{
+  const raw=document.getElementById('sfxUrlLink').value.trim();
+  if(sfxUrlTargetIndex<0){closeSFXUrlModal();return;}
+  if(!raw){toast('Paste an audio URL first',2200,true);return;}
+  if(/drive\.google\.com/i.test(raw)){toast('Google Drive not supported — use a CDN or GitHub raw link',4000,true);return;}
+  const url=normalizeUrl(raw);
+  const title=document.getElementById('sfxUrlName').value.trim()||inferTitle(raw);
+  const fn=decodeURIComponent((raw.split('/').pop()||'').split('?')[0]||title);
+  const old=sfxSlots[sfxUrlTargetIndex];
+  old.activeAudios.forEach(a=>{a.pause();a.currentTime=0;});
+  sfxSlots[sfxUrlTargetIndex]={name:title,url,filename:fn,playMode:old.playMode||'restart',loop:!!old.loop,activeAudios:[]};
+  renderSFX(); closeSFXUrlModal(); markUnsaved(); toast('URL SFX added');
 });
+['sfxUrlLink','sfxUrlName'].forEach(id=>document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();document.getElementById('sfxUrlAdd').click();}}));
 
-/* ── LIBRARY MODAL ── */
+/* ═══════════════════════════════════════
+   URL CUE MODAL
+═══════════════════════════════════════ */
+function openUrlModal(){document.getElementById('urlModal').classList.add('open');setTimeout(()=>document.getElementById('urlCueLink').focus(),30);}
+function closeUrlModal(){document.getElementById('urlModal').classList.remove('open');document.getElementById('urlCueName').value='';document.getElementById('urlCueLink').value='';}
+document.getElementById('btnAddUrl').addEventListener('click',openUrlModal);
+document.getElementById('urlModalClose').addEventListener('click',closeUrlModal);
+document.getElementById('urlCancel').addEventListener('click',closeUrlModal);
+document.getElementById('urlModal').addEventListener('click',e=>{if(e.target===document.getElementById('urlModal'))closeUrlModal();});
+document.getElementById('urlAdd').addEventListener('click',()=>{
+  const raw=document.getElementById('urlCueLink').value.trim();
+  if(!raw){toast('Paste an audio URL first',2200,true);return;}
+  if(/drive\.google\.com/i.test(raw)){toast('Google Drive not supported — use a CDN or GitHub raw link',4000,true);return;}
+  const url=normalizeUrl(raw);
+  const title=document.getElementById('urlCueName').value.trim()||inferTitle(raw);
+  const fn=decodeURIComponent((raw.split('/').pop()||'').split('?')[0]||title);
+  cues.push({title,url,filename:fn,mode:'manual',vol:1,speed:1,pitch:0,loop:false,note:''});
+  renderCues(); updateStatus(); closeUrlModal(); markUnsaved(); toast('URL cue added');
+});
+['urlCueLink','urlCueName'].forEach(id=>document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();document.getElementById('urlAdd').click();}}));
+
+/* ═══════════════════════════════════════
+   HELP MODAL
+═══════════════════════════════════════ */
+function openHelp(){document.getElementById('helpModal').classList.add('open');}
+function closeHelp(){document.getElementById('helpModal').classList.remove('open');}
+document.getElementById('btnHelp').addEventListener('click',openHelp);
+document.getElementById('helpClose').addEventListener('click',closeHelp);
+document.getElementById('helpGotIt').addEventListener('click',closeHelp);
+document.getElementById('helpModal').addEventListener('click',e=>{if(e.target===document.getElementById('helpModal'))closeHelp();});
+
+/* ═══════════════════════════════════════
+   LIBRARY MODAL
+═══════════════════════════════════════ */
 function openLibrary(){
   const body=document.getElementById('libBody'); body.innerHTML='';
   LIBRARY.forEach((t,i)=>{
@@ -962,122 +1317,146 @@ function openLibrary(){
   document.getElementById('libraryModal').classList.add('open');
 }
 function closeLibrary(){document.getElementById('libraryModal').classList.remove('open');}
-
 document.getElementById('btnLoadShow').addEventListener('click',()=>{
   if(cues.length&&!confirm('Replace current cue list with Beetlejuice JR?'))return;
-  clearGap();ws.pause();
-  cues=LIBRARY.map(t=>({title:t.title,url:t.url,filename:t.url.split('/').pop(),mode:'manual',vol:1,note:''}));
-  current=0;loadedIndex=-1;isPlaying=false;
-  updateGoBtn();renderCues();updateStatus();toast('Beetlejuice JR loaded — '+cues.length+' cues');
+  clearGap(); destroyEngine();
+  cues=LIBRARY.map(t=>({title:t.title,url:t.url,filename:t.url.split('/').pop(),mode:'manual',vol:1,speed:1,pitch:0,loop:false,note:''}));
+  current=0; loadedIndex=-1; isPlaying=false;
+  updateGoBtn(); renderCues(); updateStatus(); markUnsaved();
+  toast('Beetlejuice JR loaded — '+cues.length+' cues');
 });
 document.getElementById('btnLibrary').addEventListener('click',openLibrary);
 document.getElementById('modalClose').addEventListener('click',closeLibrary);
 document.getElementById('modalCancel').addEventListener('click',closeLibrary);
 document.getElementById('modalAdd').addEventListener('click',()=>{
   const checks=document.querySelectorAll('#libBody input:checked'); let added=0;
-  checks.forEach(cb=>{const t=LIBRARY[cb.dataset.i];cues.push({title:t.title,url:t.url,filename:t.url.split('/').pop(),mode:'manual',vol:1,note:''});added++;});
-  closeLibrary();if(added){renderCues();updateStatus();toast(added+' cue(s) added');}
+  checks.forEach(cb=>{
+    const t=LIBRARY[cb.dataset.i];
+    cues.push({title:t.title,url:t.url,filename:t.url.split('/').pop(),mode:'manual',vol:1,speed:1,pitch:0,loop:false,note:''});
+    added++;
+  });
+  closeLibrary(); if(added){renderCues();updateStatus();markUnsaved();toast(added+' cue(s) added');}
 });
 document.getElementById('libraryModal').addEventListener('click',e=>{if(e.target===document.getElementById('libraryModal'))closeLibrary();});
 
-/* ── LOCAL FILE ── */
+/* ═══════════════════════════════════════
+   LOCAL FILE
+═══════════════════════════════════════ */
 document.getElementById('btnAddLocal').addEventListener('click',()=>document.getElementById('localFilePicker').click());
 document.getElementById('localFilePicker').addEventListener('change',e=>{
-  const f=e.target.files?.[0];if(!f)return;
-  const url=URL.createObjectURL(f);localFileMap[f.name]=url;
-  cues.push({title:f.name.replace(/\.[^.]+$/,''),url,filename:f.name,mode:'manual',vol:1,note:''});
-  renderCues();updateStatus();toast('Added: '+f.name);e.target.value='';
+  const f=e.target.files?.[0]; if(!f)return;
+  const url=URL.createObjectURL(f); localFileMap[f.name]=url;
+  cues.push({title:f.name.replace(/\.[^.]+$/,''),url,filename:f.name,mode:'manual',vol:1,speed:1,pitch:0,loop:false,note:''});
+  renderCues(); updateStatus(); markUnsaved(); toast('Added: '+f.name); e.target.value='';
 });
 
-/* ── LOAD FOLDER ── */
+/* ═══════════════════════════════════════
+   LOAD FOLDER
+═══════════════════════════════════════ */
 document.getElementById('btnLoadFolder').addEventListener('click',()=>document.getElementById('folderPicker').click());
 document.getElementById('folderPicker').addEventListener('change',e=>{
-  const files=Array.from(e.target.files||[]);if(!files.length)return;
-  // revoke old
+  const files=Array.from(e.target.files||[]); if(!files.length)return;
   Object.values(localFileMap).forEach(u=>URL.revokeObjectURL(u));
   Object.keys(localFileMap).forEach(k=>delete localFileMap[k]);
-  // build map
   files.forEach(f=>{
     if(!f.type.startsWith('audio/')&&!/\.(mp3|wav|ogg|flac|aac|m4a)$/i.test(f.name))return;
     localFileMap[f.name]=URL.createObjectURL(f);
   });
   const loaded=Object.keys(localFileMap).length;
-
   if(cues.length===0){
     Object.keys(localFileMap).sort().forEach(fn=>{
-      cues.push({title:fn.replace(/\.[^.]+$/,''),url:localFileMap[fn],filename:fn,mode:'manual',vol:1,note:''});
+      cues.push({title:fn.replace(/\.[^.]+$/,''),url:localFileMap[fn],filename:fn,mode:'manual',vol:1,speed:1,pitch:0,loop:false,note:''});
     });
-    current=0;renderCues();updateStatus();toast(loaded+' files loaded from folder');e.target.value='';return;
+    current=0; renderCues(); updateStatus(); renderSFX(); markUnsaved(); toast(loaded+' files loaded'); e.target.value=''; return;
   }
-
-  let matched=0;const missing=[];
+  let matched=0; const missing=[];
   cues.forEach(c=>{
     if(c.filename&&localFileMap[c.filename]){c.url=localFileMap[c.filename];matched++;}
-    else if(c.filename&&c.url==='')missing.push(c.filename);
+    else if(c.filename&&c.url==='') missing.push(c.filename);
   });
   sfxSlots.forEach(s=>{if(s.filename&&localFileMap[s.filename])s.url=localFileMap[s.filename];});
-
-  renderCues();updateStatus();renderSFX();
-  if(missing.length)showOfflineBanner(missing);else hideBanner();
-  if(cues.length&&!isOffline(cues[current]))loadCue(current,false);
-  toast(`${matched} matched`+(missing.length?`, ${missing.length} offline`:''));
-  e.target.value='';
+  renderCues(); updateStatus(); renderSFX();
+  if(missing.length) showOfflineBanner(missing); else hideBanner();
+  if(cues.length&&!isOffline(cues[current])) loadCue(current,false);
+  toast(`${matched} matched`+(missing.length?`, ${missing.length} offline`:'')); e.target.value='';
 });
 
-/* ── SAVE / LOAD ── */
+/* ═══════════════════════════════════════
+   SAVE / LOAD
+═══════════════════════════════════════ */
 document.getElementById('btnSave').addEventListener('click',()=>{
   const data={
-    show:'Beetlejuice JR',version:2,current,loopMode,gap,
-    masterVol:parseFloat(masterVol.value),speed:parseFloat(speedSlider.value),
-    cues:cues.map(c=>({title:c.title,url:c.url.startsWith('blob:')?'':c.url,filename:c.filename||'',mode:c.mode,vol:c.vol,note:c.note||''})),
+    show:'Beetlejuice JR',version:3,current,gap,
+    masterVol:parseFloat(masterVol.value),
+    cues:cues.map(c=>({title:c.title,url:c.url.startsWith('blob:')?'':c.url,filename:c.filename||'',mode:c.mode,vol:c.vol??1,speed:c.speed||1,pitch:c.pitch||0,loop:!!c.loop,note:c.note||''})),
     sfx:sfxSlots.map(s=>({name:s.name,filename:s.filename,url:s.url.startsWith('blob:')?'':s.url,playMode:s.playMode,loop:s.loop}))
   };
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='beetlejuice-jr-show.json';a.click();
-  toast('Show file saved');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='beetlejuice-jr-show.json'; a.click();
+  markSaved(); toast('Show file saved');
 });
 document.getElementById('btnLoad').addEventListener('click',()=>document.getElementById('loadFilePicker').click());
 document.getElementById('loadFilePicker').addEventListener('change',e=>{
-  const f=e.target.files?.[0];if(!f)return;
+  const f=e.target.files?.[0]; if(!f)return;
   const reader=new FileReader();
   reader.onload=ev=>{
     try{
       const data=JSON.parse(ev.target.result);
       if(!data.cues)throw new Error('Invalid');
-      cues=data.cues.map(c=>({title:c.title||'',url:c.url||'',filename:c.filename||'',mode:c.mode||'manual',vol:c.vol||1,note:c.note||''}));
-      if(data.sfx)data.sfx.forEach((s,i)=>{sfxSlots[i]={name:s.name||'',url:s.url||'',filename:s.filename||'',playMode:s.playMode||'restart',loop:!!s.loop,activeAudios:[]};});
-      current=data.current||0;loopMode=data.loopMode||0;gap=data.gap||0;
+      clearGap(); destroyEngine();
+      cues=data.cues.map(c=>({title:c.title||'',url:c.url||'',filename:c.filename||'',mode:c.mode||'manual',vol:c.vol??1,speed:Number(c.speed||1),pitch:Number(c.pitch||0),loop:!!c.loop,note:c.note||''}));
+      sfxSlots.forEach((slot,i)=>{
+        const s=(data.sfx&&data.sfx[i])||{};
+        slot.activeAudios.forEach(a=>{a.pause();a.currentTime=0;});
+        sfxSlots[i]={name:s.name||'',url:s.url||'',filename:s.filename||'',playMode:s.playMode||'restart',loop:!!s.loop,activeAudios:[]};
+      });
+      current=data.current||0; gap=data.gap||0;
       if(data.masterVol!==undefined){masterVol.value=data.masterVol;masterVolVal.textContent=Math.round(data.masterVol*100)+'%';}
-      if(data.speed!==undefined){speedSlider.value=data.speed;speedVal.textContent=parseFloat(data.speed).toFixed(2)+'×';}
-      gapSlider.value=gap;gapVal.textContent=gap.toFixed(1)+'s';
-      loopBtn.textContent=LOOP_LABELS[loopMode];loopBtn.classList.toggle('active',loopMode!==0);
-      renderCues();updateStatus();renderSFX();
+      gapSlider.value=gap; gapVal.textContent=gap.toFixed(1)+'s';
+      renderCues(); updateStatus(); renderSFX();
       const offFiles=[...cues.filter(c=>isOffline(c)).map(c=>c.filename),...sfxSlots.filter(s=>isSFXOffline(s)).map(s=>s.filename)].filter(Boolean);
       if(offFiles.length){showOfflineBanner(offFiles);toast(offFiles.length+' file(s) offline — click 📁 Load Folder',4000,true);}
-      else if(cues.length)loadCue(current,false);
-      toast('Show loaded: '+(data.show||'unknown'));
+      else{hideBanner();if(cues.length)loadCue(current,false);}
+      markSaved(); toast('Show loaded: '+(data.show||'unknown'));
     }catch(err){toast('Error loading show file',2500,true);}
   };
-  reader.readAsText(f);e.target.value='';
+  reader.readAsText(f); e.target.value='';
 });
 
-/* ── EXPORT / PRINT ── */
+/* ═══════════════════════════════════════
+   EXPORT / PRINT
+═══════════════════════════════════════ */
 document.getElementById('btnExport').addEventListener('click',()=>{
   document.getElementById('printMeta').textContent=`${cues.length} cues · ${new Date().toLocaleDateString()}`;
   window.print();
 });
 
-/* ── CLEAR ── */
+/* ═══════════════════════════════════════
+   CLEAR
+═══════════════════════════════════════ */
 document.getElementById('btnClear').addEventListener('click',()=>{
   if(!confirm('Clear all cues and SFX?'))return;
-  clearGap();ws.pause();
-  cues=[];current=0;loadedIndex=-1;isPlaying=false;
+  clearGap(); destroyEngine();
+  cues=[]; current=0; loadedIndex=-1; isPlaying=false;
   sfxSlots.forEach((s,i)=>{s.activeAudios.forEach(a=>a.pause());sfxSlots[i]={name:'',url:'',filename:'',playMode:'restart',loop:false,activeAudios:[]};});
-  updateGoBtn();renderCues();updateStatus();renderSFX();hideBanner();
+  updateGoBtn(); renderCues(); updateStatus(); renderSFX(); hideBanner(); markUnsaved();
 });
 
-/* ── INIT ── */
-renderCues();updateStatus();renderSFX();
+/* ═══════════════════════════════════════
+   UNSAVED CHANGES WARNING
+═══════════════════════════════════════ */
+window.addEventListener('beforeunload',e=>{
+  if(unsavedChanges){
+    e.preventDefault();
+    e.returnValue='You have unsaved changes. Save your show file before closing.';
+    return e.returnValue;
+  }
+});
+
+/* ═══════════════════════════════════════
+   INIT
+═══════════════════════════════════════ */
+renderCues(); updateStatus(); renderSFX();
 </script>
 </body>
 </html>
