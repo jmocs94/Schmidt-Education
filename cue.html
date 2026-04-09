@@ -276,6 +276,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh
   <div class="header-actions">
     <button class="hbtn hbtn-show" id="btnHelp">Help</button>
     <button class="hbtn" id="btnAddLocal">+ File</button>
+    <button class="hbtn" id="btnAddUrl">+ URL</button>
     <button class="hbtn hbtn-folder" id="btnLoadFolder">📁 Load Folder</button>
     <button class="hbtn" id="btnSave">Save Show</button>
     <button class="hbtn" id="btnLoad">Load Show</button>
@@ -422,32 +423,54 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh
         <div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>What this is:</strong> a simple show-control page for students. Add cues, arrange them, press <strong>GO</strong> to move forward, and use the SFX Bank for one-off effects.</div>
       </div>
       <div class="lib-item" style="display:block;cursor:default">
-        <div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>+ File</strong> adds one audio file as a cue. <strong>Load Folder</strong> loads a whole folder of audio and can reconnect saved cues and SFX by filename.</div>
+        <div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>+ File</strong> adds one audio file as a cue. <strong>+ URL</strong> adds a cue from a direct web link. <strong>Load Folder</strong> loads a whole folder of audio and can reconnect saved cues and SFX by filename.</div>
       </div>
       <div class="lib-item" style="display:block;cursor:default">
-        <div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>Save Show</strong> saves your cue list, notes, levels, modes, and SFX setup as JSON. <strong>Load Show</strong> restores it. If local files are missing, the app marks them offline so you can reconnect them.</div>
+        <div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>Save Show</strong> saves your cue list, notes, levels, modes, SFX setup, and any web URLs as JSON. <strong>Load Show</strong> restores it. If local files are missing, the app marks them offline so you can reconnect them.</div>
       </div>
       <div class="lib-item" style="display:block;cursor:default">
         <div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>GO</strong> always advances to the next cue and plays it. <strong>AUTO</strong> cues continue after the set gap. <strong>MAN</strong> cues wait for the next GO.</div>
       </div>
       <div class="lib-item" style="display:block;cursor:default">
-        <div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>Now Playing</strong> shows the current cue. <strong>Up Next</strong> shows the next cue and its note. Right-click a cue name to edit its note. Double-click a cue name to rename it.</div>
+        <div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>Now Playing</strong> shows the current cue. <strong>Up Next</strong> shows the next cue and its note. Right-click a cue name to edit its note, or press <strong>N</strong> to edit the current cue note. Double-click a cue name to rename it.</div>
       </div>
       <div class="lib-item" style="display:block;cursor:default">
-        <div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>SFX Bank</strong> uses keys 0 through 9. Click a slot to assign a sound. <strong>OVR</strong> overlaps repeated presses. <strong>RST</strong> restarts from the beginning. <strong>LOOP</strong> repeats until the same key is pressed again.</div>
+        <div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>SFX Bank</strong> uses keys 0 through 9. Empty slots can take a <strong>local file</strong> or a <strong>URL</strong>. <strong>OVR</strong> overlaps repeated presses. <strong>RST</strong> restarts from the beginning. <strong>LOOP</strong> repeats until the same key is pressed again.</div>
       </div>
       <div class="lib-item" style="display:block;cursor:default">
         <div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>Prev</strong> moves back. <strong>Stop</strong> stops and rewinds the current cue. <strong>Panic</strong> silences everything, including SFX. <strong>Print / Export</strong> opens a printer-friendly cue sheet.</div>
       </div>
       <div class="lib-item" style="display:block;cursor:default">
-        <div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>"N" Key</strong> uses the N key to add cue notes. This is helpful for when adding cue lines or notes to one self.</div>
-      </div>
-      <div class="lib-item" style="display:block;cursor:default">
-        <div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>Icons:</strong> globe = web file, monitor = local file loaded this session, warning = offline and needs to be located.</div>
+        <div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text)"><strong>Icons:</strong> globe = web file, monitor = local file loaded this session, warning = offline and needs to be located. Google Drive links must be shared broadly enough for playback, and even then they should always be tested before rehearsal or performance. The app will try to convert common Drive share links into direct audio links.</div>
       </div>
     </div>
     <div class="modal-footer">
       <button class="mfbtn primary" id="helpGotIt">Got it</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal-overlay" id="urlModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Add Cue from URL</span>
+      <button class="modal-close" id="urlModalClose">✕</button>
+    </div>
+    <div class="modal-body" style="padding:.85rem .95rem;display:flex;flex-direction:column;gap:.65rem;">
+      <label style="display:flex;flex-direction:column;gap:.25rem;">
+        <span class="lib-item-name" style="color:var(--text)">Cue name</span>
+        <input id="urlCueName" type="text" placeholder="Optional title" style="background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);padding:.55rem .7rem;outline:none;font:inherit;">
+      </label>
+      <label style="display:flex;flex-direction:column;gap:.25rem;">
+        <span class="lib-item-name" style="color:var(--text)">Audio URL</span>
+        <input id="urlCueLink" type="url" placeholder="https://...mp3 or Google Drive share link" style="background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);padding:.55rem .7rem;outline:none;font:inherit;">
+      </label>
+      <div class="lib-item-name" style="white-space:normal;line-height:1.6;color:var(--text2)">Tip: Google Drive links must be shared so other people can access them. The app will try to convert common Drive share links into direct audio links.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="mfbtn secondary" id="urlCancel">Cancel</button>
+      <button class="mfbtn primary" id="urlAdd">Add URL Cue</button>
     </div>
   </div>
 </div>
@@ -472,6 +495,7 @@ const localFileMap={};
 const sfxSlots=Array.from({length:10},()=>({name:'',url:'',filename:'',playMode:'restart',loop:false,activeAudios:[]}));
 let rescueTarget=null;
 let noteTargetIndex=-1;
+let sfxUrlTargetIndex=-1;
 
 /* ── WAVESURFER ── */
 const ws=WaveSurfer.create({
@@ -513,6 +537,32 @@ function toast(msg,dur=2400,err=false){
 function clearGap(){
   if(gapTimer){clearTimeout(gapTimer);gapTimer=null;}
   stopPreroll();
+}
+
+function inferTitleFromUrl(url){
+  try{
+    const u=new URL(url);
+    const raw=(u.pathname.split('/').pop()||'').split('?')[0];
+    return decodeURIComponent(raw||'Web Cue').replace(/\.[^.]+$/,'') || 'Web Cue';
+  }catch{return 'Web Cue';}
+}
+function normalizeSharedAudioUrl(url){
+  const trimmed=(url||'').trim();
+  if(!trimmed) return '';
+  try{
+    const u=new URL(trimmed);
+    if(u.hostname.includes('drive.google.com')){
+      let id='';
+      const match=u.pathname.match(/\/file\/d\/([^/]+)/);
+      if(match) id=match[1];
+      if(!id) id=u.searchParams.get('id')||'';
+      if(id) return `https://drive.google.com/uc?export=download&id=${id}`;
+    }
+    return trimmed;
+  }catch{return trimmed;}
+}
+function isProbablyAudioUrl(url){
+  return /\.(mp3|wav|ogg|flac|aac|m4a)(\?|#|$)/i.test(url) || /drive\.google\.com/i.test(url);
 }
 
 // A cue is offline only if its URL is an empty string
@@ -796,8 +846,12 @@ function renderSFX(){
     const nm=document.createElement('div');
 
     if(!slot.name&&!slot.filename){
-      nm.className='sfx-empty'; nm.textContent='click to assign';
-      div.addEventListener('click',()=>openSFXPicker(i));
+      nm.className='sfx-empty'; nm.textContent='choose file or URL';
+      const fileBtn=document.createElement('button'); fileBtn.className='sfx-mini-btn'; fileBtn.textContent='FILE';
+      fileBtn.addEventListener('click',e=>{e.stopPropagation();openSFXPicker(i);});
+      const urlBtn=document.createElement('button'); urlBtn.className='sfx-mini-btn'; urlBtn.textContent='URL';
+      urlBtn.addEventListener('click',e=>{e.stopPropagation();openSFXUrlModal(i);});
+      ctrl.append(fileBtn,urlBtn);
     }else{
       nm.className='sfx-name'; nm.textContent=slot.name||slot.filename;
       nm.title=slot.name||slot.filename;
@@ -815,7 +869,10 @@ function renderSFX(){
       lb.textContent='LOOP';
       lb.addEventListener('click',e=>{e.stopPropagation();sfxSlots[i].loop=!sfxSlots[i].loop;sfxSlots[i].activeAudios.forEach(a=>a.loop=sfxSlots[i].loop);renderSFX();});
 
-      ctrl.append(mb,lb);
+      const ub=document.createElement('button'); ub.className='sfx-mini-btn'; ub.textContent='URL'; ub.title='Replace with URL';
+      ub.addEventListener('click',e=>{e.stopPropagation();openSFXUrlModal(i);});
+
+      ctrl.append(mb,lb,ub);
 
       if(isOff){
         const rb=document.createElement('button'); rb.className='sfx-mini-btn'; rb.textContent='LOCATE';
@@ -932,6 +989,68 @@ document.getElementById('btnHelp').addEventListener('click',openHelp);
 document.getElementById('helpClose').addEventListener('click',closeHelp);
 document.getElementById('helpGotIt').addEventListener('click',closeHelp);
 document.getElementById('helpModal').addEventListener('click',e=>{if(e.target===document.getElementById('helpModal'))closeHelp();});
+
+/* ── URL SFX MODAL ── */
+function openSFXUrlModal(i){
+  sfxUrlTargetIndex=i;
+  document.getElementById('sfxUrlSlotLabel').textContent='SFX slot '+i;
+  document.getElementById('sfxUrlName').value=sfxSlots[i].name||'';
+  document.getElementById('sfxUrlLink').value=sfxSlots[i].url && !sfxSlots[i].url.startsWith('blob:') ? sfxSlots[i].url : '';
+  document.getElementById('sfxUrlModal').classList.add('open');
+  setTimeout(()=>document.getElementById('sfxUrlLink').focus(),30);
+}
+function closeSFXUrlModal(){
+  document.getElementById('sfxUrlModal').classList.remove('open');
+  document.getElementById('sfxUrlName').value='';
+  document.getElementById('sfxUrlLink').value='';
+  sfxUrlTargetIndex=-1;
+}
+document.getElementById('sfxUrlModalClose').addEventListener('click',closeSFXUrlModal);
+document.getElementById('sfxUrlCancel').addEventListener('click',closeSFXUrlModal);
+document.getElementById('sfxUrlModal').addEventListener('click',e=>{if(e.target===document.getElementById('sfxUrlModal'))closeSFXUrlModal();});
+document.getElementById('sfxUrlAdd').addEventListener('click',()=>{
+  const raw=document.getElementById('sfxUrlLink').value.trim();
+  if(sfxUrlTargetIndex<0){closeSFXUrlModal();return;}
+  if(!raw){toast('Paste an audio URL first',2200,true);return;}
+  const normalized=normalizeSharedAudioUrl(raw);
+  const title=(document.getElementById('sfxUrlName').value.trim()||inferTitleFromUrl(raw));
+  const filename=decodeURIComponent((raw.split('/').pop()||'').split('?')[0]||title);
+  const old=sfxSlots[sfxUrlTargetIndex];
+  old.activeAudios.forEach(a=>{a.pause();a.currentTime=0;});
+  sfxSlots[sfxUrlTargetIndex]={name:title,url:normalized,filename,playMode:old.playMode||'restart',loop:!!old.loop,activeAudios:[]};
+  renderSFX();
+  closeSFXUrlModal();
+  toast(isProbablyAudioUrl(raw)?'URL SFX added':'URL SFX added — test playback before show',3200,!isProbablyAudioUrl(raw));
+});
+document.getElementById('sfxUrlLink').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();document.getElementById('sfxUrlAdd').click();}});
+document.getElementById('sfxUrlName').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();document.getElementById('sfxUrlAdd').click();}});
+
+/* ── URL CUE MODAL ── */
+function openUrlModal(){
+  document.getElementById('urlModal').classList.add('open');
+  setTimeout(()=>document.getElementById('urlCueLink').focus(),30);
+}
+function closeUrlModal(){
+  document.getElementById('urlModal').classList.remove('open');
+  document.getElementById('urlCueName').value='';
+  document.getElementById('urlCueLink').value='';
+}
+document.getElementById('btnAddUrl').addEventListener('click',openUrlModal);
+document.getElementById('urlModalClose').addEventListener('click',closeUrlModal);
+document.getElementById('urlCancel').addEventListener('click',closeUrlModal);
+document.getElementById('urlModal').addEventListener('click',e=>{if(e.target===document.getElementById('urlModal'))closeUrlModal();});
+document.getElementById('urlAdd').addEventListener('click',()=>{
+  const raw=document.getElementById('urlCueLink').value.trim();
+  if(!raw){toast('Paste an audio URL first',2200,true);return;}
+  const normalized=normalizeSharedAudioUrl(raw);
+  const title=(document.getElementById('urlCueName').value.trim()||inferTitleFromUrl(raw));
+  const filename=decodeURIComponent((raw.split('/').pop()||'').split('?')[0]||title);
+  cues.push({title,url:normalized,filename,mode:'manual',vol:1,note:''});
+  renderCues();updateStatus();closeUrlModal();
+  toast(isProbablyAudioUrl(raw)?'URL cue added':'URL added — test playback before show',3200,!isProbablyAudioUrl(raw));
+});
+document.getElementById('urlCueLink').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();document.getElementById('urlAdd').click();}});
+document.getElementById('urlCueName').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();document.getElementById('urlAdd').click();}});
 
 /* ── LOCAL FILE ── */
 document.getElementById('btnAddLocal').addEventListener('click',()=>document.getElementById('localFilePicker').click());
