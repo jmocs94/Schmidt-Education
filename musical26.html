@@ -84,6 +84,8 @@ body{
 .hbtn:hover{color:var(--text);border-color:var(--border2);background:var(--surface3);}
 .hbtn-folder{border-color:rgba(167,139,250,.4);color:var(--accent);}
 .hbtn-folder:hover{border-color:var(--accent);background:rgba(167,139,250,.1);color:var(--accent);}
+.hbtn-show{border-color:rgba(245,158,11,.4);color:var(--now);font-weight:600;}
+.hbtn-show:hover{border-color:var(--now);background:rgba(245,158,11,.1);color:var(--now);}
 .cue-row.is-unresolved .cue-name::after{
   content:' ⚠';
   color:#f59e0b;
@@ -680,6 +682,7 @@ body{
     <div class="header-show">Beetlejuice JR</div>
   </div>
   <div class="header-actions">
+    <button class="hbtn hbtn-show" id="btnLoadShow">Beetlejuice JR</button>
     <button class="hbtn" id="btnLibrary">+ Add Cues</button>
     <button class="hbtn" id="btnAddLocal">+ Local File</button>
     <button class="hbtn hbtn-folder" id="btnLoadFolder">📁 Load Folder</button>
@@ -875,7 +878,7 @@ const LIBRARY = [
    STATE
 ═══════════════════════════════════════════════════ */
 // Each cue: { title, url, mode:'auto'|'manual', vol:0-1, local?:bool }
-let cues = LIBRARY.map(t => ({ title: t.title, url: t.url, mode: 'manual', vol: 1 }));
+let cues = [];
 let current = 0;      // index of "active" cue (loaded / playing)
 let isPlaying = false;
 let loading = false;
@@ -1020,7 +1023,7 @@ function renderCues(){
     // source icon
     const srcDiv = document.createElement('div');
     srcDiv.className = 'cue-src';
-    const isLocal = !!(c.filename && (localFileMap[c.filename] || c.local));
+    const isLocal = c.url.startsWith('blob:');
     const unresolved = isUnresolved(c);
     srcDiv.innerHTML = unresolved
       ? `<svg class="src-icon" viewBox="0 0 16 16" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" title="File not linked — load folder"><circle cx="8" cy="8" r="6"/><line x1="8" y1="5" x2="8" y2="8"/><circle cx="8" cy="11" r=".6" fill="#f59e0b" stroke="none"/></svg>`
@@ -1311,6 +1314,16 @@ function openLibrary(){
 function closeLibrary(){
   document.getElementById('libraryModal').classList.remove('open');
 }
+document.getElementById('btnLoadShow').addEventListener('click', () => {
+  if(cues.length && !confirm('Replace current cue list with Beetlejuice JR?')) return;
+  clearGap();
+  ws.pause();
+  cues = LIBRARY.map(t => ({ title: t.title, url: t.url, filename: t.url.split('/').pop(), mode: 'manual', vol: 1 }));
+  current = 0; loadedIndex = -1; isPlaying = false;
+  updateGoBtn(); renderCues(); updateStatus();
+  toast('Beetlejuice JR loaded — ' + cues.length + ' cues');
+});
+
 document.getElementById('btnLibrary').addEventListener('click', openLibrary);
 document.getElementById('modalClose').addEventListener('click', closeLibrary);
 document.getElementById('modalCancel').addEventListener('click', closeLibrary);
@@ -1501,7 +1514,6 @@ document.getElementById('btnClear').addEventListener('click', () => {
 ═══════════════════════════════════════════════════ */
 renderCues();
 updateStatus();
-if(cues.length) loadCue(0, false);
 </script>
 </body>
 </html>
