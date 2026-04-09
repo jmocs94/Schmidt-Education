@@ -9,723 +9,331 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0d0f12;
-  --surface:#161920;
-  --surface2:#1e2229;
-  --surface3:#252b35;
-  --border:#2a3040;
-  --border2:#3a4558;
-  --text:#e8ecf2;
-  --text2:#8a94a6;
-  --text3:#4a5568;
-  --go:#22c55e;
-  --go-dim:#166534;
-  --go-glow:rgba(34,197,94,0.18);
-  --stop:#ef4444;
-  --stop-dim:#7f1d1d;
-  --now:#f59e0b;
-  --now-dim:#78350f;
-  --next:#3b82f6;
-  --next-dim:#1e3a5f;
-  --accent:#a78bfa;
-  --mono:'JetBrains Mono',monospace;
-  --sans:'DM Sans',sans-serif;
+  --bg:#0d0f12;--surface:#161920;--surface2:#1e2229;--surface3:#252b35;
+  --border:#2a3040;--border2:#3a4558;--text:#e8ecf2;--text2:#8a94a6;--text3:#4a5568;
+  --go:#22c55e;--go-glow:rgba(34,197,94,0.18);--stop:#ef4444;
+  --now:#f59e0b;--next:#3b82f6;--accent:#a78bfa;--offline:#ef4444;
+  --mono:'JetBrains Mono',monospace;--sans:'DM Sans',sans-serif;
 }
+body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
 
-body{
-  font-family:var(--sans);
-  background:var(--bg);
-  color:var(--text);
-  min-height:100vh;
-  display:flex;
-  flex-direction:column;
-  overflow-x:hidden;
-}
-
-/* ── HEADER ── */
-.header{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:.6rem 1.2rem;
-  background:var(--surface);
-  border-bottom:1px solid var(--border);
-  gap:1rem;
-  flex-shrink:0;
-}
-.header-title{
-  font-family:var(--mono);
-  font-size:.85rem;
-  font-weight:700;
-  color:var(--accent);
-  letter-spacing:.08em;
-  text-transform:uppercase;
-}
-.header-show{
-  font-family:var(--mono);
-  font-size:.75rem;
-  color:var(--text2);
-  letter-spacing:.05em;
-}
-.header-actions{display:flex;gap:.5rem;align-items:center;}
-.hbtn{
-  font-family:var(--mono);
-  font-size:.7rem;
-  font-weight:500;
-  color:var(--text2);
-  background:var(--surface2);
-  border:1px solid var(--border);
-  border-radius:4px;
-  padding:.35rem .7rem;
-  cursor:pointer;
-  letter-spacing:.04em;
-  transition:color .15s,border-color .15s,background .15s;
-}
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;padding:.45rem .9rem;background:var(--surface);border-bottom:1px solid var(--border);gap:.6rem;flex-shrink:0;flex-wrap:wrap;}
+.header-left{display:flex;flex-direction:column;gap:.08rem;}
+.header-title{font-family:var(--mono);font-size:.78rem;font-weight:700;color:var(--accent);letter-spacing:.08em;text-transform:uppercase;}
+.header-show{font-family:var(--mono);font-size:.65rem;color:var(--text3);letter-spacing:.05em;}
+.header-actions{display:flex;gap:.35rem;align-items:center;flex-wrap:wrap;}
+.hbtn{font-family:var(--mono);font-size:.67rem;font-weight:500;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:.28rem .55rem;cursor:pointer;letter-spacing:.04em;transition:color .15s,border-color .15s,background .15s;white-space:nowrap;}
 .hbtn:hover{color:var(--text);border-color:var(--border2);background:var(--surface3);}
-.hbtn-folder{border-color:rgba(167,139,250,.4);color:var(--accent);}
-.hbtn-folder:hover{border-color:var(--accent);background:rgba(167,139,250,.1);color:var(--accent);}
-.hbtn-show{border-color:rgba(245,158,11,.4);color:var(--now);font-weight:600;}
+.hbtn-show{border-color:rgba(245,158,11,.4);color:var(--now);font-weight:700;}
 .hbtn-show:hover{border-color:var(--now);background:rgba(245,158,11,.1);color:var(--now);}
-.cue-row.is-unresolved .cue-name::after{
-  content:' ⚠';
-  color:#f59e0b;
-  font-size:.7rem;
-}
+.hbtn-folder{border-color:rgba(167,139,250,.4);color:var(--accent);}
+.hbtn-folder:hover{border-color:var(--accent);background:rgba(167,139,250,.1);}
+.hbtn-export{border-color:rgba(59,130,246,.3);color:#60a5fa;}
+.hbtn-export:hover{border-color:var(--next);background:rgba(59,130,246,.08);}
 
-/* ── LAYOUT ── */
-.main{
-  display:grid;
-  grid-template-columns:1fr 340px;
-  flex:1;
-  min-height:0;
-  overflow:hidden;
-}
-@media(max-width:900px){
-  .main{grid-template-columns:1fr;overflow:auto;}
-}
+/* OFFLINE BANNER */
+.offline-banner{display:none;background:rgba(239,68,68,.09);border-bottom:1px solid rgba(239,68,68,.28);padding:.42rem .9rem;flex-shrink:0;}
+.offline-banner.visible{display:flex;align-items:flex-start;gap:.6rem;}
+.offline-banner-text{flex:1;font-family:var(--mono);font-size:.67rem;}
+.offline-banner-title{font-weight:700;color:#fca5a5;letter-spacing:.05em;text-transform:uppercase;margin-bottom:.15rem;}
+.offline-files{color:#f87171;font-size:.63rem;line-height:1.55;}
+.offline-dismiss{background:none;border:none;color:#f87171;cursor:pointer;font-size:.95rem;padding:.1rem .3rem;border-radius:3px;flex-shrink:0;}
+.offline-dismiss:hover{background:rgba(239,68,68,.15);}
 
-/* ── CUE LIST ── */
-.cue-panel{
-  display:flex;
-  flex-direction:column;
-  border-right:1px solid var(--border);
-  overflow:hidden;
-}
-.cue-list-header{
-  display:grid;
-  grid-template-columns:36px 1fr 22px 54px 60px 36px;
-  gap:0;
-  padding:.45rem .8rem;
-  background:var(--surface2);
-  border-bottom:1px solid var(--border);
-  font-family:var(--mono);
-  font-size:.65rem;
-  color:var(--text3);
-  letter-spacing:.08em;
-  text-transform:uppercase;
-}
-.cue-list{
-  flex:1;
-  overflow-y:auto;
-  overflow-x:hidden;
-}
-.cue-list::-webkit-scrollbar{width:4px;}
-.cue-list::-webkit-scrollbar-track{background:var(--bg);}
+/* LAYOUT */
+.main{display:grid;grid-template-columns:1fr 330px;flex:1;min-height:0;overflow:hidden;}
+@media(max-width:860px){.main{grid-template-columns:1fr;overflow-y:auto;}}
+.left-col{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border);}
+
+/* CUE LIST */
+.cue-panel{display:flex;flex-direction:column;flex:1;min-height:0;}
+.cue-list-header{display:grid;grid-template-columns:36px 1fr 16px 54px 64px 32px;padding:.38rem .75rem;background:var(--surface2);border-bottom:1px solid var(--border);font-family:var(--mono);font-size:.58rem;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;}
+.cue-list{flex:1;overflow-y:auto;overflow-x:hidden;}
+.cue-list::-webkit-scrollbar{width:3px;}
 .cue-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
 
-.cue-row{
-  display:grid;
-  grid-template-columns:36px 1fr 22px 54px 60px 36px;
-  align-items:center;
-  gap:0;
-  padding:.5rem .8rem;
-  border-bottom:1px solid var(--border);
-  cursor:pointer;
-  transition:background .1s;
-  position:relative;
-}
+.cue-row{display:grid;grid-template-columns:36px 1fr 16px 54px 64px 32px;align-items:center;padding:.42rem .75rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;position:relative;}
 .cue-row:hover{background:var(--surface2);}
-.cue-row.is-now{
-  background:rgba(245,158,11,.07);
-  border-left:3px solid var(--now);
-  padding-left:calc(.8rem - 3px);
-}
-.cue-row.is-next{
-  background:rgba(59,130,246,.05);
-  border-left:3px solid var(--next);
-  padding-left:calc(.8rem - 3px);
-}
-.cue-row.is-done{opacity:.38;}
+.cue-row.is-now{background:rgba(245,158,11,.07);border-left:3px solid var(--now);padding-left:calc(.75rem - 3px);}
+.cue-row.is-next{background:rgba(59,130,246,.05);border-left:3px solid var(--next);padding-left:calc(.75rem - 3px);}
+.cue-row.is-done{opacity:.33;}
+.cue-row.is-offline{background:rgba(239,68,68,.04);}
+.cue-row.flash-offline{animation:flash-red .5s ease;}
+@keyframes flash-red{0%,100%{background:rgba(239,68,68,.04);}50%{background:rgba(239,68,68,.22);}}
 
-.cue-num{
-  font-family:var(--mono);
-  font-size:.68rem;
-  color:var(--text3);
-  font-weight:500;
-}
+.cue-num{font-family:var(--mono);font-size:.63rem;color:var(--text3);font-weight:500;user-select:none;}
 .cue-row.is-now .cue-num{color:var(--now);}
 .cue-row.is-next .cue-num{color:var(--next);}
+.cue-row.is-offline .cue-num{color:var(--offline);opacity:.65;}
 
-.cue-name{
-  font-size:.82rem;
-  font-weight:500;
-  color:var(--text);
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  padding-right:.5rem;
-}
+.cue-name-wrap{display:flex;flex-direction:column;overflow:hidden;padding-right:.35rem;gap:.04rem;}
+.cue-name{font-size:.78rem;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .cue-row.is-now .cue-name{color:var(--now);}
 .cue-row.is-next .cue-name{color:var(--next);}
 .cue-row.is-done .cue-name{color:var(--text3);}
+.cue-row.is-offline .cue-name{color:#f87171;}
+.cue-name-input{font-family:var(--sans);font-size:.78rem;font-weight:500;background:var(--surface3);border:1px solid var(--accent);border-radius:3px;color:var(--text);padding:.08rem .28rem;width:100%;outline:none;}
+.cue-note-preview{font-size:.62rem;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:italic;line-height:1.2;}
+.cue-row.is-now .cue-note-preview{color:rgba(245,158,11,.5);}
+.cue-row.is-next .cue-note-preview{color:rgba(59,130,246,.5);}
+.rescue-btn{font-family:var(--mono);font-size:.56rem;font-weight:600;border:1px solid rgba(239,68,68,.4);color:#f87171;border-radius:3px;padding:.12rem .3rem;cursor:pointer;background:none;transition:all .15s;white-space:nowrap;margin-top:.1rem;width:fit-content;}
+.rescue-btn:hover{background:rgba(239,68,68,.12);border-color:var(--offline);}
 
-/* volume knob in list */
-.cue-vol{
-  display:flex;
-  align-items:center;
-  gap:.3rem;
-}
-.cue-vol input[type=range]{
-  -webkit-appearance:none;
-  width:44px;
-  height:3px;
-  background:var(--border2);
-  border-radius:2px;
-  outline:none;
-  cursor:pointer;
-}
-.cue-vol input[type=range]::-webkit-slider-thumb{
-  -webkit-appearance:none;
-  width:10px;height:10px;
-  border-radius:50%;
-  background:var(--text2);
-  cursor:pointer;
-}
-.cue-row.is-now .cue-vol input[type=range]::-webkit-slider-thumb{background:var(--now);}
-.cue-row.is-next .cue-vol input[type=range]::-webkit-slider-thumb{background:var(--next);}
-.cue-vol-label{
-  font-family:var(--mono);
-  font-size:.62rem;
-  color:var(--text3);
-  width:26px;
-  text-align:right;
-}
+.cue-src{display:flex;align-items:center;justify-content:center;}
+.src-icon{width:12px;height:12px;flex-shrink:0;opacity:.32;}
+.cue-row.is-now .src-icon{opacity:.65;}
+.cue-row.is-offline .src-icon{opacity:1;}
 
-/* auto / manual pill */
-.cue-mode{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-.mode-pill{
-  font-family:var(--mono);
-  font-size:.6rem;
-  font-weight:700;
-  letter-spacing:.05em;
-  border-radius:3px;
-  padding:.18rem .38rem;
-  cursor:pointer;
-  border:1px solid transparent;
-  transition:all .15s;
-  user-select:none;
-}
-.mode-pill.auto{
-  background:rgba(59,130,246,.12);
-  color:#60a5fa;
-  border-color:rgba(59,130,246,.25);
-}
-.mode-pill.manual{
-  background:rgba(245,158,11,.10);
-  color:#fbbf24;
-  border-color:rgba(245,158,11,.22);
-}
+.cue-mode{display:flex;align-items:center;justify-content:center;}
+.mode-pill{font-family:var(--mono);font-size:.56rem;font-weight:700;letter-spacing:.04em;border-radius:3px;padding:.14rem .28rem;cursor:pointer;border:1px solid transparent;transition:all .15s;user-select:none;}
+.mode-pill.auto{background:rgba(59,130,246,.12);color:#60a5fa;border-color:rgba(59,130,246,.25);}
+.mode-pill.manual{background:rgba(245,158,11,.1);color:#fbbf24;border-color:rgba(245,158,11,.22);}
 .mode-pill:hover{filter:brightness(1.2);}
 
-/* delete btn */
-.cue-del{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-.del-btn{
-  background:none;
-  border:none;
-  color:var(--text3);
-  cursor:pointer;
-  font-size:.8rem;
-  padding:.2rem;
-  border-radius:3px;
-  line-height:1;
-  transition:color .15s,background .15s;
-}
+.cue-vol{display:flex;align-items:center;gap:.22rem;}
+.cue-vol input[type=range]{-webkit-appearance:none;width:34px;height:3px;background:var(--border2);border-radius:2px;outline:none;cursor:pointer;}
+.cue-vol input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:9px;height:9px;border-radius:50%;background:var(--text2);cursor:pointer;}
+.cue-row.is-now .cue-vol input[type=range]::-webkit-slider-thumb{background:var(--now);}
+.cue-row.is-next .cue-vol input[type=range]::-webkit-slider-thumb{background:var(--next);}
+.cue-vol-label{font-family:var(--mono);font-size:.58rem;color:var(--text3);width:22px;text-align:right;}
+
+.cue-del{display:flex;align-items:center;justify-content:center;}
+.del-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:.72rem;padding:.18rem;border-radius:3px;line-height:1;transition:color .15s,background .15s;}
 .del-btn:hover{color:var(--stop);background:rgba(239,68,68,.1);}
-.cue-src{display:flex;align-items:center;justify-content:center;}
-.src-icon{width:14px;height:14px;flex-shrink:0;opacity:.4;}
-.cue-row.is-now .src-icon{opacity:.75;}
-.cue-row.is-unresolved .src-icon{opacity:1;}
 
-/* ── RIGHT PANEL ── */
-.right-panel{
-  display:flex;
-  flex-direction:column;
-  gap:0;
-  overflow:hidden;
-}
+/* SFX BANK */
+.sfx-panel{flex-shrink:0;border-top:1px solid var(--border);background:var(--surface);padding:.5rem .75rem;}
+.sfx-title{font-family:var(--mono);font-size:.6rem;font-weight:700;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem;}
+.sfx-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:.3rem;}
+.sfx-slot{background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:.32rem .38rem;display:flex;flex-direction:column;gap:.18rem;position:relative;transition:border-color .15s,background .15s;cursor:pointer;}
+.sfx-slot.has-file{border-color:var(--border2);}
+.sfx-slot.is-playing{border-color:var(--go);background:rgba(34,197,94,.06);}
+.sfx-slot.is-offline{border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.04);}
+.sfx-key{font-family:var(--mono);font-size:.58rem;font-weight:700;color:var(--text3);background:var(--surface3);border-radius:2px;padding:.03rem .22rem;display:inline-block;width:fit-content;}
+.sfx-slot.has-file .sfx-key{color:var(--accent);}
+.sfx-slot.is-playing .sfx-key{color:var(--go);}
+.sfx-slot.is-offline .sfx-key{color:var(--offline);}
+.sfx-name{font-size:.62rem;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25;}
+.sfx-slot.has-file .sfx-name{color:var(--text);}
+.sfx-slot.is-offline .sfx-name{color:#f87171;}
+.sfx-empty{font-size:.6rem;color:var(--text3);font-style:italic;}
+.sfx-controls{display:flex;gap:.2rem;flex-wrap:wrap;}
+.sfx-mini-btn{font-family:var(--mono);font-size:.5rem;font-weight:700;border-radius:2px;padding:.08rem .22rem;cursor:pointer;border:1px solid var(--border);background:var(--surface3);color:var(--text3);transition:all .12s;letter-spacing:.03em;}
+.sfx-mini-btn.active{background:rgba(167,139,250,.15);border-color:var(--accent);color:var(--accent);}
+.sfx-mini-btn:hover{border-color:var(--border2);color:var(--text);}
+.sfx-clear{position:absolute;top:.18rem;right:.18rem;background:none;border:none;color:var(--text3);cursor:pointer;font-size:.6rem;opacity:0;transition:opacity .15s;padding:.08rem;}
+.sfx-slot:hover .sfx-clear{opacity:.55;}
+.sfx-clear:hover{opacity:1!important;color:var(--stop);}
 
-/* now/next status */
-.status-section{
-  padding:.85rem 1rem;
-  background:var(--surface);
-  border-bottom:1px solid var(--border);
-}
-.status-block{
-  padding:.6rem .8rem;
-  border-radius:6px;
-  margin-bottom:.55rem;
-}
+/* RIGHT PANEL */
+.right-panel{display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;}
+.right-panel::-webkit-scrollbar{width:3px;}
+.right-panel::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+/* STATUS */
+.status-section{padding:.65rem .85rem;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
+.status-block{padding:.48rem .65rem;border-radius:6px;margin-bottom:.4rem;}
 .status-block:last-child{margin-bottom:0;}
-.status-block.now-block{
-  background:rgba(245,158,11,.08);
-  border:1px solid rgba(245,158,11,.2);
-}
-.status-block.next-block{
-  background:rgba(59,130,246,.06);
-  border:1px solid rgba(59,130,246,.15);
-}
-.status-label{
-  font-family:var(--mono);
-  font-size:.62rem;
-  font-weight:700;
-  letter-spacing:.1em;
-  text-transform:uppercase;
-  margin-bottom:.3rem;
-}
+.status-block.now-block{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);}
+.status-block.next-block{background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.14);}
+.status-label{font-family:var(--mono);font-size:.56rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.22rem;}
 .now-block .status-label{color:var(--now);}
 .next-block .status-label{color:var(--next);}
-.status-name{
-  font-size:.95rem;
-  font-weight:600;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
+.status-name{font-size:.88rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .now-block .status-name{color:var(--text);}
 .next-block .status-name{color:var(--text2);}
-.status-mode{
-  font-family:var(--mono);
-  font-size:.62rem;
-  margin-top:.25rem;
-}
-.now-block .status-mode{color:rgba(245,158,11,.6);}
-.next-block .status-mode{color:rgba(59,130,246,.5);}
+.status-note{font-size:.7rem;color:var(--text2);margin-top:.22rem;font-style:italic;line-height:1.4;word-break:break-word;}
+.next-block .status-note{color:rgba(59,130,246,.65);}
+.status-mode{font-family:var(--mono);font-size:.58rem;margin-top:.18rem;}
+.now-block .status-mode{color:rgba(245,158,11,.5);}
+.next-block .status-mode{color:rgba(59,130,246,.4);}
 
-/* time + waveform */
-.wave-section{
-  padding:.6rem 1rem;
-  background:var(--surface);
-  border-bottom:1px solid var(--border);
-}
-.time-row{
-  display:flex;
-  justify-content:space-between;
-  align-items:baseline;
-  margin-bottom:.4rem;
-}
-.time-current{
-  font-family:var(--mono);
-  font-size:1.35rem;
-  font-weight:700;
-  color:var(--now);
-  letter-spacing:.04em;
-}
-.time-total{
-  font-family:var(--mono);
-  font-size:.78rem;
-  color:var(--text3);
-}
-#waveform{
-  width:100%;
-  height:56px;
-  border-radius:4px;
-  overflow:hidden;
-  background:var(--surface2);
-}
+/* PREROLL */
+.preroll-bar-wrap{height:3px;background:var(--border);border-radius:2px;margin-top:.3rem;display:none;}
+.preroll-bar-wrap.active{display:block;}
+.preroll-bar{height:3px;background:var(--next);border-radius:2px;width:100%;transition:width linear;}
 
-/* GO button area */
-.go-section{
-  padding:.8rem 1rem;
-  background:var(--surface);
-  border-bottom:1px solid var(--border);
-}
-.go-btn{
-  width:100%;
-  padding:1.1rem;
-  font-family:var(--mono);
-  font-size:1.5rem;
-  font-weight:700;
-  letter-spacing:.15em;
-  color:#fff;
-  background:var(--go-dim);
-  border:2px solid var(--go);
-  border-radius:8px;
-  cursor:pointer;
-  transition:background .12s,box-shadow .12s,transform .08s;
-  position:relative;
-  overflow:hidden;
-}
-.go-btn:hover{
-  background:rgba(34,197,94,.22);
-  box-shadow:0 0 24px var(--go-glow);
-}
-.go-btn:active{
-  transform:scale(.98);
-  background:rgba(34,197,94,.35);
-}
-.go-btn.playing{
-  background:rgba(34,197,94,.15);
-  border-color:var(--go);
-  box-shadow:0 0 20px var(--go-glow);
-}
-.go-label{display:block;font-size:1.5rem;margin-bottom:.15rem;}
-.go-sub{display:block;font-size:.62rem;letter-spacing:.12em;color:rgba(255,255,255,.45);}
+/* WAVEFORM */
+.wave-section{padding:.48rem .85rem;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
+.time-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.3rem;}
+.time-current{font-family:var(--mono);font-size:1.2rem;font-weight:700;color:var(--now);letter-spacing:.04em;}
+.time-total{font-family:var(--mono);font-size:.72rem;color:var(--text3);}
+#waveform{width:100%;height:48px;border-radius:4px;overflow:hidden;background:var(--surface2);}
 
-/* transport row */
-.transport{
-  display:grid;
-  grid-template-columns:1fr 1fr 1fr;
-  gap:.5rem;
-  padding:.7rem 1rem;
-  background:var(--surface);
-  border-bottom:1px solid var(--border);
-}
-.tbtn{
-  font-family:var(--mono);
-  font-size:.72rem;
-  font-weight:600;
-  letter-spacing:.06em;
-  color:var(--text2);
-  background:var(--surface2);
-  border:1px solid var(--border);
-  border-radius:5px;
-  padding:.55rem .5rem;
-  cursor:pointer;
-  text-align:center;
-  transition:all .12s;
-}
+/* GO */
+.go-section{padding:.6rem .85rem;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
+.go-btn{width:100%;padding:.85rem;font-family:var(--mono);font-size:1.35rem;font-weight:700;letter-spacing:.15em;color:#fff;background:rgba(34,197,94,.12);border:2px solid var(--go);border-radius:7px;cursor:pointer;transition:background .12s,box-shadow .12s,transform .08s;}
+.go-btn:hover{background:rgba(34,197,94,.22);box-shadow:0 0 18px var(--go-glow);}
+.go-btn:active{transform:scale(.98);}
+.go-btn.playing{animation:pulse-go 1.8s ease-in-out infinite;}
+.go-btn.offline-flash{animation:flash-go-red .45s ease;}
+@keyframes pulse-go{0%,100%{box-shadow:0 0 8px var(--go-glow);}50%{box-shadow:0 0 22px rgba(34,197,94,.32);}}
+@keyframes flash-go-red{0%,100%{border-color:var(--go);background:rgba(34,197,94,.12);}50%{border-color:var(--offline);background:rgba(239,68,68,.18);}}
+.go-label{display:block;font-size:1.35rem;margin-bottom:.08rem;}
+.go-sub{display:block;font-size:.56rem;letter-spacing:.1em;color:rgba(255,255,255,.32);}
+
+/* TRANSPORT */
+.transport{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.38rem;padding:.55rem .85rem;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
+.tbtn{font-family:var(--mono);font-size:.65rem;font-weight:600;letter-spacing:.05em;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:.48rem .4rem;cursor:pointer;text-align:center;transition:all .12s;}
 .tbtn:hover{color:var(--text);border-color:var(--border2);background:var(--surface3);}
 .tbtn.danger{color:#fca5a5;border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.06);}
 .tbtn.danger:hover{background:rgba(239,68,68,.14);border-color:var(--stop);}
-.tbtn.danger:active{transform:scale(.97);}
 
-/* global controls */
-.global-controls{
-  padding:.7rem 1rem;
-  background:var(--surface);
-  border-bottom:1px solid var(--border);
-  display:flex;
-  flex-direction:column;
-  gap:.55rem;
-}
-.ctrl-row{
-  display:flex;
-  align-items:center;
-  gap:.7rem;
-}
-.ctrl-label{
-  font-family:var(--mono);
-  font-size:.65rem;
-  color:var(--text3);
-  letter-spacing:.06em;
-  text-transform:uppercase;
-  width:52px;
-  flex-shrink:0;
-}
-.ctrl-slider{
-  -webkit-appearance:none;
-  flex:1;
-  height:3px;
-  background:var(--border2);
-  border-radius:2px;
-  outline:none;
-  cursor:pointer;
-}
-.ctrl-slider::-webkit-slider-thumb{
-  -webkit-appearance:none;
-  width:13px;height:13px;
-  border-radius:50%;
-  background:var(--text2);
-  cursor:pointer;
-  transition:background .15s;
-}
+/* GLOBAL CONTROLS */
+.global-controls{padding:.55rem .85rem;background:var(--surface);border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:.4rem;flex-shrink:0;}
+.ctrl-row{display:flex;align-items:center;gap:.55rem;}
+.ctrl-label{font-family:var(--mono);font-size:.58rem;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;width:46px;flex-shrink:0;}
+.ctrl-slider{-webkit-appearance:none;flex:1;height:3px;background:var(--border2);border-radius:2px;outline:none;cursor:pointer;}
+.ctrl-slider::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--text2);cursor:pointer;}
 .ctrl-slider:hover::-webkit-slider-thumb{background:var(--text);}
-.ctrl-val{
-  font-family:var(--mono);
-  font-size:.68rem;
-  color:var(--text2);
-  width:38px;
-  text-align:right;
-  flex-shrink:0;
-}
-
-/* loop */
-.loop-row{
-  display:flex;
-  align-items:center;
-  gap:.5rem;
-}
-.loop-label{
-  font-family:var(--mono);
-  font-size:.65rem;
-  color:var(--text3);
-  letter-spacing:.06em;
-  text-transform:uppercase;
-  width:52px;
-  flex-shrink:0;
-}
-.loop-pill{
-  font-family:var(--mono);
-  font-size:.65rem;
-  font-weight:600;
-  padding:.28rem .65rem;
-  border-radius:3px;
-  cursor:pointer;
-  background:var(--surface3);
-  border:1px solid var(--border2);
-  color:var(--text2);
-  transition:all .12s;
-  letter-spacing:.04em;
-}
+.ctrl-val{font-family:var(--mono);font-size:.63rem;color:var(--text2);width:34px;text-align:right;flex-shrink:0;}
+.loop-pill{font-family:var(--mono);font-size:.6rem;font-weight:600;padding:.22rem .55rem;border-radius:3px;cursor:pointer;background:var(--surface3);border:1px solid var(--border2);color:var(--text2);transition:all .12s;letter-spacing:.04em;}
 .loop-pill:hover{color:var(--text);border-color:var(--accent);}
 .loop-pill.active{background:rgba(167,139,250,.12);border-color:var(--accent);color:var(--accent);}
 
-/* hotkey legend */
-.hotkeys{
-  padding:.7rem 1rem;
-  background:var(--surface);
-  flex:1;
-}
-.hotkeys-title{
-  font-family:var(--mono);
-  font-size:.62rem;
-  color:var(--text3);
-  letter-spacing:.1em;
-  text-transform:uppercase;
-  margin-bottom:.5rem;
-}
-.hk-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:.28rem .8rem;
-}
-.hk-row{
-  display:flex;
-  align-items:center;
-  gap:.4rem;
-}
-.hk-key{
-  font-family:var(--mono);
-  font-size:.62rem;
-  font-weight:700;
-  background:var(--surface3);
-  border:1px solid var(--border2);
-  border-radius:3px;
-  padding:.1rem .38rem;
-  color:var(--text2);
-  white-space:nowrap;
-  flex-shrink:0;
-}
-.hk-desc{
-  font-size:.72rem;
-  color:var(--text3);
-}
+/* HOTKEYS */
+.hotkeys{padding:.55rem .85rem;background:var(--surface);flex-shrink:0;}
+.hotkeys-title{font-family:var(--mono);font-size:.56rem;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.38rem;}
+.hk-grid{display:grid;grid-template-columns:1fr 1fr;gap:.2rem .65rem;}
+.hk-row{display:flex;align-items:center;gap:.32rem;}
+.hk-key{font-family:var(--mono);font-size:.56rem;font-weight:700;background:var(--surface3);border:1px solid var(--border2);border-radius:3px;padding:.06rem .28rem;color:var(--text2);white-space:nowrap;flex-shrink:0;}
+.hk-desc{font-size:.65rem;color:var(--text3);}
 
-/* library modal */
-.modal-overlay{
-  display:none;
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.72);
-  z-index:100;
-  align-items:center;
-  justify-content:center;
-}
+/* NOTE MODAL */
+.note-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;align-items:center;justify-content:center;}
+.note-modal-overlay.open{display:flex;}
+.note-modal{background:var(--surface);border:1px solid var(--border2);border-radius:10px;width:min(430px,92vw);padding:1rem;display:flex;flex-direction:column;gap:.65rem;}
+.note-modal-title{font-family:var(--mono);font-size:.72rem;font-weight:700;color:var(--text);letter-spacing:.06em;text-transform:uppercase;}
+.note-modal-cue{font-size:.8rem;color:var(--text2);margin-top:.08rem;}
+.note-textarea{background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-family:var(--sans);font-size:.83rem;padding:.55rem .7rem;resize:vertical;min-height:72px;outline:none;line-height:1.5;width:100%;}
+.note-textarea:focus{border-color:var(--accent);}
+.note-modal-foot{display:flex;gap:.45rem;justify-content:flex-end;}
+.nmbtn{font-family:var(--mono);font-size:.68rem;font-weight:600;padding:.38rem .8rem;border-radius:5px;cursor:pointer;border:1px solid var(--border2);transition:all .12s;}
+.nmbtn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+.nmbtn.primary:hover{filter:brightness(1.1);}
+.nmbtn.secondary{background:var(--surface2);color:var(--text2);}
+.nmbtn.secondary:hover{background:var(--surface3);color:var(--text);}
+
+/* LIBRARY MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;}
 .modal-overlay.open{display:flex;}
-.modal{
-  background:var(--surface);
-  border:1px solid var(--border2);
-  border-radius:10px;
-  width:min(520px,95vw);
-  max-height:80vh;
-  display:flex;
-  flex-direction:column;
-  overflow:hidden;
-}
-.modal-header{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:.8rem 1rem;
-  border-bottom:1px solid var(--border);
-  flex-shrink:0;
-}
-.modal-title{
-  font-family:var(--mono);
-  font-size:.8rem;
-  font-weight:700;
-  color:var(--text);
-  letter-spacing:.06em;
-  text-transform:uppercase;
-}
-.modal-close{
-  background:none;
-  border:none;
-  color:var(--text3);
-  cursor:pointer;
-  font-size:1.1rem;
-  padding:.2rem .4rem;
-  border-radius:4px;
-  transition:color .12s,background .12s;
-}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:10px;width:min(490px,94vw);max-height:76vh;display:flex;flex-direction:column;overflow:hidden;}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:.7rem .95rem;border-bottom:1px solid var(--border);flex-shrink:0;}
+.modal-title{font-family:var(--mono);font-size:.75rem;font-weight:700;color:var(--text);letter-spacing:.06em;text-transform:uppercase;}
+.modal-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:1rem;padding:.18rem .38rem;border-radius:4px;transition:color .12s,background .12s;}
 .modal-close:hover{color:var(--text);background:var(--surface3);}
-.modal-body{
-  flex:1;
-  overflow-y:auto;
-  padding:.5rem 0;
-}
-.modal-body::-webkit-scrollbar{width:4px;}
+.modal-body{flex:1;overflow-y:auto;padding:.35rem 0;}
+.modal-body::-webkit-scrollbar{width:3px;}
 .modal-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
-.lib-item{
-  display:flex;
-  align-items:center;
-  gap:.7rem;
-  padding:.5rem 1rem;
-  cursor:pointer;
-  transition:background .1s;
-  border-bottom:1px solid var(--border);
-}
+.lib-item{display:flex;align-items:center;gap:.55rem;padding:.42rem .95rem;cursor:pointer;transition:background .1s;border-bottom:1px solid var(--border);}
 .lib-item:hover{background:var(--surface2);}
-.lib-item input[type=checkbox]{
-  accent-color:var(--accent);
-  width:14px;height:14px;
-  cursor:pointer;
-  flex-shrink:0;
-}
-.lib-item-name{
-  font-size:.82rem;
-  color:var(--text2);
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-.modal-footer{
-  padding:.7rem 1rem;
-  border-top:1px solid var(--border);
-  display:flex;
-  gap:.5rem;
-  justify-content:flex-end;
-  flex-shrink:0;
-}
-.mfbtn{
-  font-family:var(--mono);
-  font-size:.72rem;
-  font-weight:600;
-  padding:.45rem .9rem;
-  border-radius:5px;
-  cursor:pointer;
-  border:1px solid var(--border2);
-  transition:all .12s;
-}
+.lib-item input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px;cursor:pointer;flex-shrink:0;}
+.lib-item-name{font-size:.78rem;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.modal-footer{padding:.55rem .95rem;border-top:1px solid var(--border);display:flex;gap:.4rem;justify-content:flex-end;flex-shrink:0;}
+.mfbtn{font-family:var(--mono);font-size:.68rem;font-weight:600;padding:.38rem .8rem;border-radius:5px;cursor:pointer;border:1px solid var(--border2);transition:all .12s;}
 .mfbtn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
 .mfbtn.primary:hover{filter:brightness(1.1);}
 .mfbtn.secondary{background:var(--surface2);color:var(--text2);}
 .mfbtn.secondary:hover{background:var(--surface3);color:var(--text);}
 
-/* toast */
-.toast{
-  position:fixed;
-  bottom:1.2rem;
-  left:50%;
-  transform:translateX(-50%) translateY(8px);
-  background:var(--surface3);
-  border:1px solid var(--border2);
-  border-radius:6px;
-  padding:.5rem 1rem;
-  font-family:var(--mono);
-  font-size:.72rem;
-  color:var(--text);
-  opacity:0;
-  transition:opacity .2s,transform .2s;
-  pointer-events:none;
-  z-index:200;
-  white-space:nowrap;
-}
+/* TOAST */
+.toast{position:fixed;bottom:1rem;left:50%;transform:translateX(-50%) translateY(8px);background:var(--surface3);border:1px solid var(--border2);border-radius:6px;padding:.42rem .9rem;font-family:var(--mono);font-size:.68rem;color:var(--text);opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:300;white-space:nowrap;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.error{border-color:rgba(239,68,68,.5);color:#fca5a5;background:rgba(239,68,68,.1);}
 
-/* scrollbar on cue list */
-.cue-list::-webkit-scrollbar{width:4px;}
-.cue-list::-webkit-scrollbar-track{background:transparent;}
-
-/* playing pulse on GO */
-@keyframes pulse-go{
-  0%,100%{box-shadow:0 0 10px var(--go-glow);}
-  50%{box-shadow:0 0 28px rgba(34,197,94,.35);}
+/* PRINT */
+@media print{
+  body{background:#fff;color:#000;font-family:sans-serif;height:auto;overflow:auto;}
+  .header,.right-panel,.sfx-panel,.offline-banner,.toast,.modal-overlay,.note-modal-overlay{display:none!important;}
+  .main{display:block;}
+  .left-col{border:none;}
+  .cue-panel{overflow:visible;}
+  .cue-list{overflow:visible;max-height:none;}
+  .print-header{display:block!important;}
+  .cue-row{border-bottom:1px solid #ddd;padding:.4rem .5rem;break-inside:avoid;}
+  .cue-row.is-done{opacity:1;}
+  .del-btn,.rescue-btn,.cue-vol input,.mode-pill,.src-icon,.cue-src{display:none!important;}
+  .cue-vol-label,.cue-name,.cue-num,.cue-note-preview{color:#000!important;}
+  .cue-note-preview{color:#444!important;font-style:italic;}
+  .sfx-print{display:block!important;padding:1rem 0;}
 }
-.go-btn.playing{animation:pulse-go 1.8s ease-in-out infinite;}
+.print-header{display:none;padding:.8rem 0 .6rem;border-bottom:2px solid #000;margin-bottom:.4rem;}
+.print-header h1{font-size:1.15rem;font-weight:700;}
+.print-header p{font-size:.82rem;color:#444;margin-top:.18rem;}
+.sfx-print{display:none;}
+.sfx-print-title{font-size:.9rem;font-weight:700;margin:.8rem 0 .3rem;}
+.sfx-print-row{font-size:.8rem;color:#333;line-height:1.7;}
 </style>
 </head>
 <body>
 
-<!-- HEADER -->
 <header class="header">
-  <div>
+  <div class="header-left">
     <div class="header-title">Show Cue Player</div>
     <div class="header-show">Beetlejuice JR</div>
   </div>
   <div class="header-actions">
     <button class="hbtn hbtn-show" id="btnLoadShow">Beetlejuice JR</button>
     <button class="hbtn" id="btnLibrary">+ Add Cues</button>
-    <button class="hbtn" id="btnAddLocal">+ Local File</button>
+    <button class="hbtn" id="btnAddLocal">+ File</button>
     <button class="hbtn hbtn-folder" id="btnLoadFolder">📁 Load Folder</button>
     <button class="hbtn" id="btnSave">Save Show</button>
     <button class="hbtn" id="btnLoad">Load Show</button>
-    <button class="hbtn" id="btnClear">Clear All</button>
+    <button class="hbtn hbtn-export" id="btnExport">Print / Export</button>
+    <button class="hbtn" id="btnClear">Clear</button>
   </div>
 </header>
 
-<!-- MAIN -->
+<div class="offline-banner" id="offlineBanner">
+  <div class="offline-banner-text">
+    <div class="offline-banner-title">⚠ Offline Files Detected — Load Folder to reconnect</div>
+    <div class="offline-files" id="offlineFileList"></div>
+  </div>
+  <button class="offline-dismiss" id="offlineDismiss">✕</button>
+</div>
+
 <div class="main">
-
-  <!-- CUE LIST -->
-  <section class="cue-panel">
-    <div class="cue-list-header">
-      <span>#</span>
-      <span>Cue Name</span>
-      <span></span>
-      <span>Mode</span>
-      <span style="padding-left:.3rem">Vol</span>
-      <span></span>
+  <div class="left-col">
+    <div class="cue-panel">
+      <div class="cue-list-header">
+        <span>#</span><span>Cue Name / Note</span><span></span><span>Mode</span><span>Vol</span><span></span>
+      </div>
+      <div class="print-header">
+        <h1>Beetlejuice JR — Cue Sheet</h1>
+        <p id="printMeta"></p>
+      </div>
+      <ul class="cue-list" id="cueList"></ul>
+      <!-- SFX print section (hidden on screen) -->
+      <div class="sfx-print" id="sfxPrint">
+        <div class="sfx-print-title">SFX Bank</div>
+        <div id="sfxPrintRows"></div>
+      </div>
     </div>
-    <ul class="cue-list" id="cueList"></ul>
-  </section>
 
-  <!-- RIGHT PANEL -->
+    <div class="sfx-panel">
+      <div class="sfx-title">SFX Bank — keys 0 – 9</div>
+      <div class="sfx-grid" id="sfxGrid"></div>
+    </div>
+  </div>
+
   <aside class="right-panel">
-
-    <!-- Now / Next -->
     <div class="status-section">
       <div class="status-block now-block">
         <div class="status-label">▶ Now Playing</div>
         <div class="status-name" id="nowName">—</div>
+        <div class="status-note" id="nowNote" style="display:none"></div>
         <div class="status-mode" id="nowMode"></div>
       </div>
       <div class="status-block next-block">
         <div class="status-label">⏭ Up Next</div>
         <div class="status-name" id="nextName">—</div>
+        <div class="status-note" id="nextNote" style="display:none"></div>
         <div class="status-mode" id="nextMode"></div>
+        <div class="preroll-bar-wrap" id="prerollWrap"><div class="preroll-bar" id="prerollBar"></div></div>
       </div>
     </div>
 
-    <!-- Waveform + time -->
     <div class="wave-section">
       <div class="time-row">
         <span class="time-current" id="timeCurrent">0:00</span>
@@ -734,22 +342,19 @@ body{
       <div id="waveform"></div>
     </div>
 
-    <!-- GO -->
     <div class="go-section">
       <button class="go-btn" id="goBtn">
         <span class="go-label">GO</span>
-        <span class="go-sub">SPACE — play / advance</span>
+        <span class="go-sub">SPACE — advance &amp; play</span>
       </button>
     </div>
 
-    <!-- Transport -->
     <div class="transport">
       <button class="tbtn" id="btnPrev">⏮ PREV</button>
       <button class="tbtn" id="btnStop">⏹ STOP</button>
       <button class="tbtn danger" id="btnPanic">✕ PANIC</button>
     </div>
 
-    <!-- Global controls -->
     <div class="global-controls">
       <div class="ctrl-row">
         <span class="ctrl-label">Master</span>
@@ -766,28 +371,43 @@ body{
         <input class="ctrl-slider" type="range" id="gapSlider" min="0" max="5" step="0.1" value="0"/>
         <span class="ctrl-val" id="gapVal">0.0s</span>
       </div>
-      <div class="loop-row">
-        <span class="loop-label">Loop</span>
-        <button class="loop-pill" id="loopBtn" data-mode="0">Off</button>
+      <div class="ctrl-row">
+        <span class="ctrl-label">Loop</span>
+        <button class="loop-pill" id="loopBtn">Off</button>
       </div>
     </div>
 
-    <!-- Hotkey legend -->
     <div class="hotkeys">
       <div class="hotkeys-title">Keyboard Shortcuts</div>
       <div class="hk-grid">
-        <div class="hk-row"><span class="hk-key">Space</span><span class="hk-desc">GO / play-pause</span></div>
+        <div class="hk-row"><span class="hk-key">Space</span><span class="hk-desc">GO / advance</span></div>
         <div class="hk-row"><span class="hk-key">Esc</span><span class="hk-desc">Panic stop</span></div>
-        <div class="hk-row"><span class="hk-key">→</span><span class="hk-desc">Next cue</span></div>
-        <div class="hk-row"><span class="hk-key">←</span><span class="hk-desc">Prev cue</span></div>
+        <div class="hk-row"><span class="hk-key">→</span><span class="hk-desc">Skip to next</span></div>
+        <div class="hk-row"><span class="hk-key">←</span><span class="hk-desc">Go to prev</span></div>
+        <div class="hk-row"><span class="hk-key">P</span><span class="hk-desc">Pause / resume</span></div>
         <div class="hk-row"><span class="hk-key">S</span><span class="hk-desc">Stop + rewind</span></div>
-        <div class="hk-row"><span class="hk-key">M</span><span class="hk-desc">Toggle mode</span></div>
-        <div class="hk-row"><span class="hk-key">↑ / ↓</span><span class="hk-desc">Scroll cue list</span></div>
+        <div class="hk-row"><span class="hk-key">M</span><span class="hk-desc">Toggle cue mode</span></div>
+        <div class="hk-row"><span class="hk-key">N</span><span class="hk-desc">Edit note</span></div>
         <div class="hk-row"><span class="hk-key">L</span><span class="hk-desc">Cycle loop</span></div>
+        <div class="hk-row"><span class="hk-key">0–9</span><span class="hk-desc">Fire SFX</span></div>
       </div>
     </div>
-
   </aside>
+</div>
+
+<!-- Note modal -->
+<div class="note-modal-overlay" id="noteModal">
+  <div class="note-modal">
+    <div>
+      <div class="note-modal-title">Edit Cue Note</div>
+      <div class="note-modal-cue" id="noteModalCueName"></div>
+    </div>
+    <textarea class="note-textarea" id="noteTextarea" placeholder="e.g. Lights fade · Barbara enters SR · Director cue"></textarea>
+    <div class="note-modal-foot">
+      <button class="nmbtn secondary" id="noteCancel">Cancel</button>
+      <button class="nmbtn primary" id="noteSave">Save Note</button>
+    </div>
+  </div>
 </div>
 
 <!-- Library modal -->
@@ -805,715 +425,658 @@ body{
   </div>
 </div>
 
-<!-- Toast -->
-<div class="toast" id="toast"></div>
-
-<!-- Hidden inputs -->
 <input type="file" id="localFilePicker" accept="audio/*" style="display:none"/>
 <input type="file" id="loadFilePicker" accept=".json" style="display:none"/>
 <input type="file" id="folderPicker" webkitdirectory multiple accept="audio/*" style="display:none"/>
+<input type="file" id="rescuePicker" accept="audio/*" style="display:none"/>
+<div class="toast" id="toast"></div>
 
 <script>
-/* ═══════════════════════════════════════════════════
-   TRACK DATA
-═══════════════════════════════════════════════════ */
-const LIBRARY = [
-  { title: "01 Prologue: Invisible", url: "BeetlejuiceJR/01 Prologue_ Invisible.mp3" },
-  { title: "02 Beetlejuice Appears", url: "BeetlejuiceJR/02 Beetlejuice Appears.mp3" },
-  { title: "03 The Whole 'Being Dead' Thing", url: "BeetlejuiceJR/03 The Whole _Being Dead_ Thing.mp3" },
-  { title: "04 The Maitlands", url: "BeetlejuiceJR/04 The Maitlands.mp3" },
-  { title: "05 Phone Ring", url: "BeetlejuiceJR/05 Phone Ring.mp3" },
-  { title: "06 Ready, Set, Not Yet", url: "BeetlejuiceJR/06 Ready, Set, Not Yet.mp3" },
-  { title: "07 The Handbook", url: "BeetlejuiceJR/07 The Handbook.mp3" },
-  { title: "08 Shock", url: "BeetlejuiceJR/08 Shock.mp3" },
-  { title: "09 The Whole 'Being Dead' Thing (Part 2)", url: "BeetlejuiceJR/09 The Whole _Being Dead_ Thing (Part 2).mp3" },
-  { title: "10 The Whole 'Being Dead' Thing (Part 3)", url: "BeetlejuiceJR/10 The Whole _Being Dead_ Thing (Part 3).mp3" },
-  { title: "11 The Deetz's", url: "BeetlejuiceJR/11 The Deetz_s.mp3" },
-  { title: "12 Let's Clean Up", url: "BeetlejuiceJR/12 Let_s Clean Up.mp3" },
-  { title: "13 Dead Mom", url: "BeetlejuiceJR/13 Dead Mom.mp3" },
-  { title: "14 The Attic", url: "BeetlejuiceJR/14 The Attic.mp3" },
-  { title: "15 Sweat Lodge", url: "BeetlejuiceJR/15 Sweat Lodge.mp3" },
-  { title: "16 No Reason", url: "BeetlejuiceJR/16 No Reason.mp3" },
-  { title: "17 Ghosts", url: "BeetlejuiceJR/17 Ghosts.mp3" },
-  { title: "18 Mama", url: "BeetlejuiceJR/18 Mama.mp3" },
-  { title: "19 Let's Scare My Dad", url: "BeetlejuiceJR/19 Let_s Scare My Dad.mp3" },
-  { title: "20 Diamond Ring", url: "BeetlejuiceJR/20 Diamond Ring.mp3" },
-  { title: "21 Please Leave This House", url: "BeetlejuiceJR/21 Please Leave This House.mp3" },
-  { title: "22 Invisible (Reprise)", url: "BeetlejuiceJR/22 Invisible (Reprise).mp3" },
-  { title: "23 Say My Name", url: "BeetlejuiceJR/23 Say My Name.mp3" },
-  { title: "24 The Dinner Party", url: "BeetlejuiceJR/24 The Dinner Party.mp3" },
-  { title: "25 Dinner Bell", url: "BeetlejuiceJR/25 Dinner Bell.mp3" },
-  { title: "26 Day-O (The Banana Boat Song)", url: "BeetlejuiceJR/26 Day-O (The Banana Boat Song).mp3" },
-  { title: "27 Showtime!", url: "BeetlejuiceJR/27 Showtime!.mp3" },
-  { title: "28 Girl Scout", url: "BeetlejuiceJR/28 Girl Scout.mp3" },
-  { title: "29 That Beautiful Sound", url: "BeetlejuiceJR/29 That Beautiful Sound.mp3" },
-  { title: "30 The Handbook 2", url: "BeetlejuiceJR/30 The Handbook 2.mp3" },
-  { title: "31 The Attic 2", url: "BeetlejuiceJR/31 The Attic 2.mp3" },
-  { title: "32 Adam Opens The Book", url: "BeetlejuiceJR/32 Adam Opens The Book.mp3" },
-  { title: "33 Netherworld 1", url: "BeetlejuiceJR/33 Netherworld 1.mp3" },
-  { title: "34 A Very Deetz Return", url: "BeetlejuiceJR/34 A Very Deetz Return.mp3" },
-  { title: "35 Otho", url: "BeetlejuiceJR/35 Otho.mp3" },
-  { title: "36 The Handbook 3", url: "BeetlejuiceJR/36 The Handbook 3.mp3" },
-  { title: "37 The Séance", url: "BeetlejuiceJR/37 The S\u251C\u2514ance.mp3" },
-  { title: "38 Netherworld 2", url: "BeetlejuiceJR/38 Netherworld 2.mp3" },
-  { title: "39 The Netherworld!", url: "BeetlejuiceJR/39 The Netherworld!.mp3" },
-  { title: "40 What I Know Now", url: "BeetlejuiceJR/40 What I Know Now.mp3" },
-  { title: "41 Klaxon", url: "BeetlejuiceJR/41 Klaxon.mp3" },
-  { title: "42 The Netherworld Chase", url: "BeetlejuiceJR/42 The Netherworld Chase.mp3" },
-  { title: "43 Home (Part 1)", url: "BeetlejuiceJR/43 Home (Part 1).mp3" },
-  { title: "44 Home (Part 2)", url: "BeetlejuiceJR/44 Home (Part 2).mp3" },
-  { title: "45 Back Home", url: "BeetlejuiceJR/45 Back Home.mp3" },
-  { title: "46 Here Comes The....", url: "BeetlejuiceJR/46 Here Comes The....mp3" },
-  { title: "47 Alive!", url: "BeetlejuiceJR/47 Alive!.mp3" },
-  { title: "48 Netherworld 3", url: "BeetlejuiceJR/48 Netherworld 3.mp3" },
-  { title: "49 The Wasteland", url: "BeetlejuiceJR/49 The Wasteland.mp3" },
-  { title: "50 Yeehaw!", url: "BeetlejuiceJR/50 Yeehaw!.mp3" },
-  { title: "51 Most Of All, Scarecrow", url: "BeetlejuiceJR/51 Most Of All, Scarecrow.mp3" },
-  { title: "52 Jump In The Line", url: "BeetlejuiceJR/52 Jump In The Line.mp3" },
-  { title: "53 Bows", url: "BeetlejuiceJR/53 Bows.mp3" },
-  { title: "54 Exit Music", url: "BeetlejuiceJR/54 Exit Music.mp3" }
+/* ── LIBRARY ── */
+const LIBRARY=[
+  {title:"01 Prologue: Invisible",url:"BeetlejuiceJR/01 Prologue_ Invisible.mp3"},
+  {title:"02 Beetlejuice Appears",url:"BeetlejuiceJR/02 Beetlejuice Appears.mp3"},
+  {title:"03 The Whole 'Being Dead' Thing",url:"BeetlejuiceJR/03 The Whole _Being Dead_ Thing.mp3"},
+  {title:"04 The Maitlands",url:"BeetlejuiceJR/04 The Maitlands.mp3"},
+  {title:"05 Phone Ring",url:"BeetlejuiceJR/05 Phone Ring.mp3"},
+  {title:"06 Ready, Set, Not Yet",url:"BeetlejuiceJR/06 Ready, Set, Not Yet.mp3"},
+  {title:"07 The Handbook",url:"BeetlejuiceJR/07 The Handbook.mp3"},
+  {title:"08 Shock",url:"BeetlejuiceJR/08 Shock.mp3"},
+  {title:"09 The Whole 'Being Dead' Thing (Part 2)",url:"BeetlejuiceJR/09 The Whole _Being Dead_ Thing (Part 2).mp3"},
+  {title:"10 The Whole 'Being Dead' Thing (Part 3)",url:"BeetlejuiceJR/10 The Whole _Being Dead_ Thing (Part 3).mp3"},
+  {title:"11 The Deetz's",url:"BeetlejuiceJR/11 The Deetz_s.mp3"},
+  {title:"12 Let's Clean Up",url:"BeetlejuiceJR/12 Let_s Clean Up.mp3"},
+  {title:"13 Dead Mom",url:"BeetlejuiceJR/13 Dead Mom.mp3"},
+  {title:"14 The Attic",url:"BeetlejuiceJR/14 The Attic.mp3"},
+  {title:"15 Sweat Lodge",url:"BeetlejuiceJR/15 Sweat Lodge.mp3"},
+  {title:"16 No Reason",url:"BeetlejuiceJR/16 No Reason.mp3"},
+  {title:"17 Ghosts",url:"BeetlejuiceJR/17 Ghosts.mp3"},
+  {title:"18 Mama",url:"BeetlejuiceJR/18 Mama.mp3"},
+  {title:"19 Let's Scare My Dad",url:"BeetlejuiceJR/19 Let_s Scare My Dad.mp3"},
+  {title:"20 Diamond Ring",url:"BeetlejuiceJR/20 Diamond Ring.mp3"},
+  {title:"21 Please Leave This House",url:"BeetlejuiceJR/21 Please Leave This House.mp3"},
+  {title:"22 Invisible (Reprise)",url:"BeetlejuiceJR/22 Invisible (Reprise).mp3"},
+  {title:"23 Say My Name",url:"BeetlejuiceJR/23 Say My Name.mp3"},
+  {title:"24 The Dinner Party",url:"BeetlejuiceJR/24 The Dinner Party.mp3"},
+  {title:"25 Dinner Bell",url:"BeetlejuiceJR/25 Dinner Bell.mp3"},
+  {title:"26 Day-O (The Banana Boat Song)",url:"BeetlejuiceJR/26 Day-O (The Banana Boat Song).mp3"},
+  {title:"27 Showtime!",url:"BeetlejuiceJR/27 Showtime!.mp3"},
+  {title:"28 Girl Scout",url:"BeetlejuiceJR/28 Girl Scout.mp3"},
+  {title:"29 That Beautiful Sound",url:"BeetlejuiceJR/29 That Beautiful Sound.mp3"},
+  {title:"30 The Handbook 2",url:"BeetlejuiceJR/30 The Handbook 2.mp3"},
+  {title:"31 The Attic 2",url:"BeetlejuiceJR/31 The Attic 2.mp3"},
+  {title:"32 Adam Opens The Book",url:"BeetlejuiceJR/32 Adam Opens The Book.mp3"},
+  {title:"33 Netherworld 1",url:"BeetlejuiceJR/33 Netherworld 1.mp3"},
+  {title:"34 A Very Deetz Return",url:"BeetlejuiceJR/34 A Very Deetz Return.mp3"},
+  {title:"35 Otho",url:"BeetlejuiceJR/35 Otho.mp3"},
+  {title:"36 The Handbook 3",url:"BeetlejuiceJR/36 The Handbook 3.mp3"},
+  {title:"37 The Séance",url:"BeetlejuiceJR/37 The S\u251C\u2514ance.mp3"},
+  {title:"38 Netherworld 2",url:"BeetlejuiceJR/38 Netherworld 2.mp3"},
+  {title:"39 The Netherworld!",url:"BeetlejuiceJR/39 The Netherworld!.mp3"},
+  {title:"40 What I Know Now",url:"BeetlejuiceJR/40 What I Know Now.mp3"},
+  {title:"41 Klaxon",url:"BeetlejuiceJR/41 Klaxon.mp3"},
+  {title:"42 The Netherworld Chase",url:"BeetlejuiceJR/42 The Netherworld Chase.mp3"},
+  {title:"43 Home (Part 1)",url:"BeetlejuiceJR/43 Home (Part 1).mp3"},
+  {title:"44 Home (Part 2)",url:"BeetlejuiceJR/44 Home (Part 2).mp3"},
+  {title:"45 Back Home",url:"BeetlejuiceJR/45 Back Home.mp3"},
+  {title:"46 Here Comes The....",url:"BeetlejuiceJR/46 Here Comes The....mp3"},
+  {title:"47 Alive!",url:"BeetlejuiceJR/47 Alive!.mp3"},
+  {title:"48 Netherworld 3",url:"BeetlejuiceJR/48 Netherworld 3.mp3"},
+  {title:"49 The Wasteland",url:"BeetlejuiceJR/49 The Wasteland.mp3"},
+  {title:"50 Yeehaw!",url:"BeetlejuiceJR/50 Yeehaw!.mp3"},
+  {title:"51 Most Of All, Scarecrow",url:"BeetlejuiceJR/51 Most Of All, Scarecrow.mp3"},
+  {title:"52 Jump In The Line",url:"BeetlejuiceJR/52 Jump In The Line.mp3"},
+  {title:"53 Bows",url:"BeetlejuiceJR/53 Bows.mp3"},
+  {title:"54 Exit Music",url:"BeetlejuiceJR/54 Exit Music.mp3"}
 ];
 
-/* ═══════════════════════════════════════════════════
-   STATE
-═══════════════════════════════════════════════════ */
-// Each cue: { title, url, mode:'auto'|'manual', vol:0-1, local?:bool }
-let cues = [];
-let current = 0;      // index of "active" cue (loaded / playing)
-let isPlaying = false;
-let loading = false;
-let loadedIndex = -1;
-let gap = 0;
-let gapTimer = null;
-const LOOP_MODES = ['off','track','all'];
-const LOOP_LABELS = ['Off','Track','All'];
-let loopMode = 0;
+/* ── STATE ── */
+let cues=[];
+let current=0, isPlaying=false, loading=false, loadedIndex=-1;
+let gap=0, gapTimer=null;
+const LOOP_LABELS=['Off','Track','All'];
+let loopMode=0;
+const localFileMap={};
+const sfxSlots=Array.from({length:10},()=>({name:'',url:'',filename:'',playMode:'restart',loop:false,activeAudios:[]}));
+let rescueTarget=null;
+let noteTargetIndex=-1;
 
-// Maps filename (e.g. "01 Prologue.mp3") → blob URL for locally-loaded folders
-const localFileMap = {};
-
-function isLocalMode(){ return Object.keys(localFileMap).length > 0; }
-function resolveUrl(cue){
-  if(cue.filename && localFileMap[cue.filename]) return localFileMap[cue.filename];
-  if(cue.local) return cue.url; // single-file blob still valid this session
-  return cue.url; // remote URL fallback
-}
-function isUnresolved(cue){
-  // A cue is unresolved if it has a filename (saved from local mode) but no blob URL yet
-  return !!(cue.filename && !localFileMap[cue.filename] && !cue.url.startsWith('blob:'));
-}
-
-/* ═══════════════════════════════════════════════════
-   WAVESURFER
-═══════════════════════════════════════════════════ */
-const ws = WaveSurfer.create({
-  container: '#waveform',
-  waveColor: '#2a3040',
-  progressColor: '#f59e0b',
-  cursorColor: '#f59e0b',
-  height: 56,
-  barWidth: 2,
-  barRadius: 2,
-  cursorWidth: 2,
-  responsive: true
+/* ── WAVESURFER ── */
+const ws=WaveSurfer.create({
+  container:'#waveform',waveColor:'#2a3040',progressColor:'#f59e0b',
+  cursorColor:'#f59e0b',height:48,barWidth:2,barRadius:2,cursorWidth:2,responsive:true
 });
 
-/* ═══════════════════════════════════════════════════
-   ELEMENTS
-═══════════════════════════════════════════════════ */
-const cueListEl = document.getElementById('cueList');
-const goBtn     = document.getElementById('goBtn');
-const nowName   = document.getElementById('nowName');
-const nextName  = document.getElementById('nextName');
-const nowMode   = document.getElementById('nowMode');
-const nextMode  = document.getElementById('nextMode');
-const timeCur   = document.getElementById('timeCurrent');
-const timeTot   = document.getElementById('timeTotal');
-const masterVol = document.getElementById('masterVol');
-const masterVolVal = document.getElementById('masterVolVal');
-const speedSlider  = document.getElementById('speedSlider');
-const speedVal     = document.getElementById('speedVal');
-const gapSlider    = document.getElementById('gapSlider');
-const gapVal       = document.getElementById('gapVal');
-const loopBtn      = document.getElementById('loopBtn');
+/* ── ELEMENTS ── */
+const cueListEl=document.getElementById('cueList');
+const goBtn=document.getElementById('goBtn');
+const nowName=document.getElementById('nowName');
+const nextName=document.getElementById('nextName');
+const nowNote=document.getElementById('nowNote');
+const nextNote=document.getElementById('nextNote');
+const nowMode=document.getElementById('nowMode');
+const nextMode=document.getElementById('nextMode');
+const prerollWrap=document.getElementById('prerollWrap');
+const prerollBar=document.getElementById('prerollBar');
+const timeCur=document.getElementById('timeCurrent');
+const timeTot=document.getElementById('timeTotal');
+const masterVol=document.getElementById('masterVol');
+const masterVolVal=document.getElementById('masterVolVal');
+const speedSlider=document.getElementById('speedSlider');
+const speedVal=document.getElementById('speedVal');
+const gapSlider=document.getElementById('gapSlider');
+const gapVal=document.getElementById('gapVal');
+const loopBtn=document.getElementById('loopBtn');
 
-/* ═══════════════════════════════════════════════════
-   HELPERS
-═══════════════════════════════════════════════════ */
-const fmt = s => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
-function clearGap(){ if(gapTimer){ clearTimeout(gapTimer); gapTimer=null; } }
-
-function toast(msg, dur=2200){
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  setTimeout(()=>el.classList.remove('show'), dur);
+/* ── HELPERS ── */
+const fmt=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+let toastTimer=null;
+function toast(msg,dur=2400,err=false){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.toggle('error',err); el.classList.add('show');
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),dur);
 }
 
-/* ═══════════════════════════════════════════════════
-   RENDER CUE LIST
-═══════════════════════════════════════════════════ */
+function clearGap(){
+  if(gapTimer){clearTimeout(gapTimer);gapTimer=null;}
+  stopPreroll();
+}
+
+// A cue is offline only if its URL is an empty string
+// (blob: = local loaded this session; non-empty non-blob = web URL; empty = needs folder)
+function isOffline(cue){ return cue && cue.url===''; }
+function isSFXOffline(slot){ return slot.filename && slot.url===''; }
+
+/* ── PREROLL ── */
+function startPreroll(ms){
+  stopPreroll();
+  if(ms<=0) return;
+  prerollWrap.classList.add('active');
+  prerollBar.style.transition='none';
+  prerollBar.style.width='100%';
+  prerollBar.getBoundingClientRect();
+  prerollBar.style.transition=`width ${ms}ms linear`;
+  prerollBar.style.width='0%';
+}
+function stopPreroll(){
+  prerollWrap.classList.remove('active');
+  prerollBar.style.transition='none';
+  prerollBar.style.width='100%';
+}
+
+/* ── VOLUME ── */
+function applyVolume(){
+  const master=parseFloat(masterVol.value);
+  const cv=(cues[loadedIndex]||{vol:1}).vol;
+  ws.setVolume(master*cv);
+}
+
+/* ── STATUS ── */
+function updateStatus(){
+  const nc=cues[current]||null, nx=cues[current+1]||null;
+  nowName.textContent=nc?nc.title:'—';
+  if(nc&&nc.note){nowNote.textContent=nc.note;nowNote.style.display='block';}
+  else nowNote.style.display='none';
+  nowMode.textContent=nc?(isOffline(nc)?'⚠ OFFLINE — locate file':nc.mode==='auto'?'● Auto-advance':'● Waiting for GO'):'';
+  nextName.textContent=nx?nx.title:(cues.length?'End of show':'—');
+  if(nx&&nx.note){nextNote.textContent=nx.note;nextNote.style.display='block';}
+  else nextNote.style.display='none';
+  nextMode.textContent=nx?(isOffline(nx)?'⚠ OFFLINE':nx.mode==='auto'?'Auto':'Manual GO'):'';
+}
+
+/* ── OFFLINE BANNER ── */
+function showOfflineBanner(files){
+  if(!files.length){hideBanner();return;}
+  document.getElementById('offlineFileList').textContent=
+    files.slice(0,10).join(' · ')+(files.length>10?` · +${files.length-10} more`:'');
+  document.getElementById('offlineBanner').classList.add('visible');
+}
+function hideBanner(){document.getElementById('offlineBanner').classList.remove('visible');}
+document.getElementById('offlineDismiss').addEventListener('click',hideBanner);
+
+/* ── RENDER CUES ── */
 function renderCues(){
-  cueListEl.innerHTML = '';
-  cues.forEach((c, i) => {
-    const done = i < current;
-    const isNow = i === current;
-    const isNext = i === current + 1;
-    const li = document.createElement('li');
-    li.className = 'cue-row' +
-      (isNow ? ' is-now' : '') +
-      (isNext ? ' is-next' : '') +
-      (done ? ' is-done' : '') +
-      (isUnresolved(c) ? ' is-unresolved' : '');
-    li.dataset.index = i;
+  cueListEl.innerHTML='';
+  cues.forEach((c,i)=>{
+    const done=i<current,isNow=i===current,isNext=i===current+1;
+    const offline=isOffline(c),isLocal=c.url.startsWith('blob:');
+    const li=document.createElement('li');
+    li.className='cue-row'+(isNow?' is-now':'')+(isNext?' is-next':'')+(done?' is-done':'')+(offline?' is-offline':'');
+    li.dataset.index=i;
 
-    // cue number
-    const num = document.createElement('span');
-    num.className = 'cue-num';
-    num.textContent = String(i+1).padStart(2,'0');
+    // num
+    const num=document.createElement('span');
+    num.className='cue-num';
+    num.textContent=String(i+1).padStart(2,'0');
 
-    // name
-    const name = document.createElement('span');
-    name.className = 'cue-name';
-    name.textContent = c.title;
-
-    // mode toggle
-    const modeDiv = document.createElement('div');
-    modeDiv.className = 'cue-mode';
-    const pill = document.createElement('span');
-    pill.className = 'mode-pill ' + c.mode;
-    pill.textContent = c.mode === 'auto' ? 'AUTO' : 'MAN';
-    pill.title = 'Click to toggle Auto/Manual';
-    pill.addEventListener('click', e => {
-      e.stopPropagation();
-      cues[i].mode = cues[i].mode === 'auto' ? 'manual' : 'auto';
-      renderCues();
-      updateStatus();
-    });
-    modeDiv.appendChild(pill);
-
-    // volume
-    const volDiv = document.createElement('div');
-    volDiv.className = 'cue-vol';
-    const volSlider = document.createElement('input');
-    volSlider.type = 'range';
-    volSlider.min = 0; volSlider.max = 1; volSlider.step = 0.05;
-    volSlider.value = c.vol;
-    const volLbl = document.createElement('span');
-    volLbl.className = 'cue-vol-label';
-    volLbl.textContent = Math.round(c.vol * 100) + '%';
-    volSlider.addEventListener('input', e => {
-      e.stopPropagation();
-      cues[i].vol = parseFloat(e.target.value);
-      volLbl.textContent = Math.round(cues[i].vol * 100) + '%';
-      if(i === loadedIndex) applyVolume();
-    });
-    volDiv.append(volSlider, volLbl);
-
-    // delete
-    const delDiv = document.createElement('div');
-    delDiv.className = 'cue-del';
-    const delBtn = document.createElement('button');
-    delBtn.className = 'del-btn';
-    delBtn.textContent = '✕';
-    delBtn.title = 'Remove cue';
-    delBtn.addEventListener('click', e => { e.stopPropagation(); removeCue(i); });
-    delDiv.appendChild(delBtn);
+    // name+note wrap
+    const nw=document.createElement('div');
+    nw.className='cue-name-wrap';
+    const ne=document.createElement('span');
+    ne.className='cue-name'; ne.textContent=c.title; ne.title='Double-click to rename · Right-click to edit note';
+    ne.addEventListener('dblclick',e=>{e.stopPropagation();startRename(i,ne,c);});
+    nw.appendChild(ne);
+    if(c.note){
+      const np=document.createElement('span');
+      np.className='cue-note-preview'; np.textContent=c.note;
+      nw.appendChild(np);
+    }
+    if(offline){
+      const rb=document.createElement('button');
+      rb.className='rescue-btn'; rb.textContent='Locate file'; rb.title='Find: '+(c.filename||c.title);
+      rb.addEventListener('click',e=>{e.stopPropagation();openRescue('cue',i);});
+      nw.appendChild(rb);
+    }
+    nw.addEventListener('contextmenu',e=>{e.preventDefault();openNoteModal(i);});
 
     // source icon
-    const srcDiv = document.createElement('div');
-    srcDiv.className = 'cue-src';
-    const isLocal = c.url.startsWith('blob:');
-    const unresolved = isUnresolved(c);
-    srcDiv.innerHTML = unresolved
-      ? `<svg class="src-icon" viewBox="0 0 16 16" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" title="File not linked — load folder"><circle cx="8" cy="8" r="6"/><line x1="8" y1="5" x2="8" y2="8"/><circle cx="8" cy="11" r=".6" fill="#f59e0b" stroke="none"/></svg>`
-      : isLocal
-      ? `<svg class="src-icon" viewBox="0 0 16 16" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" title="Local file"><rect x="2" y="3" width="12" height="9" rx="1.5"/><path d="M5 12v1h6v-1"/><path d="M2 9h12"/></svg>`
-      : `<svg class="src-icon" viewBox="0 0 16 16" fill="none" stroke="var(--next)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" title="Streaming from web"><circle cx="8" cy="8" r="6"/><path d="M8 2c-2 2-2 8 0 12M8 2c2 2 2 8 0 12M2 8h12"/></svg>`;
+    const sd=document.createElement('div'); sd.className='cue-src';
+    sd.innerHTML=offline
+      ?`<svg class="src-icon" viewBox="0 0 16 16" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round" title="Offline"><circle cx="8" cy="8" r="6"/><line x1="8" y1="5" x2="8" y2="8.5"/><circle cx="8" cy="11" r=".65" fill="#ef4444" stroke="none"/></svg>`
+      :isLocal
+      ?`<svg class="src-icon" viewBox="0 0 16 16" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" title="Local file"><rect x="2" y="3" width="12" height="9" rx="1.5"/><path d="M5 12v1h6v-1"/><path d="M2 9h12"/></svg>`
+      :`<svg class="src-icon" viewBox="0 0 16 16" fill="none" stroke="var(--next)" stroke-width="1.5" stroke-linecap="round" title="Web"><circle cx="8" cy="8" r="6"/><path d="M8 2c-2 2-2 8 0 12M8 2c2 2 2 8 0 12M2 8h12"/></svg>`;
 
-    li.append(num, name, srcDiv, modeDiv, volDiv, delDiv);
+    // mode
+    const md=document.createElement('div'); md.className='cue-mode';
+    const pill=document.createElement('span');
+    pill.className='mode-pill '+c.mode; pill.textContent=c.mode==='auto'?'AUTO':'MAN';
+    pill.addEventListener('click',e=>{e.stopPropagation();cues[i].mode=cues[i].mode==='auto'?'manual':'auto';renderCues();updateStatus();});
+    md.appendChild(pill);
 
-    // click to jump
-    li.addEventListener('click', () => jumpTo(i, false));
-    li.addEventListener('dblclick', () => jumpTo(i, true));
+    // vol
+    const vd=document.createElement('div'); vd.className='cue-vol';
+    const vs=document.createElement('input'); vs.type='range';vs.min=0;vs.max=1;vs.step=0.05;vs.value=c.vol;
+    const vl=document.createElement('span'); vl.className='cue-vol-label'; vl.textContent=Math.round(c.vol*100)+'%';
+    vs.addEventListener('input',e=>{e.stopPropagation();cues[i].vol=parseFloat(e.target.value);vl.textContent=Math.round(cues[i].vol*100)+'%';if(i===loadedIndex)applyVolume();});
+    vd.append(vs,vl);
 
+    // del
+    const dd=document.createElement('div'); dd.className='cue-del';
+    const db=document.createElement('button'); db.className='del-btn'; db.textContent='✕';
+    db.addEventListener('click',e=>{e.stopPropagation();removeCue(i);});
+    dd.appendChild(db);
+
+    li.append(num,nw,sd,md,vd,dd);
+    li.addEventListener('click',e=>{if(e.target.closest('.del-btn,.rescue-btn,.mode-pill,.cue-vol,.cue-name'))return;jumpTo(i,false);});
+    li.addEventListener('dblclick',e=>{if(e.target.closest('.del-btn,.rescue-btn,.mode-pill,.cue-vol,.cue-name'))return;jumpTo(i,true);});
     cueListEl.appendChild(li);
   });
-
-  // scroll active into view
-  const activeEl = cueListEl.querySelector('.is-now');
-  if(activeEl) activeEl.scrollIntoView({ block:'nearest', behavior:'smooth' });
+  const ae=cueListEl.querySelector('.is-now');
+  if(ae) ae.scrollIntoView({block:'nearest',behavior:'smooth'});
 }
 
-/* ═══════════════════════════════════════════════════
-   STATUS PANEL
-═══════════════════════════════════════════════════ */
-function updateStatus(){
-  const nowCue  = cues[current] || null;
-  const nextCue = cues[current+1] || null;
-  nowName.textContent  = nowCue  ? nowCue.title  : '—';
-  nextName.textContent = nextCue ? nextCue.title : (cues.length ? 'End of show' : '—');
-  nowMode.textContent  = nowCue  ? (nowCue.mode === 'auto' ? '● Auto-advance after this cue' : '● Waiting for GO') : '';
-  nextMode.textContent = nextCue ? (nextCue.mode === 'auto' ? 'Auto' : 'Manual GO') : '';
+/* ── INLINE RENAME ── */
+function startRename(i,nameEl,cue){
+  const inp=document.createElement('input');
+  inp.className='cue-name-input'; inp.value=cue.title;
+  nameEl.replaceWith(inp); inp.focus(); inp.select();
+  const commit=()=>{const v=inp.value.trim();if(v)cues[i].title=v;renderCues();updateStatus();};
+  inp.addEventListener('blur',commit);
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();inp.blur();}
+    if(e.key==='Escape'){inp.value=cue.title;inp.blur();}
+    e.stopPropagation();
+  });
 }
 
-/* ═══════════════════════════════════════════════════
-   VOLUME
-═══════════════════════════════════════════════════ */
-function applyVolume(){
-  const master = parseFloat(masterVol.value);
-  const cueV   = (cues[loadedIndex]||{vol:1}).vol;
-  ws.setVolume(master * cueV);
+/* ── NOTE MODAL ── */
+function openNoteModal(i){
+  noteTargetIndex=i;
+  document.getElementById('noteModalCueName').textContent=cues[i].title;
+  document.getElementById('noteTextarea').value=cues[i].note||'';
+  document.getElementById('noteModal').classList.add('open');
+  setTimeout(()=>document.getElementById('noteTextarea').focus(),40);
+}
+function closeNoteModal(){document.getElementById('noteModal').classList.remove('open');noteTargetIndex=-1;}
+document.getElementById('noteSave').addEventListener('click',()=>{
+  if(noteTargetIndex>=0){cues[noteTargetIndex].note=document.getElementById('noteTextarea').value.trim();renderCues();updateStatus();}
+  closeNoteModal();
+});
+document.getElementById('noteCancel').addEventListener('click',closeNoteModal);
+document.getElementById('noteModal').addEventListener('click',e=>{if(e.target===document.getElementById('noteModal'))closeNoteModal();});
+
+/* ── RESCUE ── */
+function openRescue(type,index){rescueTarget={type,index};document.getElementById('rescuePicker').click();}
+document.getElementById('rescuePicker').addEventListener('change',e=>{
+  const f=e.target.files?.[0];if(!f||!rescueTarget)return;
+  const url=URL.createObjectURL(f);
+  localFileMap[f.name]=url;
+  if(rescueTarget.type==='cue'){
+    cues[rescueTarget.index].url=url;cues[rescueTarget.index].filename=f.name;
+    renderCues();updateStatus();
+    if(rescueTarget.index===current)loadCue(current,false);
+  }else{
+    sfxSlots[rescueTarget.index].url=url;sfxSlots[rescueTarget.index].filename=f.name;
+    renderSFX();
+  }
+  toast('Located: '+f.name);rescueTarget=null;e.target.value='';
+});
+
+/* ── FLASH OFFLINE ── */
+function flashOffline(i){
+  goBtn.classList.remove('offline-flash');void goBtn.offsetWidth;goBtn.classList.add('offline-flash');
+  setTimeout(()=>goBtn.classList.remove('offline-flash'),500);
+  const rows=cueListEl.querySelectorAll('.cue-row');
+  if(rows[i]){rows[i].classList.remove('flash-offline');void rows[i].offsetWidth;rows[i].classList.add('flash-offline');setTimeout(()=>rows[i].classList.remove('flash-offline'),600);}
 }
 
-/* ═══════════════════════════════════════════════════
-   LOAD / PLAY CUE
-═══════════════════════════════════════════════════ */
-function loadCue(i, autoplay=false){
-  if(!cues.length) return;
-  if(i < 0 || i >= cues.length) return;
+/* ── LOAD CUE ── */
+function loadCue(i,autoplay=false){
+  if(!cues.length||i<0||i>=cues.length)return;
+  const cue=cues[i];
+  if(isOffline(cue)){flashOffline(i);toast('Cue is offline — use Locate File or Load Folder',3500,true);return;}
   clearGap();
-  current = i;
-  loading = true;
-  loadedIndex = -1;
-  timeCur.textContent = '0:00';
-  timeTot.textContent = '/ 0:00';
-  renderCues();
-  updateStatus();
-  ws.load(resolveUrl(cues[i]));
-  const onReady = () => {
-    ws.un('ready', onReady);
-    loading = false;
-    loadedIndex = i;
+  current=i;loading=true;loadedIndex=-1;
+  timeCur.textContent='0:00';timeTot.textContent='/ 0:00';
+  renderCues();updateStatus();
+  ws.load(cue.url);
+  const onReady=()=>{
+    ws.un('ready',onReady);loading=false;loadedIndex=i;
     ws.setPlaybackRate(parseFloat(speedSlider.value));
     applyVolume();
-    timeTot.textContent = '/ ' + fmt(ws.getDuration()||0);
-    if(autoplay){ ws.play(); isPlaying=true; }
+    timeTot.textContent='/ '+fmt(ws.getDuration()||0);
+    if(autoplay){ws.play();isPlaying=true;}
     updateGoBtn();
   };
-  ws.on('ready', onReady);
+  ws.on('ready',onReady);
 }
+function jumpTo(i,play=false){clearGap();loadCue(i,play);}
 
-function jumpTo(i, play=false){
-  clearGap();
-  loadCue(i, play);
-}
-
-/* ═══════════════════════════════════════════════════
-   GO LOGIC
-═══════════════════════════════════════════════════ */
+/* ── GO / ADVANCE ── */
 function go(){
-  if(!cues.length) return;
-  if(loading) return;
-
-  // If nothing has played yet (first GO of the show), play the current cue
-  if(loadedIndex === -1){
-    loadCue(current, true);
-    return;
+  if(!cues.length||loading)return;
+  if(loadedIndex===-1){
+    const c=cues[current];
+    if(isOffline(c)){flashOffline(current);toast('Cue is offline — load folder first',3000,true);return;}
+    loadCue(current,true);return;
   }
-
-  // Always advance to the next cue and play it
   advance();
 }
 
 function advance(){
-  // Move to next cue and play
   clearGap();
-  if(loopMode === 1){ ws.seekTo(0); ws.play(); return; }
-  if(current < cues.length - 1){
-    loadCue(current + 1, true);
-  } else if(loopMode === 2){
-    loadCue(0, true);
-  } else {
-    toast('End of show');
-    isPlaying = false;
-    updateGoBtn();
+  if(loopMode===1){ws.seekTo(0);ws.play();return;}
+  const nx=current+1;
+  if(nx<cues.length){
+    if(isOffline(cues[nx])){flashOffline(nx);toast('Next cue is offline — load folder first',3000,true);return;}
+    loadCue(nx,true);
+  }else if(loopMode===2&&cues.length>0){
+    loadCue(0,true);
+  }else{
+    toast('End of show');isPlaying=false;updateGoBtn();
   }
 }
 
-function updateGoBtn(){
-  if(ws.isPlaying()){
-    goBtn.classList.add('playing');
-  } else {
-    goBtn.classList.remove('playing');
+function updateGoBtn(){goBtn.classList.toggle('playing',ws.isPlaying());}
+
+/* ── WAVESURFER EVENTS ── */
+ws.on('play',()=>{isPlaying=true;updateGoBtn();});
+ws.on('pause',()=>{isPlaying=false;updateGoBtn();});
+ws.on('audioprocess',()=>{const c=ws.getCurrentTime()||0,d=ws.getDuration()||0;timeCur.textContent=fmt(c);if(d)timeTot.textContent='/ '+fmt(d);});
+ws.on('seek',()=>{timeCur.textContent=fmt(ws.getCurrentTime()||0);});
+ws.on('finish',()=>{
+  isPlaying=false;updateGoBtn();clearGap();
+  const c=cues[current];if(!c)return;
+  if(loopMode===1){ws.seekTo(0);ws.play();return;}
+  if(c.mode==='auto'){
+    if(gap>0)startPreroll(gap*1000);
+    gapTimer=setTimeout(()=>{stopPreroll();advance();},gap*1000);
   }
-}
-
-/* ═══════════════════════════════════════════════════
-   WAVESURFER EVENTS
-═══════════════════════════════════════════════════ */
-ws.on('play',  () => { isPlaying=true;  updateGoBtn(); });
-ws.on('pause', () => { isPlaying=false; updateGoBtn(); });
-ws.on('audioprocess', () => {
-  const c = ws.getCurrentTime()||0;
-  const d = ws.getDuration()||0;
-  timeCur.textContent = fmt(c);
-  if(d) timeTot.textContent = '/ ' + fmt(d);
-});
-ws.on('seek', () => {
-  timeCur.textContent = fmt(ws.getCurrentTime()||0);
-});
-ws.on('finish', () => {
-  isPlaying = false;
-  updateGoBtn();
-  clearGap();
-  const c = cues[current];
-  if(!c) return;
-  if(loopMode === 1){ ws.seekTo(0); ws.play(); return; }
-  if(c.mode === 'auto'){
-    gapTimer = setTimeout(()=>advance(), gap*1000);
-  }
-  // manual: do nothing, wait for GO
 });
 
-/* ═══════════════════════════════════════════════════
-   TRANSPORT BUTTONS
-═══════════════════════════════════════════════════ */
-goBtn.addEventListener('click', go);
-
-document.getElementById('btnStop').addEventListener('click', () => {
-  clearGap();
-  ws.pause();
-  ws.seekTo(0);
-  isPlaying = false;
-  updateGoBtn();
-  timeCur.textContent = '0:00';
+/* ── TRANSPORT ── */
+goBtn.addEventListener('click',go);
+document.getElementById('btnStop').addEventListener('click',()=>{clearGap();ws.pause();ws.seekTo(0);isPlaying=false;updateGoBtn();timeCur.textContent='0:00';});
+document.getElementById('btnPrev').addEventListener('click',()=>{
+  if(!cues.length)return;clearGap();
+  if((ws.getCurrentTime()||0)>2){ws.seekTo(0);return;}
+  if(current>0)loadCue(current-1,ws.isPlaying());
+  else if(loopMode===2)loadCue(cues.length-1,ws.isPlaying());
 });
-
-document.getElementById('btnPrev').addEventListener('click', () => {
-  if(!cues.length) return;
-  clearGap();
-  if((ws.getCurrentTime()||0) > 2){
-    ws.seekTo(0); return;
-  }
-  if(current > 0) loadCue(current-1, ws.isPlaying());
-  else if(loopMode===2) loadCue(cues.length-1, ws.isPlaying());
-});
-
-document.getElementById('btnPanic').addEventListener('click', panic);
-
 function panic(){
-  clearGap();
-  ws.pause();
-  ws.setVolume(0);
-  isPlaying = false;
-  updateGoBtn();
-  toast('PANIC — audio silenced');
-  // restore volume after a moment so operator can recover
-  setTimeout(()=>{
-    applyVolume();
-  }, 100);
+  clearGap();ws.pause();ws.setVolume(0);
+  sfxSlots.forEach(s=>{s.activeAudios.forEach(a=>{a.pause();a.currentTime=0;});s.activeAudios=[];});
+  isPlaying=false;updateGoBtn();renderSFX();
+  toast('PANIC — all audio silenced',2500,true);
+  setTimeout(()=>applyVolume(),150);
 }
+document.getElementById('btnPanic').addEventListener('click',panic);
 
-/* ═══════════════════════════════════════════════════
-   GLOBAL CONTROLS
-═══════════════════════════════════════════════════ */
-masterVol.addEventListener('input', () => {
-  masterVolVal.textContent = Math.round(parseFloat(masterVol.value)*100) + '%';
-  applyVolume();
-});
-speedSlider.addEventListener('input', () => {
-  const v = parseFloat(speedSlider.value);
-  speedVal.textContent = v.toFixed(2) + '×';
-  ws.setPlaybackRate(v);
-});
-gapSlider.addEventListener('input', () => {
-  gap = parseFloat(gapSlider.value);
-  gapVal.textContent = gap.toFixed(1) + 's';
-});
-loopBtn.addEventListener('click', () => {
-  loopMode = (loopMode+1) % 3;
-  loopBtn.textContent = LOOP_LABELS[loopMode];
-  loopBtn.classList.toggle('active', loopMode !== 0);
-});
+/* ── CONTROLS ── */
+masterVol.addEventListener('input',()=>{masterVolVal.textContent=Math.round(parseFloat(masterVol.value)*100)+'%';applyVolume();});
+speedSlider.addEventListener('input',()=>{const v=parseFloat(speedSlider.value);speedVal.textContent=v.toFixed(2)+'×';ws.setPlaybackRate(v);});
+gapSlider.addEventListener('input',()=>{gap=parseFloat(gapSlider.value);gapVal.textContent=gap.toFixed(1)+'s';});
+loopBtn.addEventListener('click',()=>{loopMode=(loopMode+1)%3;loopBtn.textContent=LOOP_LABELS[loopMode];loopBtn.classList.toggle('active',loopMode!==0);});
 
-/* ═══════════════════════════════════════════════════
-   REMOVE CUE
-═══════════════════════════════════════════════════ */
-function removeCue(i){
-  if(i < 0 || i >= cues.length) return;
-  const wasPlaying = ws.isPlaying();
-  const removingActive = i === current;
-  cues.splice(i, 1);
-  if(cues.length === 0){
-    current = 0; loadedIndex = -1;
-    ws.pause();
-    renderCues(); updateStatus(); return;
-  }
-  if(removingActive){
-    current = Math.min(i, cues.length-1);
-    loadCue(current, wasPlaying);
-  } else {
-    if(i < current) current--;
-    if(i < loadedIndex) loadedIndex--;
-    renderCues(); updateStatus();
-  }
-}
+/* ── SFX ── */
+function renderSFX(){
+  const grid=document.getElementById('sfxGrid'); grid.innerHTML='';
+  sfxSlots.forEach((slot,i)=>{
+    const hasFile=!!slot.url||!!slot.filename;
+    const isOff=isSFXOffline(slot);
+    const isActive=slot.activeAudios.length>0;
+    const div=document.createElement('div');
+    div.className='sfx-slot'+(hasFile?' has-file':'')+(isActive?' is-playing':'')+(isOff?' is-offline':'');
 
-/* ═══════════════════════════════════════════════════
-   KEYBOARD
-═══════════════════════════════════════════════════ */
-document.addEventListener('keydown', e => {
-  const tag = document.activeElement.tagName;
-  if(['INPUT','TEXTAREA','SELECT'].includes(tag)) return;
-  switch(e.key){
-    case ' ':
-      e.preventDefault();
-      go();
-      break;
-    case 'ArrowRight':
-      e.preventDefault();
-      clearGap(); advance(); break;
-    case 'ArrowLeft':
-      e.preventDefault();
-      clearGap();
-      if((ws.getCurrentTime()||0) > 2){ ws.seekTo(0); break; }
-      if(current > 0) loadCue(current-1, ws.isPlaying());
-      break;
-    case 's': case 'S':
-      clearGap(); ws.pause(); ws.seekTo(0); isPlaying=false; updateGoBtn();
-      timeCur.textContent='0:00'; break;
-    case 'Escape':
-      panic(); break;
-    case 'm': case 'M':
-      if(cues[current]){
-        cues[current].mode = cues[current].mode==='auto'?'manual':'auto';
-        renderCues(); updateStatus();
-        toast('Cue mode: ' + cues[current].mode.toUpperCase());
+    const key=document.createElement('span'); key.className='sfx-key'; key.textContent=i;
+    const nm=document.createElement('div');
+
+    if(!slot.name&&!slot.filename){
+      nm.className='sfx-empty'; nm.textContent='click to assign';
+      div.addEventListener('click',()=>openSFXPicker(i));
+    }else{
+      nm.className='sfx-name'; nm.textContent=slot.name||slot.filename;
+      nm.title=slot.name||slot.filename;
+      div.addEventListener('click',()=>fireSFX(i));
+    }
+
+    const ctrl=document.createElement('div'); ctrl.className='sfx-controls';
+    if(hasFile){
+      const mb=document.createElement('button'); mb.className='sfx-mini-btn';
+      mb.textContent=slot.playMode==='overlap'?'OVR':'RST';
+      mb.title=slot.playMode==='overlap'?'Overlap — press again to switch':'Restart — press again to switch';
+      mb.addEventListener('click',e=>{e.stopPropagation();sfxSlots[i].playMode=sfxSlots[i].playMode==='overlap'?'restart':'overlap';renderSFX();});
+
+      const lb=document.createElement('button'); lb.className='sfx-mini-btn'+(slot.loop?' active':'');
+      lb.textContent='LOOP';
+      lb.addEventListener('click',e=>{e.stopPropagation();sfxSlots[i].loop=!sfxSlots[i].loop;sfxSlots[i].activeAudios.forEach(a=>a.loop=sfxSlots[i].loop);renderSFX();});
+
+      ctrl.append(mb,lb);
+
+      if(isOff){
+        const rb=document.createElement('button'); rb.className='sfx-mini-btn'; rb.textContent='LOCATE';
+        rb.addEventListener('click',e=>{e.stopPropagation();openRescue('sfx',i);});
+        ctrl.appendChild(rb);
       }
+
+      const clr=document.createElement('button'); clr.className='sfx-clear'; clr.textContent='✕'; clr.title='Remove';
+      clr.addEventListener('click',e=>{
+        e.stopPropagation();
+        sfxSlots[i].activeAudios.forEach(a=>{a.pause();a.currentTime=0;});
+        sfxSlots[i]={name:'',url:'',filename:'',playMode:'restart',loop:false,activeAudios:[]};
+        renderSFX();
+      });
+      div.appendChild(clr);
+    }
+
+    div.append(key,nm,ctrl); grid.appendChild(div);
+  });
+
+  // update print section
+  const rows=document.getElementById('sfxPrintRows');
+  if(rows){
+    rows.innerHTML='';
+    sfxSlots.forEach((s,i)=>{
+      if(s.name||s.filename){
+        const r=document.createElement('div'); r.className='sfx-print-row';
+        r.textContent=`[${i}] ${s.name||s.filename} — ${s.playMode.toUpperCase()}${s.loop?' LOOP':''}`;
+        rows.appendChild(r);
+      }
+    });
+  }
+}
+
+function openSFXPicker(i){
+  const tmp=document.createElement('input'); tmp.type='file'; tmp.accept='audio/*'; tmp.style.display='none';
+  tmp.addEventListener('change',e=>{
+    const f=e.target.files?.[0];if(!f)return;
+    const url=URL.createObjectURL(f);
+    localFileMap[f.name]=url;
+    sfxSlots[i].url=url; sfxSlots[i].filename=f.name;
+    if(!sfxSlots[i].name) sfxSlots[i].name=f.name.replace(/\.[^.]+$/,'');
+    renderSFX(); document.body.removeChild(tmp);
+  });
+  document.body.appendChild(tmp); tmp.click();
+}
+
+function fireSFX(i){
+  const s=sfxSlots[i];
+  if(!s.url&&!s.filename)return;
+  if(s.url===''){toast('SFX '+i+' offline — locate file',2500,true);return;}
+  if(!s.url){toast('SFX '+i+': no audio loaded',2000,true);return;}
+  // loop toggle off
+  if(s.loop&&s.activeAudios.length>0){
+    s.activeAudios.forEach(a=>{a.pause();a.currentTime=0;}); s.activeAudios=[]; renderSFX(); return;
+  }
+  // restart mode
+  if(s.playMode==='restart'&&s.activeAudios.length>0){
+    s.activeAudios.forEach(a=>{a.pause();a.currentTime=0;}); s.activeAudios=[];
+  }
+  const audio=new Audio(s.url);
+  audio.loop=s.loop; audio.volume=parseFloat(masterVol.value);
+  audio.play().catch(()=>toast('SFX '+i+' playback failed',2000,true));
+  s.activeAudios.push(audio); renderSFX();
+  if(!s.loop){
+    audio.addEventListener('ended',()=>{s.activeAudios=s.activeAudios.filter(a=>a!==audio);renderSFX();});
+  }
+}
+
+/* ── REMOVE CUE ── */
+function removeCue(i){
+  if(i<0||i>=cues.length)return;
+  const wasPlaying=ws.isPlaying(),removingActive=i===current;
+  cues.splice(i,1);
+  if(cues.length===0){current=0;loadedIndex=-1;ws.pause();renderCues();updateStatus();return;}
+  if(removingActive){current=Math.min(i,cues.length-1);loadCue(current,wasPlaying);}
+  else{if(i<current)current--;if(i<loadedIndex)loadedIndex--;renderCues();updateStatus();}
+}
+
+/* ── KEYBOARD ── */
+document.addEventListener('keydown',e=>{
+  const tag=document.activeElement.tagName;
+  const inText=['INPUT','TEXTAREA','SELECT'].includes(tag);
+  if(!inText&&/^[0-9]$/.test(e.key)){e.preventDefault();fireSFX(parseInt(e.key));return;}
+  if(inText)return;
+  switch(e.key){
+    case ' ':e.preventDefault();go();break;
+    case 'ArrowRight':e.preventDefault();clearGap();advance();break;
+    case 'ArrowLeft':
+      e.preventDefault();clearGap();
+      if((ws.getCurrentTime()||0)>2){ws.seekTo(0);break;}
+      if(current>0)loadCue(current-1,ws.isPlaying());
+      else if(loopMode===2)loadCue(cues.length-1,ws.isPlaying());
       break;
-    case 'l': case 'L':
-      loopMode = (loopMode+1)%3;
-      loopBtn.textContent = LOOP_LABELS[loopMode];
-      loopBtn.classList.toggle('active', loopMode!==0);
-      toast('Loop: ' + LOOP_LABELS[loopMode]);
-      break;
+    case 's':case 'S':clearGap();ws.pause();ws.seekTo(0);isPlaying=false;updateGoBtn();timeCur.textContent='0:00';break;
+    case 'p':case 'P':if(ws.isPlaying())ws.pause();else if(loadedIndex>=0)ws.play();break;
+    case 'Escape':panic();break;
+    case 'm':case 'M':
+      if(cues[current]){cues[current].mode=cues[current].mode==='auto'?'manual':'auto';renderCues();updateStatus();toast('Mode: '+cues[current].mode.toUpperCase());}break;
+    case 'n':case 'N':if(cues[current])openNoteModal(current);break;
+    case 'l':case 'L':
+      loopMode=(loopMode+1)%3;loopBtn.textContent=LOOP_LABELS[loopMode];loopBtn.classList.toggle('active',loopMode!==0);toast('Loop: '+LOOP_LABELS[loopMode]);break;
   }
 });
 
-/* ═══════════════════════════════════════════════════
-   LIBRARY MODAL
-═══════════════════════════════════════════════════ */
+/* ── LIBRARY MODAL ── */
 function openLibrary(){
-  const body = document.getElementById('libBody');
-  body.innerHTML = '';
-  LIBRARY.forEach((t, i) => {
-    const row = document.createElement('label');
-    row.className = 'lib-item';
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.dataset.i = i;
-    const nm = document.createElement('span');
-    nm.className = 'lib-item-name';
-    nm.textContent = t.title;
-    row.append(cb, nm);
-    body.appendChild(row);
+  const body=document.getElementById('libBody'); body.innerHTML='';
+  LIBRARY.forEach((t,i)=>{
+    const row=document.createElement('label'); row.className='lib-item';
+    const cb=document.createElement('input'); cb.type='checkbox'; cb.dataset.i=i;
+    const nm=document.createElement('span'); nm.className='lib-item-name'; nm.textContent=t.title;
+    row.append(cb,nm); body.appendChild(row);
   });
   document.getElementById('libraryModal').classList.add('open');
 }
-function closeLibrary(){
-  document.getElementById('libraryModal').classList.remove('open');
-}
-document.getElementById('btnLoadShow').addEventListener('click', () => {
-  if(cues.length && !confirm('Replace current cue list with Beetlejuice JR?')) return;
-  clearGap();
-  ws.pause();
-  cues = LIBRARY.map(t => ({ title: t.title, url: t.url, filename: t.url.split('/').pop(), mode: 'manual', vol: 1 }));
-  current = 0; loadedIndex = -1; isPlaying = false;
-  updateGoBtn(); renderCues(); updateStatus();
-  toast('Beetlejuice JR loaded — ' + cues.length + ' cues');
+function closeLibrary(){document.getElementById('libraryModal').classList.remove('open');}
+
+document.getElementById('btnLoadShow').addEventListener('click',()=>{
+  if(cues.length&&!confirm('Replace current cue list with Beetlejuice JR?'))return;
+  clearGap();ws.pause();
+  cues=LIBRARY.map(t=>({title:t.title,url:t.url,filename:t.url.split('/').pop(),mode:'manual',vol:1,note:''}));
+  current=0;loadedIndex=-1;isPlaying=false;
+  updateGoBtn();renderCues();updateStatus();toast('Beetlejuice JR loaded — '+cues.length+' cues');
+});
+document.getElementById('btnLibrary').addEventListener('click',openLibrary);
+document.getElementById('modalClose').addEventListener('click',closeLibrary);
+document.getElementById('modalCancel').addEventListener('click',closeLibrary);
+document.getElementById('modalAdd').addEventListener('click',()=>{
+  const checks=document.querySelectorAll('#libBody input:checked'); let added=0;
+  checks.forEach(cb=>{const t=LIBRARY[cb.dataset.i];cues.push({title:t.title,url:t.url,filename:t.url.split('/').pop(),mode:'manual',vol:1,note:''});added++;});
+  closeLibrary();if(added){renderCues();updateStatus();toast(added+' cue(s) added');}
+});
+document.getElementById('libraryModal').addEventListener('click',e=>{if(e.target===document.getElementById('libraryModal'))closeLibrary();});
+
+/* ── LOCAL FILE ── */
+document.getElementById('btnAddLocal').addEventListener('click',()=>document.getElementById('localFilePicker').click());
+document.getElementById('localFilePicker').addEventListener('change',e=>{
+  const f=e.target.files?.[0];if(!f)return;
+  const url=URL.createObjectURL(f);localFileMap[f.name]=url;
+  cues.push({title:f.name.replace(/\.[^.]+$/,''),url,filename:f.name,mode:'manual',vol:1,note:''});
+  renderCues();updateStatus();toast('Added: '+f.name);e.target.value='';
 });
 
-document.getElementById('btnLibrary').addEventListener('click', openLibrary);
-document.getElementById('modalClose').addEventListener('click', closeLibrary);
-document.getElementById('modalCancel').addEventListener('click', closeLibrary);
-document.getElementById('modalAdd').addEventListener('click', () => {
-  const checks = document.querySelectorAll('#libBody input:checked');
-  let added = 0;
-  checks.forEach(cb => {
-    const t = LIBRARY[cb.dataset.i];
-    cues.push({ title: t.title, url: t.url, mode:'manual', vol:1 });
-    added++;
+/* ── LOAD FOLDER ── */
+document.getElementById('btnLoadFolder').addEventListener('click',()=>document.getElementById('folderPicker').click());
+document.getElementById('folderPicker').addEventListener('change',e=>{
+  const files=Array.from(e.target.files||[]);if(!files.length)return;
+  // revoke old
+  Object.values(localFileMap).forEach(u=>URL.revokeObjectURL(u));
+  Object.keys(localFileMap).forEach(k=>delete localFileMap[k]);
+  // build map
+  files.forEach(f=>{
+    if(!f.type.startsWith('audio/')&&!/\.(mp3|wav|ogg|flac|aac|m4a)$/i.test(f.name))return;
+    localFileMap[f.name]=URL.createObjectURL(f);
   });
-  closeLibrary();
-  if(added) { renderCues(); updateStatus(); toast(added + ' cue(s) added'); }
-});
-document.getElementById('libraryModal').addEventListener('click', e => {
-  if(e.target === document.getElementById('libraryModal')) closeLibrary();
-});
+  const loaded=Object.keys(localFileMap).length;
 
-/* ═══════════════════════════════════════════════════
-   LOCAL FILE
-═══════════════════════════════════════════════════ */
-document.getElementById('btnAddLocal').addEventListener('click', () => {
-  document.getElementById('localFilePicker').click();
-});
-document.getElementById('localFilePicker').addEventListener('change', e => {
-  const f = e.target.files?.[0]; if(!f) return;
-  const url = URL.createObjectURL(f);
-  cues.push({ title: f.name.replace(/\.[^.]+$/, ''), url, filename: f.name, mode:'manual', vol:1, local:true });
-  renderCues(); updateStatus();
-  toast('Added: ' + f.name);
-  e.target.value = '';
-});
-
-/* ═══════════════════════════════════════════════════
-   LOAD FOLDER
-═══════════════════════════════════════════════════ */
-document.getElementById('btnLoadFolder').addEventListener('click', () => {
-  document.getElementById('folderPicker').click();
-});
-
-document.getElementById('folderPicker').addEventListener('change', e => {
-  const files = Array.from(e.target.files||[]);
-  if(!files.length) return;
-
-  // Revoke any old blob URLs we created
-  Object.values(localFileMap).forEach(u => URL.revokeObjectURL(u));
-  // Clear the map
-  Object.keys(localFileMap).forEach(k => delete localFileMap[k]);
-
-  // Build filename → blob URL map for every audio file in the folder
-  files.forEach(f => {
-    if(!f.type.startsWith('audio/') && !/\.(mp3|wav|ogg|flac|aac|m4a)$/i.test(f.name)) return;
-    localFileMap[f.name] = URL.createObjectURL(f);
-  });
-
-  const loaded = Object.keys(localFileMap).length;
-
-  // If cue list is empty, populate it from the folder (sorted by filename)
-  if(cues.length === 0){
-    const sorted = Object.keys(localFileMap).sort();
-    sorted.forEach(filename => {
-      cues.push({
-        title: filename.replace(/\.[^.]+$/, ''), // strip extension for display
-        url: localFileMap[filename],
-        filename,
-        mode: 'manual',
-        vol: 1,
-        local: true
-      });
+  if(cues.length===0){
+    Object.keys(localFileMap).sort().forEach(fn=>{
+      cues.push({title:fn.replace(/\.[^.]+$/,''),url:localFileMap[fn],filename:fn,mode:'manual',vol:1,note:''});
     });
-    current = 0;
-    renderCues(); updateStatus();
-    if(cues.length) loadCue(0, false);
-    toast(loaded + ' files loaded from folder');
-    e.target.value = '';
-    return;
+    current=0;renderCues();updateStatus();toast(loaded+' files loaded from folder');e.target.value='';return;
   }
 
-  // Otherwise re-match existing cues by filename
-  let matched = 0, unmatched = 0;
-  cues.forEach(c => {
-    const fn = c.filename;
-    if(fn && localFileMap[fn]){
-      c.url = localFileMap[fn];
-      matched++;
-    } else if(fn){
-      unmatched++;
-    }
+  let matched=0;const missing=[];
+  cues.forEach(c=>{
+    if(c.filename&&localFileMap[c.filename]){c.url=localFileMap[c.filename];matched++;}
+    else if(c.filename&&c.url==='')missing.push(c.filename);
   });
+  sfxSlots.forEach(s=>{if(s.filename&&localFileMap[s.filename])s.url=localFileMap[s.filename];});
 
-  renderCues(); updateStatus();
-
-  // Load current cue now that URLs are resolved
-  if(cues.length && !isUnresolved(cues[current])) loadCue(current, false);
-
-  if(unmatched > 0){
-    toast(`${matched} matched, ${unmatched} not found in folder`, 4000);
-  } else {
-    toast(`All ${matched} cue(s) matched from folder`);
-  }
-  e.target.value = '';
+  renderCues();updateStatus();renderSFX();
+  if(missing.length)showOfflineBanner(missing);else hideBanner();
+  if(cues.length&&!isOffline(cues[current]))loadCue(current,false);
+  toast(`${matched} matched`+(missing.length?`, ${missing.length} offline`:''));
+  e.target.value='';
 });
 
-
-document.getElementById('btnSave').addEventListener('click', () => {
-  const data = {
-    show: 'Beetlejuice JR',
-    version: 1,
-    current,
-    loopMode, gap,
-    masterVol: parseFloat(masterVol.value),
-    speed: parseFloat(speedSlider.value),
-    cues: cues.map(c=>({
-      title: c.title,
-      url: c.local ? '' : c.url,           // don't save blob: URLs — they die on reload
-      filename: c.filename || (c.local ? c.title : ''),  // filename for folder re-matching
-      mode: c.mode,
-      vol: c.vol
-    }))
+/* ── SAVE / LOAD ── */
+document.getElementById('btnSave').addEventListener('click',()=>{
+  const data={
+    show:'Beetlejuice JR',version:2,current,loopMode,gap,
+    masterVol:parseFloat(masterVol.value),speed:parseFloat(speedSlider.value),
+    cues:cues.map(c=>({title:c.title,url:c.url.startsWith('blob:')?'':c.url,filename:c.filename||'',mode:c.mode,vol:c.vol,note:c.note||''})),
+    sfx:sfxSlots.map(s=>({name:s.name,filename:s.filename,url:s.url.startsWith('blob:')?'':s.url,playMode:s.playMode,loop:s.loop}))
   };
-  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'beetlejuice-jr-show.json';
-  a.click();
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='beetlejuice-jr-show.json';a.click();
   toast('Show file saved');
 });
-
-document.getElementById('btnLoad').addEventListener('click', () => {
-  document.getElementById('loadFilePicker').click();
-});
-document.getElementById('loadFilePicker').addEventListener('change', e => {
-  const f = e.target.files?.[0]; if(!f) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    try {
-      const data = JSON.parse(ev.target.result);
-      if(!data.cues) throw new Error('Invalid show file');
-      cues = data.cues.map(c=>({
-        title: c.title,
-        url: c.url || '',
-        filename: c.filename || '',
-        mode: c.mode||'manual',
-        vol: c.vol||1
-      }));
-      current = data.current||0;
-      loopMode = data.loopMode||0;
-      gap = data.gap||0;
-      if(data.masterVol !== undefined){ masterVol.value = data.masterVol; masterVolVal.textContent = Math.round(data.masterVol*100)+'%'; }
-      if(data.speed !== undefined){ speedSlider.value = data.speed; speedVal.textContent = parseFloat(data.speed).toFixed(2)+'×'; }
-      gapSlider.value = gap; gapVal.textContent = gap.toFixed(1)+'s';
-      loopBtn.textContent = LOOP_LABELS[loopMode];
-      loopBtn.classList.toggle('active', loopMode!==0);
-      renderCues(); updateStatus();
-      const unresolvedCount = cues.filter(c => isUnresolved(c)).length;
-      if(unresolvedCount > 0){
-        toast(unresolvedCount + ' cue(s) need folder — click 📁 Load Folder', 4000);
-      } else if(cues.length){
-        loadCue(current, false);
-      }
-      toast('Show loaded: ' + (data.show||'unknown'));
-    } catch(err){
-      toast('Error loading show file');
-    }
+document.getElementById('btnLoad').addEventListener('click',()=>document.getElementById('loadFilePicker').click());
+document.getElementById('loadFilePicker').addEventListener('change',e=>{
+  const f=e.target.files?.[0];if(!f)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(!data.cues)throw new Error('Invalid');
+      cues=data.cues.map(c=>({title:c.title||'',url:c.url||'',filename:c.filename||'',mode:c.mode||'manual',vol:c.vol||1,note:c.note||''}));
+      if(data.sfx)data.sfx.forEach((s,i)=>{sfxSlots[i]={name:s.name||'',url:s.url||'',filename:s.filename||'',playMode:s.playMode||'restart',loop:!!s.loop,activeAudios:[]};});
+      current=data.current||0;loopMode=data.loopMode||0;gap=data.gap||0;
+      if(data.masterVol!==undefined){masterVol.value=data.masterVol;masterVolVal.textContent=Math.round(data.masterVol*100)+'%';}
+      if(data.speed!==undefined){speedSlider.value=data.speed;speedVal.textContent=parseFloat(data.speed).toFixed(2)+'×';}
+      gapSlider.value=gap;gapVal.textContent=gap.toFixed(1)+'s';
+      loopBtn.textContent=LOOP_LABELS[loopMode];loopBtn.classList.toggle('active',loopMode!==0);
+      renderCues();updateStatus();renderSFX();
+      const offFiles=[...cues.filter(c=>isOffline(c)).map(c=>c.filename),...sfxSlots.filter(s=>isSFXOffline(s)).map(s=>s.filename)].filter(Boolean);
+      if(offFiles.length){showOfflineBanner(offFiles);toast(offFiles.length+' file(s) offline — click 📁 Load Folder',4000,true);}
+      else if(cues.length)loadCue(current,false);
+      toast('Show loaded: '+(data.show||'unknown'));
+    }catch(err){toast('Error loading show file',2500,true);}
   };
-  reader.readAsText(f);
-  e.target.value = '';
+  reader.readAsText(f);e.target.value='';
 });
 
-/* ═══════════════════════════════════════════════════
-   CLEAR
-═══════════════════════════════════════════════════ */
-document.getElementById('btnClear').addEventListener('click', () => {
-  if(!confirm('Clear all cues?')) return;
-  clearGap();
-  ws.pause();
-  cues = [];
-  current = 0;
-  loadedIndex = -1;
-  isPlaying = false;
-  updateGoBtn();
-  renderCues();
-  updateStatus();
+/* ── EXPORT / PRINT ── */
+document.getElementById('btnExport').addEventListener('click',()=>{
+  document.getElementById('printMeta').textContent=`${cues.length} cues · ${new Date().toLocaleDateString()}`;
+  window.print();
 });
 
-/* ═══════════════════════════════════════════════════
-   INIT
-═══════════════════════════════════════════════════ */
-renderCues();
-updateStatus();
+/* ── CLEAR ── */
+document.getElementById('btnClear').addEventListener('click',()=>{
+  if(!confirm('Clear all cues and SFX?'))return;
+  clearGap();ws.pause();
+  cues=[];current=0;loadedIndex=-1;isPlaying=false;
+  sfxSlots.forEach((s,i)=>{s.activeAudios.forEach(a=>a.pause());sfxSlots[i]={name:'',url:'',filename:'',playMode:'restart',loop:false,activeAudios:[]};});
+  updateGoBtn();renderCues();updateStatus();renderSFX();hideBanner();
+});
+
+/* ── INIT ── */
+renderCues();updateStatus();renderSFX();
 </script>
 </body>
 </html>
