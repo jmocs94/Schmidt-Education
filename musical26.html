@@ -82,6 +82,13 @@ body{
   transition:color .15s,border-color .15s,background .15s;
 }
 .hbtn:hover{color:var(--text);border-color:var(--border2);background:var(--surface3);}
+.hbtn-folder{border-color:rgba(167,139,250,.4);color:var(--accent);}
+.hbtn-folder:hover{border-color:var(--accent);background:rgba(167,139,250,.1);color:var(--accent);}
+.cue-row.is-unresolved .cue-name::after{
+  content:' ⚠';
+  color:#f59e0b;
+  font-size:.7rem;
+}
 
 /* ── LAYOUT ── */
 .main{
@@ -671,6 +678,7 @@ body{
   <div class="header-actions">
     <button class="hbtn" id="btnLibrary">+ Add Cues</button>
     <button class="hbtn" id="btnAddLocal">+ Local File</button>
+    <button class="hbtn hbtn-folder" id="btnLoadFolder">📁 Load Folder</button>
     <button class="hbtn" id="btnSave">Save Show</button>
     <button class="hbtn" id="btnLoad">Load Show</button>
     <button class="hbtn" id="btnClear">Clear All</button>
@@ -795,6 +803,7 @@ body{
 <!-- Hidden inputs -->
 <input type="file" id="localFilePicker" accept="audio/*" style="display:none"/>
 <input type="file" id="loadFilePicker" accept=".json" style="display:none"/>
+<input type="file" id="folderPicker" webkitdirectory multiple accept="audio/*" style="display:none"/>
 
 <script>
 /* ═══════════════════════════════════════════════════
@@ -872,6 +881,20 @@ const LOOP_MODES = ['off','track','all'];
 const LOOP_LABELS = ['Off','Track','All'];
 let loopMode = 0;
 
+// Maps filename (e.g. "01 Prologue.mp3") → blob URL for locally-loaded folders
+const localFileMap = {};
+
+function isLocalMode(){ return Object.keys(localFileMap).length > 0; }
+function resolveUrl(cue){
+  if(cue.filename && localFileMap[cue.filename]) return localFileMap[cue.filename];
+  if(cue.local) return cue.url; // single-file blob still valid this session
+  return cue.url; // remote URL fallback
+}
+function isUnresolved(cue){
+  // A cue is unresolved if it has a filename (saved from local mode) but no blob URL yet
+  return !!(cue.filename && !localFileMap[cue.filename] && !cue.url.startsWith('blob:'));
+}
+
 /* ═══════════════════════════════════════════════════
    WAVESURFER
 ═══════════════════════════════════════════════════ */
@@ -912,7 +935,7 @@ const loopBtn      = document.getElementById('loopBtn');
 const fmt = s => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
 function clearGap(){ if(gapTimer){ clearTimeout(gapTimer); gapTimer=null; } }
 
-function toast(msg, dur=2000){
+function toast(msg, dur=2200){
   const el = document.getElementById('toast');
   el.textContent = msg;
   el.classList.add('show');
@@ -932,7 +955,8 @@ function renderCues(){
     li.className = 'cue-row' +
       (isNow ? ' is-now' : '') +
       (isNext ? ' is-next' : '') +
-      (done ? ' is-done' : '');
+      (done ? ' is-done' : '') +
+      (isUnresolved(c) ? ' is-unresolved' : '');
     li.dataset.index = i;
 
     // cue number
@@ -1037,7 +1061,7 @@ function loadCue(i, autoplay=false){
   timeTot.textContent = '/ 0:00';
   renderCues();
   updateStatus();
-  ws.load(cues[i].url);
+  ws.load(resolveUrl(cues[i]));
   const onReady = () => {
     ws.un('ready', onReady);
     loading = false;
@@ -1312,15 +1336,83 @@ document.getElementById('btnAddLocal').addEventListener('click', () => {
 document.getElementById('localFilePicker').addEventListener('change', e => {
   const f = e.target.files?.[0]; if(!f) return;
   const url = URL.createObjectURL(f);
-  cues.push({ title: f.name, url, mode:'manual', vol:1, local:true });
+  cues.push({ title: f.name.replace(/\.[^.]+$/, ''), url, filename: f.name, mode:'manual', vol:1, local:true });
   renderCues(); updateStatus();
   toast('Added: ' + f.name);
   e.target.value = '';
 });
 
 /* ═══════════════════════════════════════════════════
-   SAVE / LOAD SHOW FILE
+   LOAD FOLDER
 ═══════════════════════════════════════════════════ */
+document.getElementById('btnLoadFolder').addEventListener('click', () => {
+  document.getElementById('folderPicker').click();
+});
+
+document.getElementById('folderPicker').addEventListener('change', e => {
+  const files = Array.from(e.target.files||[]);
+  if(!files.length) return;
+
+  // Revoke any old blob URLs we created
+  Object.values(localFileMap).forEach(u => URL.revokeObjectURL(u));
+  // Clear the map
+  Object.keys(localFileMap).forEach(k => delete localFileMap[k]);
+
+  // Build filename → blob URL map for every audio file in the folder
+  files.forEach(f => {
+    if(!f.type.startsWith('audio/') && !/\.(mp3|wav|ogg|flac|aac|m4a)$/i.test(f.name)) return;
+    localFileMap[f.name] = URL.createObjectURL(f);
+  });
+
+  const loaded = Object.keys(localFileMap).length;
+
+  // If cue list is empty, populate it from the folder (sorted by filename)
+  if(cues.length === 0){
+    const sorted = Object.keys(localFileMap).sort();
+    sorted.forEach(filename => {
+      cues.push({
+        title: filename.replace(/\.[^.]+$/, ''), // strip extension for display
+        url: localFileMap[filename],
+        filename,
+        mode: 'manual',
+        vol: 1,
+        local: true
+      });
+    });
+    current = 0;
+    renderCues(); updateStatus();
+    if(cues.length) loadCue(0, false);
+    toast(loaded + ' files loaded from folder');
+    e.target.value = '';
+    return;
+  }
+
+  // Otherwise re-match existing cues by filename
+  let matched = 0, unmatched = 0;
+  cues.forEach(c => {
+    const fn = c.filename;
+    if(fn && localFileMap[fn]){
+      c.url = localFileMap[fn];
+      matched++;
+    } else if(fn){
+      unmatched++;
+    }
+  });
+
+  renderCues(); updateStatus();
+
+  // Load current cue now that URLs are resolved
+  if(cues.length && !isUnresolved(cues[current])) loadCue(current, false);
+
+  if(unmatched > 0){
+    toast(`${matched} matched, ${unmatched} not found in folder`, 4000);
+  } else {
+    toast(`All ${matched} cue(s) matched from folder`);
+  }
+  e.target.value = '';
+});
+
+
 document.getElementById('btnSave').addEventListener('click', () => {
   const data = {
     show: 'Beetlejuice JR',
@@ -1329,9 +1421,10 @@ document.getElementById('btnSave').addEventListener('click', () => {
     loopMode, gap,
     masterVol: parseFloat(masterVol.value),
     speed: parseFloat(speedSlider.value),
-    cues: cues.filter(c=>!c.local).map(c=>({
+    cues: cues.map(c=>({
       title: c.title,
-      url: c.url,
+      url: c.local ? '' : c.url,           // don't save blob: URLs — they die on reload
+      filename: c.filename || (c.local ? c.title : ''),  // filename for folder re-matching
       mode: c.mode,
       vol: c.vol
     }))
@@ -1356,7 +1449,8 @@ document.getElementById('loadFilePicker').addEventListener('change', e => {
       if(!data.cues) throw new Error('Invalid show file');
       cues = data.cues.map(c=>({
         title: c.title,
-        url: c.url,
+        url: c.url || '',
+        filename: c.filename || '',
         mode: c.mode||'manual',
         vol: c.vol||1
       }));
@@ -1369,8 +1463,13 @@ document.getElementById('loadFilePicker').addEventListener('change', e => {
       loopBtn.textContent = LOOP_LABELS[loopMode];
       loopBtn.classList.toggle('active', loopMode!==0);
       renderCues(); updateStatus();
-      if(cues.length) loadCue(current, false);
-      toast('Show file loaded: ' + (data.show||'unknown'));
+      const unresolvedCount = cues.filter(c => isUnresolved(c)).length;
+      if(unresolvedCount > 0){
+        toast(unresolvedCount + ' cue(s) need folder — click 📁 Load Folder', 4000);
+      } else if(cues.length){
+        loadCue(current, false);
+      }
+      toast('Show loaded: ' + (data.show||'unknown'));
     } catch(err){
       toast('Error loading show file');
     }
