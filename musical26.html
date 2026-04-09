@@ -111,7 +111,7 @@ body{
 }
 .cue-list-header{
   display:grid;
-  grid-template-columns:36px 1fr 54px 60px 36px;
+  grid-template-columns:36px 1fr 22px 54px 60px 36px;
   gap:0;
   padding:.45rem .8rem;
   background:var(--surface2);
@@ -133,7 +133,7 @@ body{
 
 .cue-row{
   display:grid;
-  grid-template-columns:36px 1fr 54px 60px 36px;
+  grid-template-columns:36px 1fr 22px 54px 60px 36px;
   align-items:center;
   gap:0;
   padding:.5rem .8rem;
@@ -257,6 +257,10 @@ body{
   transition:color .15s,background .15s;
 }
 .del-btn:hover{color:var(--stop);background:rgba(239,68,68,.1);}
+.cue-src{display:flex;align-items:center;justify-content:center;}
+.src-icon{width:14px;height:14px;flex-shrink:0;opacity:.4;}
+.cue-row.is-now .src-icon{opacity:.75;}
+.cue-row.is-unresolved .src-icon{opacity:1;}
 
 /* ── RIGHT PANEL ── */
 .right-panel{
@@ -693,6 +697,7 @@ body{
     <div class="cue-list-header">
       <span>#</span>
       <span>Cue Name</span>
+      <span></span>
       <span>Mode</span>
       <span style="padding-left:.3rem">Vol</span>
       <span></span>
@@ -1012,7 +1017,18 @@ function renderCues(){
     delBtn.addEventListener('click', e => { e.stopPropagation(); removeCue(i); });
     delDiv.appendChild(delBtn);
 
-    li.append(num, name, modeDiv, volDiv, delDiv);
+    // source icon
+    const srcDiv = document.createElement('div');
+    srcDiv.className = 'cue-src';
+    const isLocal = !!(c.filename && (localFileMap[c.filename] || c.local));
+    const unresolved = isUnresolved(c);
+    srcDiv.innerHTML = unresolved
+      ? `<svg class="src-icon" viewBox="0 0 16 16" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" title="File not linked — load folder"><circle cx="8" cy="8" r="6"/><line x1="8" y1="5" x2="8" y2="8"/><circle cx="8" cy="11" r=".6" fill="#f59e0b" stroke="none"/></svg>`
+      : isLocal
+      ? `<svg class="src-icon" viewBox="0 0 16 16" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" title="Local file"><rect x="2" y="3" width="12" height="9" rx="1.5"/><path d="M5 12v1h6v-1"/><path d="M2 9h12"/></svg>`
+      : `<svg class="src-icon" viewBox="0 0 16 16" fill="none" stroke="var(--next)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" title="Streaming from web"><circle cx="8" cy="8" r="6"/><path d="M8 2c-2 2-2 8 0 12M8 2c2 2 2 8 0 12M2 8h12"/></svg>`;
+
+    li.append(num, name, srcDiv, modeDiv, volDiv, delDiv);
 
     // click to jump
     li.addEventListener('click', () => jumpTo(i, false));
@@ -1087,29 +1103,20 @@ function go(){
   if(!cues.length) return;
   if(loading) return;
 
-  // If something is playing → pause it
-  if(ws.isPlaying()){
-    ws.pause();
-    isPlaying = false;
-    updateGoBtn();
+  // If nothing has played yet (first GO of the show), play the current cue
+  if(loadedIndex === -1){
+    loadCue(current, true);
     return;
   }
 
-  // If current cue is loaded → play it
-  if(loadedIndex === current){
-    ws.play();
-    isPlaying = true;
-    updateGoBtn();
-    return;
-  }
-
-  // Otherwise load & play current
-  loadCue(current, true);
+  // Always advance to the next cue and play it
+  advance();
 }
 
 function advance(){
   // Move to next cue and play
   clearGap();
+  if(loopMode === 1){ ws.seekTo(0); ws.play(); return; }
   if(current < cues.length - 1){
     loadCue(current + 1, true);
   } else if(loopMode === 2){
@@ -1249,12 +1256,7 @@ document.addEventListener('keydown', e => {
   switch(e.key){
     case ' ':
       e.preventDefault();
-      if(ws.isPlaying()){
-        ws.pause();
-      } else {
-        if(loadedIndex === current) ws.play();
-        else loadCue(current, true);
-      }
+      go();
       break;
     case 'ArrowRight':
       e.preventDefault();
