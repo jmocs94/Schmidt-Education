@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Studio Recorder</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -355,6 +356,78 @@
       text-align: right;
     }
 
+    /* ── Mic selector ── */
+    .mic-select-row {
+      margin-top: 0.9rem;
+    }
+    .mic-select {
+      width: 100%;
+      padding: 0.6rem 0.9rem;
+      border-radius: 9px;
+      border: 1.5px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.15s;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237a7f8a' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.8rem center;
+      padding-right: 2.2rem;
+    }
+    .mic-select:focus { border-color: var(--accent); }
+    .mic-select:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── Format chips ── */
+    .format-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .format-chip {
+      padding: 0.35rem 0.85rem;
+      border-radius: 7px;
+      border: 1.5px solid var(--border);
+      background: var(--surface2);
+      color: var(--text-dim);
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      letter-spacing: 0.05em;
+    }
+    .format-chip.active {
+      border-color: var(--accent2);
+      color: var(--accent2);
+      background: #e8a44a18;
+    }
+    .format-chip:hover:not(.active) { border-color: #3a3d44; color: var(--text); }
+
+    /* ── Reset button ── */
+    .btn-reset {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1.5px solid var(--border);
+      font-size: 0.85rem;
+      padding: 0.65rem 1.2rem;
+    }
+    .btn-reset:not(:disabled):hover { color: var(--red) !important; border-color: var(--red) !important; opacity: 1 !important; }
+
+    /* ── Converting overlay ── */
+    .converting-msg {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--accent2);
+      margin-top: 0.6rem;
+      min-height: 1em;
+      display: none;
+    }
+    .converting-msg.visible { display: block; }
+
     /* ── Divider ── */
     .divider { height: 1px; background: var(--border); margin: 1.25rem 0; }
 
@@ -389,6 +462,11 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
         Desktop Audio
       </button>
+    </div>
+    <div class="mic-select-row" id="micSelectRow">
+      <select class="mic-select" id="micSelect">
+        <option value="">— select microphone —</option>
+      </select>
     </div>
   </div>
 
@@ -427,6 +505,10 @@
         <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="1" y="1" width="12" height="12" rx="2"/></svg>
         Stop
       </button>
+      <button class="btn btn-reset" id="resetBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
+        Reset
+      </button>
     </div>
   </div>
 
@@ -442,37 +524,50 @@
     <audio id="playback" controls></audio>
     <div class="divider"></div>
     <div class="card-label">Export</div>
+    <div class="format-row">
+      <button class="format-chip active" data-fmt="webm">WEBM</button>
+      <button class="format-chip" data-fmt="wav">WAV</button>
+      <button class="format-chip" data-fmt="mp3">MP3</button>
+    </div>
     <div class="download-row">
       <input class="filename-input" type="text" id="filenameInput" placeholder="recording-filename" />
       <button class="btn-download" id="downloadBtn" disabled>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Download .webm
+        <span id="downloadBtnLabel">Download .webm</span>
       </button>
     </div>
+    <div class="converting-msg" id="convertingMsg">⏳ Converting… this may take a moment.</div>
   </div>
 
 <script>
   // ── Elements ──────────────────────────────────────────────
-  const btnMic      = document.getElementById('btnMic');
-  const btnDesk     = document.getElementById('btnDesk');
-  const startBtn    = document.getElementById('startBtn');
-  const stopBtn     = document.getElementById('stopBtn');
-  const recDot      = document.getElementById('recDot');
-  const timerEl     = document.getElementById('timerDisplay');
-  const meterBar    = document.getElementById('meterBar');
-  const dbReadout   = document.getElementById('dbReadout');
-  const statusEl    = document.getElementById('statusBar');
-  const waveCanvas  = document.getElementById('waveCanvas');
-  const playback    = document.getElementById('playback');
+  const btnMic        = document.getElementById('btnMic');
+  const btnDesk       = document.getElementById('btnDesk');
+  const micSelect     = document.getElementById('micSelect');
+  const micSelectRow  = document.getElementById('micSelectRow');
+  const startBtn      = document.getElementById('startBtn');
+  const stopBtn       = document.getElementById('stopBtn');
+  const resetBtn      = document.getElementById('resetBtn');
+  const recDot        = document.getElementById('recDot');
+  const timerEl       = document.getElementById('timerDisplay');
+  const meterBar      = document.getElementById('meterBar');
+  const dbReadout     = document.getElementById('dbReadout');
+  const statusEl      = document.getElementById('statusBar');
+  const waveCanvas    = document.getElementById('waveCanvas');
+  const playback      = document.getElementById('playback');
   const filenameInput = document.getElementById('filenameInput');
-  const downloadBtn = document.getElementById('downloadBtn');
-  const gainSlider  = document.getElementById('gainSlider');
-  const gainValueEl = document.getElementById('gainValue');
+  const downloadBtn   = document.getElementById('downloadBtn');
+  const downloadBtnLabel = document.getElementById('downloadBtnLabel');
+  const gainSlider    = document.getElementById('gainSlider');
+  const gainValueEl   = document.getElementById('gainValue');
+  const convertingMsg = document.getElementById('convertingMsg');
 
   const wCtx = waveCanvas.getContext('2d');
 
   // ── State ─────────────────────────────────────────────────
-  let source = 'mic';   // 'mic' | 'desktop'
+  let source = 'mic';
+  let selectedMicId = '';
+  let exportFmt = 'webm';
   let mediaRecorder;
   let chunks = [];
   let timerInterval;
@@ -481,6 +576,7 @@
   let meterRafId, waveRafId;
   let wavePoints = [];
   let blobUrl = null;
+  let rawBlob = null; // always store the raw webm blob for conversion
 
   // ── Gain slider ───────────────────────────────────────────
   function gainToDB(linear) {
@@ -494,20 +590,74 @@
     if (gainNode) gainNode.gain.value = val;
   });
 
+  // ── Format chips ─────────────────────────────────────────
+  document.querySelectorAll('.format-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.format-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      exportFmt = chip.dataset.fmt;
+      downloadBtnLabel.textContent = `Download .${exportFmt}`;
+    });
+  });
+
+  // ── Mic device enumeration ────────────────────────────────
+  async function populateMics() {
+    try {
+      // Need permission first so labels are populated
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const mics = devices.filter(d => d.kind === 'audioinput');
+      micSelect.innerHTML = '';
+      if (mics.length === 0) {
+        micSelect.innerHTML = '<option value="">No microphones found</option>';
+        return;
+      }
+      mics.forEach((mic, i) => {
+        const opt = document.createElement('option');
+        opt.value = mic.deviceId;
+        opt.textContent = mic.label || `Microphone ${i + 1}`;
+        if (mic.deviceId === selectedMicId) opt.selected = true;
+        micSelect.appendChild(opt);
+      });
+      // Auto-select first if nothing chosen yet
+      if (!selectedMicId && mics.length > 0) {
+        selectedMicId = mics[0].deviceId;
+        micSelect.value = selectedMicId;
+      }
+    } catch(e) {
+      console.warn('Could not enumerate devices:', e);
+    }
+  }
+
+  micSelect.addEventListener('change', () => {
+    selectedMicId = micSelect.value;
+    if (source === 'mic') {
+      stopMonitor();
+      initMicMonitor();
+    }
+  });
+
+  // Re-enumerate if devices change (e.g. plugging in a USB mic)
+  navigator.mediaDevices.addEventListener('devicechange', () => {
+    if (source === 'mic') populateMics();
+  });
+
   // ── Source switcher ───────────────────────────────────────
   btnMic.addEventListener('click', () => {
     if (source === 'mic') return;
     source = 'mic';
     btnMic.classList.add('active');
     btnDesk.classList.remove('active');
+    micSelectRow.style.display = '';
     stopMonitor();
     initMicMonitor();
   });
+
   btnDesk.addEventListener('click', () => {
     if (source === 'desktop') return;
     source = 'desktop';
     btnDesk.classList.add('active');
     btnMic.classList.remove('active');
+    micSelectRow.style.display = 'none';
     stopMonitor();
     setStatus('Click Record to capture desktop audio.', 'warn');
     resetMeter();
@@ -543,7 +693,7 @@
   function buildAnalyser(stream) {
     if (audioCtx) { try { audioCtx.close(); } catch(e){} }
     audioCtx = new AudioContext();
-    audioCtx.resume(); // ensure it's running (Chrome suspends new contexts)
+    audioCtx.resume();
     analyser = audioCtx.createAnalyser();
     analyser.fftSize = 2048;
     analyser.smoothingTimeConstant = 0.7;
@@ -570,7 +720,6 @@
         if (v > peak) peak = v;
       }
       const db = dbFromFloat(peak);
-      // map -60dBFS..0dBFS → 0%..100%
       const pct = Math.max(0, Math.min(100, ((db + 60) / 60) * 100));
       meterBar.style.width = pct + '%';
       dbReadout.textContent = isFinite(db) ? db.toFixed(1) + ' dBFS' : '−∞ dBFS';
@@ -584,21 +733,15 @@
     const buf = new Float32Array(analyser.fftSize);
     const W = () => waveCanvas.width;
     const H = () => waveCanvas.height;
-    const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#00b38a';
 
     function tick() {
       analyser.getFloatTimeDomainData(buf);
       wCtx.clearRect(0, 0, W(), H());
-
-      // scroll waveform
       if (wavePoints.length > W()) wavePoints.shift();
-      // RMS of current frame
       let sum = 0;
       for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
-      const rms = Math.sqrt(sum / buf.length);
-      wavePoints.push(rms);
+      wavePoints.push(Math.sqrt(sum / buf.length));
 
-      // draw
       wCtx.beginPath();
       wCtx.strokeStyle = '#00b38a';
       wCtx.lineWidth = 1.5 * devicePixelRatio;
@@ -606,21 +749,15 @@
       for (let i = 0; i < wavePoints.length; i++) {
         const x = i * step;
         const amp = wavePoints[i] * H() * 2.2;
-        const y1 = H() / 2 - amp;
-        const y2 = H() / 2 + amp;
-        if (i === 0) { wCtx.moveTo(x, y1); } else { wCtx.lineTo(x, y1); }
+        if (i === 0) { wCtx.moveTo(x, H()/2 - amp); } else { wCtx.lineTo(x, H()/2 - amp); }
       }
-      // mirror bottom
       for (let i = wavePoints.length - 1; i >= 0; i--) {
-        const x = i * step;
-        const amp = wavePoints[i] * H() * 2.2;
-        wCtx.lineTo(x, H() / 2 + amp);
+        wCtx.lineTo(i * step, H()/2 + wavePoints[i] * H() * 2.2);
       }
       wCtx.closePath();
       wCtx.fillStyle = 'rgba(0,179,138,0.18)';
       wCtx.fill();
       wCtx.stroke();
-
       waveRafId = requestAnimationFrame(tick);
     }
     tick();
@@ -629,15 +766,24 @@
   // ── Monitor mic on load ───────────────────────────────────
   async function initMicMonitor() {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 2 },
+      const constraints = {
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          channelCount: 2,
+          ...(selectedMicId ? { deviceId: { exact: selectedMicId } } : {})
+        },
         video: false
-      });
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       monitorStream = stream;
       buildAnalyser(stream);
       startMeterLoop();
       startWaveLoop();
       setStatus('Mic live — adjust your gain before recording.', 'ok');
+      // Populate mic list now that we have permission & labels
+      await populateMics();
     } catch(e) {
       setStatus('Mic access denied — check browser permissions.', 'err');
       console.error(e);
@@ -656,20 +802,23 @@
 
   // ── Record ────────────────────────────────────────────────
   startBtn.addEventListener('click', async () => {
-    if (source === 'mic') {
-      await recordMic();
-    } else {
-      await recordDesktop();
-    }
+    if (source === 'mic') await recordMic();
+    else await recordDesktop();
   });
 
   async function recordMic() {
     try {
-      // Re-get a fresh stream for recording (monitor may be using another)
-      const recStream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 2 },
+      const constraints = {
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          channelCount: 2,
+          ...(selectedMicId ? { deviceId: { exact: selectedMicId } } : {})
+        },
         video: false
-      });
+      };
+      const recStream = await navigator.mediaDevices.getUserMedia(constraints);
       stopMonitor();
       buildAnalyser(recStream);
       startMeterLoop();
@@ -684,8 +833,6 @@
 
   async function recordDesktop() {
     try {
-      // Chrome requires video:true in getDisplayMedia to show the permission dialog.
-      // We immediately stop the video track after getting the audio track we actually need.
       const desktopStream = await navigator.mediaDevices.getDisplayMedia({
         video: true,
         audio: {
@@ -696,19 +843,15 @@
           channelCount: 2
         }
       });
-
-      // Drop video track right away — we only want audio
       desktopStream.getVideoTracks().forEach(t => t.stop());
-
       const audioTracks = desktopStream.getAudioTracks();
       if (!audioTracks.length) {
         setStatus('No audio track — enable "Share system audio" in the picker.', 'err');
         desktopStream.getTracks().forEach(t => t.stop());
         return;
       }
-
       const audioOnly = new MediaStream(audioTracks);
-      stopMonitor();                // close old audioCtx BEFORE building new one
+      stopMonitor();
       monitorStream = audioOnly;
       buildAnalyser(audioOnly);
       startMeterLoop();
@@ -722,15 +865,12 @@
 
   function beginRecording(stream) {
     chunks = [];
-
-    // Build a gain-processed stream for recording.
-    // audioCtx & gainNode were just built by buildAnalyser(), so connect them now.
-    let recordStream = stream; // fallback
+    rawBlob = null;
+    let recordStream = stream;
     if (audioCtx && gainNode) {
       try {
         const dest = audioCtx.createMediaStreamDestination();
         gainNode.connect(dest);
-        // Resume context in case it's suspended (Chrome autoplay policy)
         if (audioCtx.state === 'suspended') audioCtx.resume();
         recordStream = dest.stream;
       } catch(e) {
@@ -747,11 +887,12 @@
     mediaRecorder.onstop = onRecordStop;
     mediaRecorder.start(250);
 
-    // UI
     startBtn.disabled = true;
     stopBtn.disabled  = false;
+    resetBtn.disabled = true;
     btnMic.disabled   = true;
     btnDesk.disabled  = true;
+    micSelect.disabled = true;
     recDot.classList.add('active');
 
     elapsedSec = 0;
@@ -763,41 +904,199 @@
   }
 
   function onRecordStop() {
-    const blob = new Blob(chunks, { type: 'audio/webm' });
+    rawBlob = new Blob(chunks, { type: 'audio/webm' });
     if (blobUrl) URL.revokeObjectURL(blobUrl);
-    blobUrl = URL.createObjectURL(blob);
+    blobUrl = URL.createObjectURL(rawBlob);
     playback.src = blobUrl;
     downloadBtn.disabled = false;
-
-    downloadBtn.onclick = () => {
-      const name = filenameInput.value.trim() || `Recording_${getDateStamp()}`;
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = name + '.webm';
-      a.click();
-    };
-
     setStatus(`Done — ${formatTime(elapsedSec)} recorded. Ready to play or download.`, 'ok');
   }
 
+  // ── Download with format conversion ──────────────────────
+  downloadBtn.addEventListener('click', async () => {
+    if (!rawBlob) return;
+    const name = filenameInput.value.trim() || `Recording_${getDateStamp()}`;
+
+    if (exportFmt === 'webm') {
+      triggerDownload(blobUrl, name + '.webm');
+      return;
+    }
+
+    // Need to decode webm → PCM first
+    downloadBtn.disabled = true;
+    convertingMsg.classList.add('visible');
+
+    try {
+      const arrayBuf = await rawBlob.arrayBuffer();
+      const offlineCtx = new OfflineAudioContext(2, 1, 44100); // just for decodeAudioData
+      const decoded = await new AudioContext().decodeAudioData(arrayBuf);
+
+      if (exportFmt === 'wav') {
+        const wavBlob = audioBufferToWav(decoded);
+        const url = URL.createObjectURL(wavBlob);
+        triggerDownload(url, name + '.wav');
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      } else if (exportFmt === 'mp3') {
+        const mp3Blob = await audioBufferToMp3(decoded);
+        const url = URL.createObjectURL(mp3Blob);
+        triggerDownload(url, name + '.mp3');
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      }
+    } catch(e) {
+      console.error('Conversion failed:', e);
+      setStatus('Conversion failed — try downloading as WEBM instead.', 'err');
+    } finally {
+      downloadBtn.disabled = false;
+      convertingMsg.classList.remove('visible');
+    }
+  });
+
+  function triggerDownload(url, filename) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+  }
+
+  // ── WAV encoder ───────────────────────────────────────────
+  function audioBufferToWav(buffer) {
+    const numCh = buffer.numberOfChannels;
+    const sampleRate = buffer.sampleRate;
+    const numFrames = buffer.length;
+    const bytesPerSample = 2; // 16-bit
+    const dataLen = numFrames * numCh * bytesPerSample;
+    const ab = new ArrayBuffer(44 + dataLen);
+    const view = new DataView(ab);
+
+    function writeStr(offset, str) {
+      for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+    }
+    writeStr(0, 'RIFF');
+    view.setUint32(4, 36 + dataLen, true);
+    writeStr(8, 'WAVE');
+    writeStr(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true); // PCM
+    view.setUint16(22, numCh, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * numCh * bytesPerSample, true);
+    view.setUint16(32, numCh * bytesPerSample, true);
+    view.setUint16(34, 16, true);
+    writeStr(36, 'data');
+    view.setUint32(40, dataLen, true);
+
+    // Interleave channels
+    let offset = 44;
+    for (let i = 0; i < numFrames; i++) {
+      for (let ch = 0; ch < numCh; ch++) {
+        const sample = Math.max(-1, Math.min(1, buffer.getChannelData(ch)[i]));
+        view.setInt16(offset, sample < 0 ? sample * 32768 : sample * 32767, true);
+        offset += 2;
+      }
+    }
+    return new Blob([ab], { type: 'audio/wav' });
+  }
+
+  // ── MP3 encoder (lamejs) ──────────────────────────────────
+  async function audioBufferToMp3(buffer) {
+    return new Promise((resolve, reject) => {
+      try {
+        const numCh = Math.min(buffer.numberOfChannels, 2);
+        const sampleRate = buffer.sampleRate;
+        const kbps = 192;
+        const mp3enc = new lamejs.Mp3Encoder(numCh, sampleRate, kbps);
+        const mp3Data = [];
+
+        const blockSize = 1152;
+        const left  = buffer.getChannelData(0);
+        const right = numCh > 1 ? buffer.getChannelData(1) : left;
+
+        // Convert float32 → int16
+        function toInt16(floatArr, start, len) {
+          const out = new Int16Array(len);
+          for (let i = 0; i < len; i++) {
+            const s = Math.max(-1, Math.min(1, floatArr[start + i]));
+            out[i] = s < 0 ? s * 32768 : s * 32767;
+          }
+          return out;
+        }
+
+        for (let i = 0; i < buffer.length; i += blockSize) {
+          const len = Math.min(blockSize, buffer.length - i);
+          const l16 = toInt16(left, i, len);
+          const r16 = toInt16(right, i, len);
+          const chunk = numCh === 1
+            ? mp3enc.encodeBuffer(l16)
+            : mp3enc.encodeBuffer(l16, r16);
+          if (chunk.length > 0) mp3Data.push(new Uint8Array(chunk));
+        }
+
+        const flush = mp3enc.flush();
+        if (flush.length > 0) mp3Data.push(new Uint8Array(flush));
+
+        resolve(new Blob(mp3Data, { type: 'audio/mp3' }));
+      } catch(e) {
+        reject(e);
+      }
+    });
+  }
+
+  // ── Stop button ───────────────────────────────────────────
   stopBtn.addEventListener('click', () => {
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
       mediaRecorder.stop();
     }
     clearInterval(timerInterval);
     recDot.classList.remove('active');
-    stopBtn.disabled  = true;
-    startBtn.disabled = false;
-    btnMic.disabled   = false;
-    btnDesk.disabled  = false;
+    stopBtn.disabled   = true;
+    startBtn.disabled  = false;
+    resetBtn.disabled  = false;
+    btnMic.disabled    = false;
+    btnDesk.disabled   = false;
+    micSelect.disabled = false;
 
-    // Restart live monitor if on mic source
     if (source === 'mic') {
       stopMonitor();
       initMicMonitor();
     } else {
       stopMonitor();
       setStatus('Recording stopped. Switch to mic to monitor input.', '');
+    }
+  });
+
+  // ── Reset button ──────────────────────────────────────────
+  resetBtn.addEventListener('click', () => {
+    // Stop any active recording
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+    }
+    clearInterval(timerInterval);
+
+    // Clear audio state
+    stopMonitor();
+    chunks = [];
+    rawBlob = null;
+    if (blobUrl) { URL.revokeObjectURL(blobUrl); blobUrl = null; }
+
+    // Reset UI
+    recDot.classList.remove('active');
+    timerEl.textContent = formatTime(0);
+    playback.src = '';
+    filenameInput.value = '';
+    downloadBtn.disabled = true;
+    stopBtn.disabled     = true;
+    startBtn.disabled    = false;
+    btnMic.disabled      = false;
+    btnDesk.disabled     = false;
+    micSelect.disabled   = false;
+    convertingMsg.classList.remove('visible');
+
+    // Re-init the appropriate monitor
+    if (source === 'mic') {
+      initMicMonitor();
+    } else {
+      setStatus('Click Record to capture desktop audio.', 'warn');
+      resetMeter();
     }
   });
 
