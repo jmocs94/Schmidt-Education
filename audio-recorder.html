@@ -302,6 +302,59 @@
       color: var(--accent2);
     }
 
+    /* ── Gain slider ── */
+    .gain-row {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      margin-top: 1rem;
+    }
+    .gain-label {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .gain-slider {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      outline: none;
+      cursor: pointer;
+    }
+    .gain-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: 2px solid var(--bg);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+    .gain-slider::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: 2px solid var(--bg);
+    }
+    .gain-value {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--accent);
+      min-width: 4.5ch;
+      text-align: right;
+    }
+
     /* ── Divider ── */
     .divider { height: 1px; background: var(--border); margin: 1.25rem 0; }
 
@@ -350,6 +403,11 @@
     </div>
     <div class="meter-ticks">
       <span>−∞</span><span>−48</span><span>−36</span><span>−24</span><span>−18</span><span>−12</span><span>−6</span><span>0</span>
+    </div>
+    <div class="gain-row">
+      <span class="gain-label">Gain</span>
+      <input class="gain-slider" type="range" id="gainSlider" min="0" max="4" step="0.05" value="1">
+      <span class="gain-value" id="gainValue">0.0 dB</span>
     </div>
   </div>
 
@@ -408,6 +466,8 @@
   const playback    = document.getElementById('playback');
   const filenameInput = document.getElementById('filenameInput');
   const downloadBtn = document.getElementById('downloadBtn');
+  const gainSlider  = document.getElementById('gainSlider');
+  const gainValueEl = document.getElementById('gainValue');
 
   const wCtx = waveCanvas.getContext('2d');
 
@@ -417,10 +477,22 @@
   let chunks = [];
   let timerInterval;
   let elapsedSec = 0;
-  let audioCtx, analyser, sourceNode, monitorStream;
+  let audioCtx, analyser, sourceNode, gainNode, monitorStream;
   let meterRafId, waveRafId;
   let wavePoints = [];
   let blobUrl = null;
+
+  // ── Gain slider ───────────────────────────────────────────
+  function gainToDB(linear) {
+    if (linear === 0) return '-∞ dB';
+    const db = 20 * Math.log10(linear);
+    return (db >= 0 ? '+' : '') + db.toFixed(1) + ' dB';
+  }
+  gainSlider.addEventListener('input', () => {
+    const val = parseFloat(gainSlider.value);
+    gainValueEl.textContent = gainToDB(val);
+    if (gainNode) gainNode.gain.value = val;
+  });
 
   // ── Source switcher ───────────────────────────────────────
   btnMic.addEventListener('click', () => {
@@ -474,8 +546,11 @@
     analyser = audioCtx.createAnalyser();
     analyser.fftSize = 2048;
     analyser.smoothingTimeConstant = 0.7;
+    gainNode = audioCtx.createGain();
+    gainNode.gain.value = parseFloat(gainSlider.value);
     sourceNode = audioCtx.createMediaStreamSource(stream);
-    sourceNode.connect(analyser);
+    sourceNode.connect(gainNode);
+    gainNode.connect(analyser);
   }
 
   function dbFromFloat(v) {
@@ -609,17 +684,32 @@
 
   async function recordDesktop() {
     try {
-      const desktopStream = await navigator.mediaDevices.getDisplayMedia({ video: false, audio: true });
+      // Chrome requires video:true in getDisplayMedia to show the permission dialog.
+      // We immediately stop the video track after getting the audio track we actually need.
+      const desktopStream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          sampleRate: 48000,
+          channelCount: 2
+        }
+      });
+
+      // Drop video track right away — we only want audio
+      desktopStream.getVideoTracks().forEach(t => t.stop());
+
       const audioTracks = desktopStream.getAudioTracks();
       if (!audioTracks.length) {
-        setStatus('No audio track found — make sure to share system audio.', 'err');
+        setStatus('No audio track — enable "Share system audio" in the picker.', 'err');
         desktopStream.getTracks().forEach(t => t.stop());
         return;
       }
-      // Build analyser from desktop audio
-      stopMonitor();
+
       const audioOnly = new MediaStream(audioTracks);
-      monitorStream = desktopStream; // so we can stop all tracks
+      monitorStream = audioOnly;
+      stopMonitor();
       buildAnalyser(audioOnly);
       startMeterLoop();
       startWaveLoop();
@@ -632,12 +722,21 @@
 
   function beginRecording(stream) {
     chunks = [];
+
+    // Route through gainNode → destination so the recorded audio reflects the gain setting
+    let recordStream = stream;
+    if (audioCtx && gainNode) {
+      const dest = audioCtx.createMediaStreamDestination();
+      gainNode.connect(dest);
+      recordStream = dest.stream;
+    }
+
     // Prefer opus/webm for high quality, fall back gracefully
     const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', '']
       .find(t => !t || MediaRecorder.isTypeSupported(t));
     const opts = mimeType ? { mimeType } : {};
 
-    mediaRecorder = new MediaRecorder(stream, opts);
+    mediaRecorder = new MediaRecorder(recordStream, opts);
     mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
     mediaRecorder.onstop = onRecordStop;
     mediaRecorder.start(250); // 250ms chunks
