@@ -543,6 +543,7 @@
   function buildAnalyser(stream) {
     if (audioCtx) { try { audioCtx.close(); } catch(e){} }
     audioCtx = new AudioContext();
+    audioCtx.resume(); // ensure it's running (Chrome suspends new contexts)
     analyser = audioCtx.createAnalyser();
     analyser.fftSize = 2048;
     analyser.smoothingTimeConstant = 0.7;
@@ -669,7 +670,6 @@
         audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 2 },
         video: false
       });
-      // Rebuild analyser on recStream for live meter while recording
       stopMonitor();
       buildAnalyser(recStream);
       startMeterLoop();
@@ -708,8 +708,8 @@
       }
 
       const audioOnly = new MediaStream(audioTracks);
+      stopMonitor();                // close old audioCtx BEFORE building new one
       monitorStream = audioOnly;
-      stopMonitor();
       buildAnalyser(audioOnly);
       startMeterLoop();
       startWaveLoop();
@@ -723,15 +723,21 @@
   function beginRecording(stream) {
     chunks = [];
 
-    // Route through gainNode → destination so the recorded audio reflects the gain setting
-    let recordStream = stream;
+    // Build a gain-processed stream for recording.
+    // audioCtx & gainNode were just built by buildAnalyser(), so connect them now.
+    let recordStream = stream; // fallback
     if (audioCtx && gainNode) {
-      const dest = audioCtx.createMediaStreamDestination();
-      gainNode.connect(dest);
-      recordStream = dest.stream;
+      try {
+        const dest = audioCtx.createMediaStreamDestination();
+        gainNode.connect(dest);
+        // Resume context in case it's suspended (Chrome autoplay policy)
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        recordStream = dest.stream;
+      } catch(e) {
+        console.warn('Could not create destination node, recording raw stream:', e);
+      }
     }
 
-    // Prefer opus/webm for high quality, fall back gracefully
     const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', '']
       .find(t => !t || MediaRecorder.isTypeSupported(t));
     const opts = mimeType ? { mimeType } : {};
@@ -739,7 +745,7 @@
     mediaRecorder = new MediaRecorder(recordStream, opts);
     mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
     mediaRecorder.onstop = onRecordStop;
-    mediaRecorder.start(250); // 250ms chunks
+    mediaRecorder.start(250);
 
     // UI
     startBtn.disabled = true;
