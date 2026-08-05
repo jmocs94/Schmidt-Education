@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Crescendos 25-26 — Simple Playlist Player</title>
+<title>Crescendos 26-27 — Simple Playlist Player</title>
 <script src="https://unpkg.com/wavesurfer.js@7"></script>
 <style>
   body{font-family:Helvetica,Arial,sans-serif;background:#f0f8ff;color:#333;padding:1.5rem}
@@ -68,8 +68,8 @@
   <a href="https://schmidt-education.com">
   <img src="https://raw.githubusercontent.com/jmocs94/Schmidt-Education/360c0fde872bd41d319af96a3e55bc9df7df3a54/Crescendos_w_trans.png" width="160" alt="Crescendos" style="border:0;">
 </a>
-  <h1>Crescendos 25-26 — Playlist Player</h1>
-  <p>Create your playlist, control playback, and use headphones for clean audio.</p>
+  <h1>Crescendos 26-27 — Playlist Player</h1>
+  <p>Create your playlist, control playback.</p>
 </header>
 
 <div class="app">
@@ -123,16 +123,10 @@
 <script>
 /* ---------- Data (relative paths so they work on schmidt-education.com) ---------- */
 const TRACKS=[
-  {title:'Seize the Day - Performance',url:'Crescendos 25-26/01-SeizeTheDay-Performance-New.mp3'},
-  {title:'Could Have Been Me - Performance',url:'Crescendos 25-26/CouldHaveBeenMe-Performance.mp3'},
-  {title:'Go the Distance — Performance',url:'Crescendos 25-26/03-GoTheDistance(LongerIntro)-Full.mp3'},
-  {title:'Life is a Highway - Performance',url:'Crescendos 25-26/04-LifeIsAHighway-Accompaniment-New.mp3'},
-  {title:'I Lived - Performance',url:'Crescendos 25-26/05-ILived-Performance-Modified.mp3'},
-  {title:'Seize the Day - Accompaniment',url:'Crescendos 25-26/01-SeizeTheDay-Accompaniment.mp3'},
-  {title:'Could Have Been Me - Accompaniment',url:'Crescendos 25-26/CouldHaveBeenMe-Accompaniment.mp3'},
-  {title:'Go the Distance — Accompaniment',url:'Crescendos 25-26/03-GoTheDistance(LongerIntro)-Accompaniment.mp3'},
-  {title:'Life is a Highway - Accompaniment',url:'Crescendos 25-26/04-LifeIsAHighway-Accompaniment-New.mp3'},
-  {title:'I Lived - Accompaniment',url:'Crescendos 25-26/05-ILived-Accompaniment-Modified.mp3'}
+  {title:'I Just Cant Wait To Be King',url:'Crescendos-26-27/01-IJustCantWaitToBeKing-All.mp3'},
+  {title:'King of Anything Youll Be Back - Performance',url:'Crescendos-26-27/02-YoullBeBack-KingOfAnything-All.mp3'},
+  {title:'What It Sounds Like — Performance',url:'Crescendos-26-27/03-WhatItSoundsLike-All.mp3'},
+  {title:'Long Live - Performance',url:'Crescendos-26-27/04-LongLive-All.mp3'},
 ];
 
 /* ---------- Elements ---------- */
@@ -170,7 +164,7 @@ const wavesurfer=WaveSurfer.create({
 });
 
 /* ---------- State ---------- */
-let playlist=TRACKS.slice(0,5);
+let playlist=TRACKS.slice(0,4);
 let current=0;
 let gap=2.0;
 let gapTimer=null;
