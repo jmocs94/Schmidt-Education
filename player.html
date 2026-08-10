@@ -91,6 +91,7 @@
     <h2>Your Playlist <span class="info-icon" title="Space = Play/Pause · ←/→ = Prev/Next · S = Stop">i</span></h2>
     <div class="toolbar">
       <button id="loopMode" class="btn btn-muted" title="Change loop mode">No Loop</button>
+      <label><input id="autoAdvance" type="checkbox" checked> Auto-Advance</label>
       <label>Speed <input id="speed" type="range" min="0.05" max="2.0" step="0.05" value="1.00"></label>
       <span id="speedVal">1.00×</span>
 
@@ -153,6 +154,7 @@ const loopButton=document.getElementById('loopMode');
 const gapSlider=document.getElementById('gap');
 const gapVal=document.getElementById('gapVal');
 const volumeSlider=document.getElementById('volume');
+const autoAdvanceToggle=document.getElementById('autoAdvance');
 
 /* ---------- WaveSurfer ---------- */
 const wavesurfer=WaveSurfer.create({
@@ -177,6 +179,7 @@ let loadedIndex=-1;
 const LOOP_MODES=['none','track','playlist'];
 const LOOP_LABELS=['No Loop','Loop Current','Loop Playlist'];
 let loopIndex=0;
+let autoAdvance=autoAdvanceToggle.checked;
 
 /* ---------- Helpers ---------- */
 const fmt=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
@@ -502,6 +505,10 @@ gapSlider.addEventListener('input',e=>{
   gap=parseFloat(e.target.value);
   gapVal.textContent=gap.toFixed(1)+'s';
 });
+autoAdvanceToggle.addEventListener('change',()=>{
+  autoAdvance=autoAdvanceToggle.checked;
+  if(!autoAdvance) clearGap();
+});
 
 /* ---------- Wavesurfer Events ---------- */
 wavesurfer.on('play',updatePlayBtn);
@@ -509,6 +516,7 @@ wavesurfer.on('pause',updatePlayBtn);
 wavesurfer.on('finish',()=>{
   updatePlayBtn();
   clearGap();
+  if(!autoAdvance) return;
   gapTimer=setTimeout(()=>nextTrack(),gap*1000);
 });
 wavesurfer.on('audioprocess',()=>{
