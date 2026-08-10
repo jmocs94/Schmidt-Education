@@ -70,6 +70,10 @@
 </a>
   <h1>Crescendos 26-27 — Playlist Player</h1>
   <p>Create your playlist, control playback.</p>
+  <label style="display:inline-flex;align-items:center;gap:.4rem;font-size:.85rem;color:#456;margin-top:.35rem">
+    <input type="checkbox" id="keepAwakeToggle" checked>
+    Keep screen awake (recommended for Chromebooks)
+  </label>
 </header>
 
 <div class="app">
@@ -555,6 +559,55 @@ document.addEventListener('keydown',e=>{
     case's':case'S':stopBtn.click();break;
   }
 });
+
+/* ---------- Keep Screen Awake ---------- */
+const keepAwakeToggle=document.getElementById('keepAwakeToggle');
+let wakeLock=null;
+let keepAwakeEnabled=true;
+
+async function requestWakeLock(){
+  if(!('wakeLock' in navigator)) return;
+  try{
+    wakeLock=await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release',()=>{wakeLock=null;});
+  }catch(err){
+    console.warn('Wake Lock request failed:',err);
+  }
+}
+
+function releaseWakeLock(){
+  if(wakeLock){
+    wakeLock.release();
+    wakeLock=null;
+  }
+}
+
+function applyWakeLockPreference(){
+  if(keepAwakeEnabled) requestWakeLock();
+  else releaseWakeLock();
+}
+
+if(keepAwakeToggle){
+  keepAwakeToggle.addEventListener('change',()=>{
+    keepAwakeEnabled=keepAwakeToggle.checked;
+    applyWakeLockPreference();
+  });
+}
+
+// Chrome releases the wake lock whenever the tab is hidden/minimized;
+// reclaim it as soon as the tab is visible again.
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible' && keepAwakeEnabled) requestWakeLock();
+});
+
+// Some browsers require transient user activation before granting a wake lock,
+// so retry on the first real interaction in addition to the load-time attempt.
+function tryWakeLockOnInteraction(){
+  if(keepAwakeEnabled && !wakeLock) requestWakeLock();
+}
+['click','keydown','touchstart'].forEach(evt=>document.addEventListener(evt,tryWakeLockOnInteraction));
+
+applyWakeLockPreference();
 
 /* ---------- Init ---------- */
 renderPlaylist();         // show playlist immediately
