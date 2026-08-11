@@ -70,6 +70,10 @@
 </a>
   <h1>Crescendos 26-27 — Playlist Player</h1>
   <p>Create your playlist, control playback.</p>
+  <label style="display:inline-flex;align-items:center;gap:.4rem;font-size:.85rem;color:#456;margin-top:.35rem">
+    <input type="checkbox" id="keepAwakeToggle" checked>
+    Keep screen awake (recommended for Chromebooks)
+  </label>
 </header>
 
 <div class="app">
@@ -87,6 +91,7 @@
     <h2>Your Playlist <span class="info-icon" title="Space = Play/Pause · ←/→ = Prev/Next · S = Stop">i</span></h2>
     <div class="toolbar">
       <button id="loopMode" class="btn btn-muted" title="Change loop mode">No Loop</button>
+      <label><input id="autoAdvance" type="checkbox" checked> Auto-Advance</label>
       <label>Speed <input id="speed" type="range" min="0.05" max="2.0" step="0.05" value="1.00"></label>
       <span id="speedVal">1.00×</span>
 
@@ -149,6 +154,7 @@ const loopButton=document.getElementById('loopMode');
 const gapSlider=document.getElementById('gap');
 const gapVal=document.getElementById('gapVal');
 const volumeSlider=document.getElementById('volume');
+const autoAdvanceToggle=document.getElementById('autoAdvance');
 
 /* ---------- WaveSurfer ---------- */
 const wavesurfer=WaveSurfer.create({
@@ -173,6 +179,7 @@ let loadedIndex=-1;
 const LOOP_MODES=['none','track','playlist'];
 const LOOP_LABELS=['No Loop','Loop Current','Loop Playlist'];
 let loopIndex=0;
+let autoAdvance=autoAdvanceToggle.checked;
 
 /* ---------- Helpers ---------- */
 const fmt=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
@@ -498,6 +505,10 @@ gapSlider.addEventListener('input',e=>{
   gap=parseFloat(e.target.value);
   gapVal.textContent=gap.toFixed(1)+'s';
 });
+autoAdvanceToggle.addEventListener('change',()=>{
+  autoAdvance=autoAdvanceToggle.checked;
+  if(!autoAdvance) clearGap();
+});
 
 /* ---------- Wavesurfer Events ---------- */
 wavesurfer.on('play',updatePlayBtn);
@@ -505,6 +516,7 @@ wavesurfer.on('pause',updatePlayBtn);
 wavesurfer.on('finish',()=>{
   updatePlayBtn();
   clearGap();
+  if(!autoAdvance) return;
   gapTimer=setTimeout(()=>nextTrack(),gap*1000);
 });
 wavesurfer.on('audioprocess',()=>{
@@ -555,6 +567,55 @@ document.addEventListener('keydown',e=>{
     case's':case'S':stopBtn.click();break;
   }
 });
+
+/* ---------- Keep Screen Awake ---------- */
+const keepAwakeToggle=document.getElementById('keepAwakeToggle');
+let wakeLock=null;
+let keepAwakeEnabled=true;
+
+async function requestWakeLock(){
+  if(!('wakeLock' in navigator)) return;
+  try{
+    wakeLock=await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release',()=>{wakeLock=null;});
+  }catch(err){
+    console.warn('Wake Lock request failed:',err);
+  }
+}
+
+function releaseWakeLock(){
+  if(wakeLock){
+    wakeLock.release();
+    wakeLock=null;
+  }
+}
+
+function applyWakeLockPreference(){
+  if(keepAwakeEnabled) requestWakeLock();
+  else releaseWakeLock();
+}
+
+if(keepAwakeToggle){
+  keepAwakeToggle.addEventListener('change',()=>{
+    keepAwakeEnabled=keepAwakeToggle.checked;
+    applyWakeLockPreference();
+  });
+}
+
+// Chrome releases the wake lock whenever the tab is hidden/minimized;
+// reclaim it as soon as the tab is visible again.
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible' && keepAwakeEnabled) requestWakeLock();
+});
+
+// Some browsers require transient user activation before granting a wake lock,
+// so retry on the first real interaction in addition to the load-time attempt.
+function tryWakeLockOnInteraction(){
+  if(keepAwakeEnabled && !wakeLock) requestWakeLock();
+}
+['click','keydown','touchstart'].forEach(evt=>document.addEventListener(evt,tryWakeLockOnInteraction));
+
+applyWakeLockPreference();
 
 /* ---------- Init ---------- */
 renderPlaylist();         // show playlist immediately
