@@ -171,18 +171,18 @@
   </div>
 
   <div id="yt-container">
-    <iframe id="ytplayer" src="" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+    <div id="ytplayer"></div>
   </div>
 
   <div id="songProgress"></div>
 
+  <div id="countdownLabel"></div>
+  <div id="countdown"></div>
+  <button id="recordBtn">Start Recording</button>
+  <button id="skipVideoBtn">⏭ Skip to Next Video</button>
+
   <div>
     <video id="preview" autoplay muted playsinline></video>
-    <div id="countdownLabel"></div>
-    <div id="countdown"></div>
-    <br />
-    <button id="recordBtn">Start Recording</button>
-    <button id="skipVideoBtn">⏭ Skip to Next Video</button>
   </div>
 
   <div>
@@ -196,17 +196,16 @@
 
   <p>After downloading, go to Google Classroom, open the assignment, click “Add or Create,” choose “File,” and upload your saved video!</p>
 
+  <script src="https://www.youtube.com/iframe_api"></script>
   <script>
     const VIDEOS = [
       { id: "ziZ85l1OuJg", title: "I Just Can't Wait To Be King" },
       { id: "jPn0snTZPoA", title: "King Of Anything/You'll Be Back" },
       { id: "gi9g3coaHX4", title: "Long Live" }
     ];
-    const YT_ORIGIN = "https://www.youtube.com";
 
-    function embedUrl(id) {
-      return `https://www.youtube.com/embed/${id}?enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
-    }
+    let player = null;
+    let playerReady = false;
 
     const preview = document.getElementById("preview");
     const recordedVideo = document.getElementById("recordedVideo");
@@ -217,7 +216,6 @@
     const videoFilename = document.getElementById("videoFilename");
     const downloadBtn = document.getElementById("downloadVideo");
     const videoSelect = document.getElementById("videoSelect");
-    const ytplayer = document.getElementById("ytplayer");
     const rotateWarning = document.getElementById("rotate-warning");
     const multiModeToggle = document.getElementById("multiModeToggle");
     const singleVideoPicker = document.getElementById("singleVideoPicker");
@@ -343,12 +341,28 @@
 
     renderVideoSelect();
     renderVideoChecklist();
-    ytplayer.src = embedUrl(videoSelect.value);
+
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player("ytplayer", {
+        videoId: videoSelect.value,
+        events: {
+          onReady: () => { playerReady = true; },
+          onStateChange: onPlayerStateChange
+        }
+      });
+    }
+
+    function onPlayerStateChange(event) {
+      if (event.data === YT.PlayerState.ENDED &&
+          multiMode && isRecording && !betweenCountdownActive) {
+        advanceQueue();
+      }
+    }
 
     detectOrientation();
 
     videoSelect.addEventListener("change", () => {
-      ytplayer.src = embedUrl(videoSelect.value);
+      if (player && playerReady) player.cueVideoById(videoSelect.value);
       updateFilename();
     });
 
@@ -358,7 +372,7 @@
       multiVideoSection.style.display = multiMode ? "block" : "none";
       songProgress.textContent = "";
       if (!multiMode) {
-        ytplayer.src = embedUrl(videoSelect.value);
+        if (player && playerReady) player.cueVideoById(videoSelect.value);
       }
       updateFilename();
     });
@@ -434,11 +448,11 @@
     }
 
     function playYouTubeVideo() {
-      ytplayer.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+      if (player && playerReady) player.playVideo();
     }
 
     function pauseYouTubeVideo() {
-      ytplayer.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+      if (player && playerReady) player.pauseVideo();
     }
 
     function buildQueueFromChecklist() {
@@ -450,7 +464,7 @@
 
     function loadQueueVideo(index) {
       const video = playQueue[index];
-      ytplayer.src = embedUrl(video.id);
+      if (player && playerReady) player.cueVideoById(video.id);
       songProgress.textContent = `🎵 Song ${index + 1} of ${playQueue.length}: ${video.title}`;
     }
 
@@ -489,32 +503,6 @@
         setTimeout(() => { stopRecording(); }, 1500);
       }
     }
-
-    // Raw YouTube IFrame postMessage protocol: the same command channel already
-    // used above for play/pause, extended to subscribe to onStateChange so we
-    // can detect when a video ends. Deliberately avoids loading the separate
-    // https://www.youtube.com/iframe_api script (a third-party CDN dependency
-    // that school content filters have been known to block) since this piggybacks
-    // on the embed connection that's already proven to work.
-    window.addEventListener("message", (event) => {
-      if (event.origin !== YT_ORIGIN) return;
-      let data;
-      try {
-        data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
-      } catch (e) {
-        return;
-      }
-      if (data && data.event === "onStateChange" && data.info === 0 &&
-          multiMode && isRecording && !betweenCountdownActive) {
-        advanceQueue();
-      }
-    });
-
-    ytplayer.addEventListener("load", () => {
-      if (ytplayer.contentWindow) {
-        ytplayer.contentWindow.postMessage('{"event":"command","func":"addEventListener","args":["onStateChange"]}', '*');
-      }
-    });
 
     skipVideoBtn.addEventListener("click", () => {
       if (!isRecording || !multiMode || betweenCountdownActive) return;
@@ -604,6 +592,10 @@
         }
 
         if (!isRecording) {
+          if (!playerReady) {
+            alert("The video player is still loading. Please wait a second and try again.");
+            return;
+          }
           if (multiMode) {
             playQueue = buildQueueFromChecklist();
             if (playQueue.length === 0) {
