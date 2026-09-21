@@ -43,9 +43,19 @@
     button:hover {
       background-color: #004d40;
     }
+    button:disabled {
+      background-color: #9db5b1;
+      cursor: not-allowed;
+    }
+    #countdownLabel {
+      font-size: 1em;
+      color: #b91c1c;
+      min-height: 1.2em;
+    }
     #countdown {
       font-size: 2em;
       color: red;
+      min-height: 1.4em;
     }
     #recordedVideo {
       width: 100%;
@@ -61,6 +71,74 @@
       border-radius: 10px;
       max-width: 500px;
     }
+    #multiModeRow {
+      margin: 0.75em 0;
+      font-weight: 600;
+    }
+    #multiVideoSection {
+      display: none;
+      max-width: 480px;
+      margin: 0.5em auto;
+      text-align: left;
+    }
+    #selectAllRow {
+      margin-bottom: 0.5em;
+      font-weight: 600;
+    }
+    #videoChecklist {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      border: 1px solid #ccd;
+      border-radius: 8px;
+      background: #fff;
+    }
+    .video-check-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5em;
+      padding: 0.5em 0.75em;
+      border-bottom: 1px solid #eef3f9;
+      cursor: grab;
+    }
+    .video-check-item:last-child {
+      border-bottom: none;
+    }
+    .video-check-item.dragging {
+      opacity: 0.5;
+    }
+    .video-check-item.drag-over {
+      box-shadow: 0 0 0 2px #00796b inset;
+    }
+    .video-check-item .drag-handle {
+      color: #889;
+      font-size: 1.1rem;
+    }
+    .video-check-item label {
+      display: flex;
+      align-items: center;
+      gap: 0.4em;
+      margin: 0;
+      cursor: pointer;
+    }
+    #reorderHint {
+      font-size: 0.85em;
+      color: #456;
+      margin: 0.4em 0 0;
+    }
+    #songProgress {
+      font-weight: 600;
+      color: #00796b;
+      margin: 0.5em 0;
+      min-height: 1.2em;
+    }
+    #skipVideoBtn {
+      display: none;
+      background-color: #455a64;
+    }
+    #skipVideoBtn:hover {
+      background-color: #2c3a3f;
+    }
   </style>
 </head>
 <body>
@@ -75,22 +153,36 @@
     🔄 Please rotate your device to landscape mode before recording.
   </div>
 
-  <label for="videoSelect">Choose a video:</label>
-  <select id="videoSelect">
-    <option value="ziZ85l1OuJg">I Just Can't Wait To Be King</option>
-    <option value="jPn0snTZPoA">King Of Anything/You'll Be Back</option>
-    <option value="gi9g3coaHX4">Long Live</option>
-  </select>
+  <div id="multiModeRow">
+    <label><input type="checkbox" id="multiModeToggle"> I need to record multiple videos back to back</label>
+  </div>
+
+  <div id="singleVideoPicker">
+    <label for="videoSelect">Choose a video:</label>
+    <select id="videoSelect"></select>
+  </div>
+
+  <div id="multiVideoSection">
+    <div id="selectAllRow">
+      <label><input type="checkbox" id="selectAllVideos"> Select All</label>
+    </div>
+    <ul id="videoChecklist"></ul>
+    <p id="reorderHint">Drag ⋮⋮ to set the performance order.</p>
+  </div>
 
   <div id="yt-container">
-    <iframe id="ytplayer" src="https://www.youtube.com/embed/ziZ85l1OuJg?enablejsapi=1" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+    <iframe id="ytplayer" src="" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
   </div>
+
+  <div id="songProgress"></div>
 
   <div>
     <video id="preview" autoplay muted playsinline></video>
+    <div id="countdownLabel"></div>
     <div id="countdown"></div>
     <br />
     <button id="recordBtn">Start Recording</button>
+    <button id="skipVideoBtn">⏭ Skip to Next Video</button>
   </div>
 
   <div>
@@ -105,24 +197,49 @@
   <p>After downloading, go to Google Classroom, open the assignment, click “Add or Create,” choose “File,” and upload your saved video!</p>
 
   <script>
+    const VIDEOS = [
+      { id: "ziZ85l1OuJg", title: "I Just Can't Wait To Be King" },
+      { id: "jPn0snTZPoA", title: "King Of Anything/You'll Be Back" },
+      { id: "gi9g3coaHX4", title: "Long Live" }
+    ];
+    const YT_ORIGIN = "https://www.youtube.com";
+
+    function embedUrl(id) {
+      return `https://www.youtube.com/embed/${id}?enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
+    }
+
     const preview = document.getElementById("preview");
     const recordedVideo = document.getElementById("recordedVideo");
     const recordBtn = document.getElementById("recordBtn");
+    const skipVideoBtn = document.getElementById("skipVideoBtn");
+    const countdownLabel = document.getElementById("countdownLabel");
     const countdown = document.getElementById("countdown");
     const videoFilename = document.getElementById("videoFilename");
     const downloadBtn = document.getElementById("downloadVideo");
     const videoSelect = document.getElementById("videoSelect");
     const ytplayer = document.getElementById("ytplayer");
     const rotateWarning = document.getElementById("rotate-warning");
+    const multiModeToggle = document.getElementById("multiModeToggle");
+    const singleVideoPicker = document.getElementById("singleVideoPicker");
+    const multiVideoSection = document.getElementById("multiVideoSection");
+    const selectAllVideos = document.getElementById("selectAllVideos");
+    const videoChecklist = document.getElementById("videoChecklist");
+    const songProgress = document.getElementById("songProgress");
 
     let mediaRecorder;
     let recordedChunks = [];
     let stream;
-    let currentVideoId = videoSelect.value;
     let isRecording = false;
     let countdownInterval = null;
     let countdownActive = false;
     let recordingOptions = { mimeType: "", extension: "webm" };
+
+    let multiMode = false;
+    let playQueue = [];
+    let queueIndex = 0;
+    let betweenCountdownActive = false;
+    let advancing = false;
+    let dragItem = null;
 
     function determineRecordingOptions() {
       if (typeof MediaRecorder === "undefined" || typeof MediaRecorder.isTypeSupported !== "function") {
@@ -156,9 +273,55 @@
       return `${yy}-${mm}-${dd}`;
     }
 
+    function renderVideoSelect() {
+      videoSelect.innerHTML = "";
+      VIDEOS.forEach(v => {
+        const opt = document.createElement("option");
+        opt.value = v.id;
+        opt.textContent = v.title;
+        videoSelect.append(opt);
+      });
+    }
+
+    function renderVideoChecklist() {
+      videoChecklist.innerHTML = "";
+      VIDEOS.forEach(v => {
+        const li = document.createElement("li");
+        li.className = "video-check-item";
+        li.draggable = true;
+
+        const handle = document.createElement("span");
+        handle.className = "drag-handle";
+        handle.textContent = "⋮⋮";
+        handle.setAttribute("aria-hidden", "true");
+
+        const label = document.createElement("label");
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.className = "video-check";
+        cb.value = v.id;
+        cb.dataset.title = v.title;
+        label.append(cb, document.createTextNode(" " + v.title));
+
+        li.append(handle, label);
+        videoChecklist.append(li);
+      });
+    }
+
     function updateFilename() {
-      const selectedText = videoSelect.options[videoSelect.selectedIndex].textContent;
-      videoFilename.value = `${selectedText.replace(/\s+/g, '_')}_${getFormattedDate()}`;
+      if (multiMode) {
+        const count = document.querySelectorAll(".video-check:checked").length;
+        videoFilename.value = `Multi-Song-Recording_${count}-songs_${getFormattedDate()}`;
+      } else {
+        const selectedText = videoSelect.options[videoSelect.selectedIndex].textContent;
+        videoFilename.value = `${selectedText.replace(/\s+/g, '_')}_${getFormattedDate()}`;
+      }
+    }
+
+    function setMultiControlsDisabled(disabled) {
+      selectAllVideos.disabled = disabled;
+      document.querySelectorAll(".video-check").forEach(cb => { cb.disabled = disabled; });
+      document.querySelectorAll(".video-check-item").forEach(li => { li.draggable = !disabled; });
     }
 
     function detectOrientation() {
@@ -177,12 +340,78 @@
 
     window.addEventListener("orientationchange", detectOrientation);
     window.addEventListener("resize", detectOrientation);
+
+    renderVideoSelect();
+    renderVideoChecklist();
+    ytplayer.src = embedUrl(videoSelect.value);
+
     detectOrientation();
 
     videoSelect.addEventListener("change", () => {
-      currentVideoId = videoSelect.value;
-      ytplayer.src = `https://www.youtube.com/embed/${currentVideoId}?enablejsapi=1`;
+      ytplayer.src = embedUrl(videoSelect.value);
       updateFilename();
+    });
+
+    multiModeToggle.addEventListener("change", () => {
+      multiMode = multiModeToggle.checked;
+      singleVideoPicker.style.display = multiMode ? "none" : "block";
+      multiVideoSection.style.display = multiMode ? "block" : "none";
+      songProgress.textContent = "";
+      if (!multiMode) {
+        ytplayer.src = embedUrl(videoSelect.value);
+      }
+      updateFilename();
+    });
+
+    selectAllVideos.addEventListener("change", () => {
+      document.querySelectorAll(".video-check").forEach(cb => { cb.checked = selectAllVideos.checked; });
+      updateFilename();
+    });
+
+    videoChecklist.addEventListener("change", (e) => {
+      if (!e.target.classList.contains("video-check")) return;
+      const boxes = [...document.querySelectorAll(".video-check")];
+      const checkedCount = boxes.filter(cb => cb.checked).length;
+      selectAllVideos.checked = checkedCount === boxes.length;
+      selectAllVideos.indeterminate = checkedCount > 0 && checkedCount < boxes.length;
+      updateFilename();
+    });
+
+    videoChecklist.addEventListener("dragstart", (e) => {
+      if (countdownActive || isRecording) return;
+      const li = e.target.closest(".video-check-item");
+      if (!li) return;
+      dragItem = li;
+      li.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", "");
+    });
+
+    videoChecklist.addEventListener("dragend", (e) => {
+      const li = e.target.closest(".video-check-item");
+      if (li) li.classList.remove("dragging");
+      dragItem = null;
+      [...videoChecklist.querySelectorAll(".drag-over")].forEach(el => el.classList.remove("drag-over"));
+    });
+
+    videoChecklist.addEventListener("dragover", (e) => {
+      if (!dragItem) return;
+      e.preventDefault();
+      const li = e.target.closest(".video-check-item");
+      if (!li || li === dragItem) return;
+      [...videoChecklist.querySelectorAll(".drag-over")].forEach(el => { if (el !== li) el.classList.remove("drag-over"); });
+      li.classList.add("drag-over");
+    });
+
+    videoChecklist.addEventListener("drop", (e) => {
+      if (!dragItem) return;
+      e.preventDefault();
+      const li = e.target.closest(".video-check-item");
+      if (!li || li === dragItem) return;
+      li.classList.remove("drag-over");
+      const rect = li.getBoundingClientRect();
+      const before = (e.clientY - rect.top) < rect.height / 2;
+      videoChecklist.insertBefore(dragItem, before ? li : li.nextSibling);
     });
 
     updateFilename();
@@ -212,6 +441,86 @@
       ytplayer.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
     }
 
+    function buildQueueFromChecklist() {
+      return [...videoChecklist.querySelectorAll(".video-check-item")]
+        .map(li => li.querySelector(".video-check"))
+        .filter(cb => cb.checked)
+        .map(cb => ({ id: cb.value, title: cb.dataset.title }));
+    }
+
+    function loadQueueVideo(index) {
+      const video = playQueue[index];
+      ytplayer.src = embedUrl(video.id);
+      songProgress.textContent = `🎵 Song ${index + 1} of ${playQueue.length}: ${video.title}`;
+    }
+
+    function startBetweenVideosCountdown(onDone) {
+      betweenCountdownActive = true;
+      countdownLabel.textContent = "Next video starts in";
+      let count = 3;
+      countdown.textContent = String(count);
+      countdownInterval = setInterval(() => {
+        count--;
+        if (count === 0) {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+          betweenCountdownActive = false;
+          countdown.textContent = "";
+          countdownLabel.textContent = "";
+          onDone();
+        } else {
+          countdown.textContent = String(count);
+        }
+      }, 1000);
+    }
+
+    function advanceQueue() {
+      if (!isRecording || !multiMode || advancing) return;
+      advancing = true;
+      queueIndex++;
+      if (queueIndex < playQueue.length) {
+        loadQueueVideo(queueIndex);
+        startBetweenVideosCountdown(() => {
+          playYouTubeVideo();
+          advancing = false;
+        });
+      } else {
+        songProgress.textContent = "🎬 Last song finished — wrapping up…";
+        setTimeout(() => { stopRecording(); }, 1500);
+      }
+    }
+
+    // Raw YouTube IFrame postMessage protocol: the same command channel already
+    // used above for play/pause, extended to subscribe to onStateChange so we
+    // can detect when a video ends. Deliberately avoids loading the separate
+    // https://www.youtube.com/iframe_api script (a third-party CDN dependency
+    // that school content filters have been known to block) since this piggybacks
+    // on the embed connection that's already proven to work.
+    window.addEventListener("message", (event) => {
+      if (event.origin !== YT_ORIGIN) return;
+      let data;
+      try {
+        data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+      } catch (e) {
+        return;
+      }
+      if (data && data.event === "onStateChange" && data.info === 0 &&
+          multiMode && isRecording && !betweenCountdownActive) {
+        advanceQueue();
+      }
+    });
+
+    ytplayer.addEventListener("load", () => {
+      if (ytplayer.contentWindow) {
+        ytplayer.contentWindow.postMessage('{"event":"command","func":"addEventListener","args":["onStateChange"]}', '*');
+      }
+    });
+
+    skipVideoBtn.addEventListener("click", () => {
+      if (!isRecording || !multiMode || betweenCountdownActive) return;
+      advanceQueue();
+    });
+
     function beginRecording() {
       recordedChunks = [];
       const options = recordingOptions.mimeType ? { mimeType: recordingOptions.mimeType } : undefined;
@@ -221,8 +530,14 @@
       };
       mediaRecorder.onstop = () => {
         isRecording = false;
+        betweenCountdownActive = false;
         recordBtn.textContent = "Start Recording";
         videoSelect.disabled = false;
+        multiModeToggle.disabled = false;
+        setMultiControlsDisabled(false);
+        skipVideoBtn.style.display = "none";
+        songProgress.textContent = "";
+        countdownLabel.textContent = "";
         detectOrientation();
         pauseYouTubeVideo();
         recordBtn.disabled = false;
@@ -242,10 +557,20 @@
       isRecording = true;
       recordBtn.textContent = "Stop Recording";
       recordBtn.disabled = false;
+      if (multiMode) {
+        skipVideoBtn.style.display = "inline-block";
+      }
     }
 
     function stopRecording() {
       if (!isRecording || !mediaRecorder) return;
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+      betweenCountdownActive = false;
+      countdown.textContent = "";
+      countdownLabel.textContent = "";
       recordBtn.disabled = true;
       mediaRecorder.stop();
     }
@@ -254,6 +579,8 @@
       countdownActive = true;
       recordBtn.disabled = true;
       videoSelect.disabled = true;
+      multiModeToggle.disabled = true;
+      setMultiControlsDisabled(true);
       let count = 3;
       countdown.textContent = String(count);
       countdownInterval = setInterval(() => {
@@ -277,6 +604,16 @@
         }
 
         if (!isRecording) {
+          if (multiMode) {
+            playQueue = buildQueueFromChecklist();
+            if (playQueue.length === 0) {
+              alert("Please select at least one video to record.");
+              return;
+            }
+            queueIndex = 0;
+            advancing = false;
+            loadQueueVideo(0);
+          }
           startCountdown();
         } else {
           stopRecording();
