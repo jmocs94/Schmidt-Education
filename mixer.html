@@ -50,7 +50,8 @@ main{display:flex;gap:12px;padding:12px;align-items:flex-start;flex-wrap:wrap}
 .jackrow{display:flex;align-items:center;gap:6px;width:100%}
 .jack{width:40px;height:40px;flex:none;border-radius:50%;background:radial-gradient(#000 34%,#4a4a4a 37%,#7b7b7b 62%,#2a2a2a);border:2px solid #000;position:relative}
 .jack.hot{box-shadow:0 0 0 2px var(--jc,#fff)}
-.scribble{flex:1;background:#f3eedc;color:#222;font:700 12px/1 "Comic Sans MS","Chalkboard SE","Marker Felt",cursive;padding:5px 3px;border-radius:2px;text-align:center;transform:rotate(-1.5deg);box-shadow:0 1px 2px #0008}
+.scribble{flex:1;min-width:0;width:100%;border:0;background:#f3eedc;color:#222;font:700 12px/1 "Comic Sans MS","Chalkboard SE","Marker Felt",cursive;padding:5px 3px;border-radius:2px;text-align:center;text-transform:uppercase;transform:rotate(-1.5deg);box-shadow:0 1px 2px #0008;cursor:text}
+.scribble:focus{outline:2px solid var(--accent);background:#fffbe9}
 .row{display:flex;justify-content:space-around;align-items:center;width:100%}
 .sec{font-size:9px;color:var(--muted);letter-spacing:1px;width:100%;text-align:center;border-top:1px solid var(--line);padding-top:2px}
 .knob{display:flex;flex-direction:column;align-items:center;width:40px}
@@ -94,6 +95,18 @@ main{display:flex;gap:12px;padding:12px;align-items:flex-start;flex-wrap:wrap}
 .plug small{font-size:8px;font-weight:800;color:var(--c);letter-spacing:.3px}
 .plug.dragging{cursor:grabbing;z-index:6;transform-origin:center}
 .plug:focus-visible{box-shadow:0 0 0 3px var(--accent)}
+.plug.needs{animation:needs 1.4s infinite}
+@keyframes needs{50%{box-shadow:0 0 0 6px #ffffff55,0 4px 8px #000b}}
+.outs{display:flex;gap:18px;justify-content:center;margin-top:24px}
+.outs>div{display:flex;flex-direction:column;align-items:center;gap:15px;font-size:8px;font-weight:700;letter-spacing:.4px;color:var(--muted);text-align:center}
+.jack.out{width:34px;height:34px}
+.spk-col{width:136px;display:flex;flex-direction:column;gap:8px}
+.spk{flex:1;background:#101216;border:1px solid var(--line);border-radius:10px;padding:5px 8px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:opacity .2s}
+.spk.off{opacity:.55}
+.spk-title{font-size:11px;font-weight:700;letter-spacing:.6px}
+.spk svg{width:84px;height:118px}
+.spk .cone{transform-box:fill-box;transform-origin:center}
+.spk .src-row{width:100%}
 /* Sidebar */
 #side{width:330px;flex:none;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;position:sticky;top:12px;max-height:calc(100vh - 90px);overflow:auto}
 #side[hidden]{display:none}
@@ -208,6 +221,13 @@ const SRC_INFO = {
   bass:  { name: 'Bass',  icon: '🎸', color: 'var(--bass)' },
   drums: { name: 'Drums', icon: '🥁', color: 'var(--drums)' },
 };
+const SPK = ['spkL', 'spkR'];
+const ALL_CABLES = [...SRC, ...SPK];
+const INFO = { ...SRC_INFO,
+  spkL: { name: 'Left speaker', short: 'L SPKR', icon: '🔊', color: '#e0e0e0' },
+  spkR: { name: 'Right speaker', short: 'R SPKR', icon: '🔊', color: '#ef5350' },
+};
+const isSpk = s => s.startsWith('spk');
 const TRACKS = ['piano', 'bass', 'drums'];
 const LABELS = ['VOCAL', 'PIANO', 'BASS', 'DRUMS'];
 const LOOP_SECONDS = 24, BAR_SECONDS = 2; // 12 bars of 4/4 at 120 BPM
@@ -238,9 +258,10 @@ const pct = db => clamp((db + 60) / 60, 0, 1) * 100;
 /* ============================== Mixer state ============================== */
 function defaultState() {
   return {
-    ch: LABELS.map(() => ({ gain: 0, hi: 0, mid: 0, lo: 0, send: 0, pan: 0, mute: false, solo: false, fader: F0 })),
-    mL: F0, mR: F0, rev: 0.5, link: false,
-    cables: { mic: null, piano: 1, bass: 2, drums: 3 },
+    ch: LABELS.map(() => ({ gain: 0, hi: 0, mid: 0, lo: 0, delay: 0, send: 0, pan: 0, mute: false, solo: false, fader: F0 })),
+    mL: F0, mR: F0, rev: 0.5, link: false, labels: [...LABELS],
+    // speakers start unplugged: students must connect them to hear anything
+    cables: { mic: null, piano: 1, bass: 2, drums: 3, spkL: null, spkR: null },
   };
 }
 let S = defaultState();
@@ -252,7 +273,9 @@ const ML = { L: -120, R: -120 };
 const anySolo = () => S.ch.some(c => c.solo);
 const chOf = src => S.cables[src] == null ? null : S.ch[S.cables[src]];
 const srcIn = i => SRC.find(s => S.cables[s] === i) || null;
-const mainOn = () => posToDb(S.mL) > -Infinity || posToDb(S.mR) > -Infinity;
+const spkGets = out => S.cables.spkL === out || S.cables.spkR === out;
+const sideOn = out => posToDb(out === 'L' ? S.mL : S.mR) > -Infinity && spkGets(out);
+const mainOn = () => sideOn('L') || sideOn('R');
 const heard = i => i != null && L[i].postSlow > -45 && mainOn();
 const heardSrc = s => heard(S.cables[s]);
 
@@ -376,13 +399,18 @@ function buildStage() {
   lab.innerHTML = '<b>◀ STAGE BOX</b>Where the musicians plug in. Drag a cable\'s plug onto a channel\'s INPUT jack below.';
   stage.appendChild(lab);
 
-  for (const s of SRC) {
+}
+
+function buildPlugs() {
+  for (const s of ALL_CABLES) {
+    const info = INFO[s];
     const p = document.createElement('div');
-    p.className = 'plug'; p.tabIndex = 0; p.dataset.help = 'cable'; p.dataset.src = s;
-    p.style.setProperty('--c', SRC_INFO[s].color);
+    p.className = 'plug'; p.tabIndex = 0; p.dataset.help = isSpk(s) ? 'spkcable' : 'cable'; p.dataset.src = s;
+    p.style.setProperty('--c', info.color);
     p.setAttribute('role', 'button');
-    p.setAttribute('aria-label', `${SRC_INFO[s].name} cable. Press 1 to 4 to plug into a channel, 0 to unplug.`);
-    p.innerHTML = `${SRC_INFO[s].icon}<small>${SRC_INFO[s].name.toUpperCase()}</small>`;
+    p.setAttribute('aria-label', isSpk(s) ? `${info.name} cable. Press L or R to plug into a main output, 0 to unplug.`
+      : `${info.name} cable. Press 1 to 4 to plug into a channel, 0 to unplug.`);
+    p.innerHTML = `${info.icon}<small>${info.short || info.name.toUpperCase()}</small>`;
     rig.appendChild(p); plugEl[s] = p;
     p.addEventListener('pointerdown', e => {
       e.preventDefault(); p.setPointerCapture(e.pointerId); p.focus();
@@ -396,13 +424,15 @@ function buildStage() {
       if (!dragPos[s]) return;
       const pt = relPoint(e); dragPos[s] = null; p.classList.remove('dragging');
       let best = null, bd = 48;
-      ui.forEach((u, i) => { const c = rel(u.jack); const d = Math.hypot(c.x - pt.x, c.y - pt.y); if (d < bd) { bd = d; best = i; } });
+      const targets = isSpk(s) ? [['L', M.out.L], ['R', M.out.R]] : ui.map((u, i) => [i, u.jack]);
+      for (const [key, el] of targets) { const c = rel(el); const d = Math.hypot(c.x - pt.x, c.y - pt.y); if (d < bd) { bd = d; best = key; } }
       if (best == null) unplug(s); else plugInto(s, best);
     };
     p.addEventListener('pointerup', drop);
     p.addEventListener('pointercancel', drop);
     p.addEventListener('keydown', e => {
-      if (e.key >= '1' && e.key <= '4') plugInto(s, +e.key - 1);
+      if (!isSpk(s) && e.key >= '1' && e.key <= '4') plugInto(s, +e.key - 1);
+      else if (isSpk(s) && /^[lr]$/i.test(e.key)) plugInto(s, e.key.toUpperCase());
       else if (e.key === '0' || e.key === 'Delete' || e.key === 'Backspace') unplug(s);
     });
   }
@@ -411,8 +441,10 @@ function buildStage() {
 function buildStrip(i) {
   const s = document.createElement('div');
   s.className = 'strip'; s.dataset.ch = i;
-  s.innerHTML = `<div class="jackrow"><div class="jack" data-help="jack" aria-label="Channel ${i + 1} input jack"></div><div class="scribble" data-help="scribble">${LABELS[i]}</div></div>`;
-  const u = { strip: s, jack: s.querySelector('.jack') };
+  s.innerHTML = `<div class="jackrow"><div class="jack" data-help="jack" aria-label="Channel ${i + 1} input jack"></div><input class="scribble" data-help="scribble" maxlength="10" spellcheck="false" aria-label="Channel ${i + 1} label"></div>`;
+  const u = { strip: s, jack: s.querySelector('.jack'), scribble: s.querySelector('.scribble') };
+  u.scribble.addEventListener('input', () => { S.labels[i] = u.scribble.value.toUpperCase(); renderLabels(); });
+  u.scribble.addEventListener('keydown', e => { if (e.key === 'Enter') u.scribble.blur(); });
   const k = (key, o) => { u[key] = new Knob({ ...o, onChange: v => setCh(i, key, v) }); return u[key].el; };
   const row = (...els) => { const r = document.createElement('div'); r.className = 'row'; els.forEach(e => r.appendChild(e)); return r; };
   const sec = t => { const d = document.createElement('div'); d.className = 'sec'; d.textContent = t; return d; };
@@ -427,6 +459,7 @@ function buildStrip(i) {
     k('mid', { label: 'MID',  aria: `Channel ${i + 1} mid EQ`,  min: -15, max: 15, def: 0, step: 0.5, fmt: fmtGainDb, help: 'eqmid', detent: true, color: '#81c784' }),
     k('lo',  { label: 'LOW',  aria: `Channel ${i + 1} low EQ`,  min: -15, max: 15, def: 0, step: 0.5, fmt: fmtGainDb, help: 'eqlo', detent: true, color: '#ffb74d' })));
   s.appendChild(row(
+    k('delay', { label: 'DELAY', aria: `Channel ${i + 1} delay`, min: 0, max: 85, def: 0, step: 1, fmt: v => Math.round(v) + ' ms', help: 'delay', color: '#4dd0e1' }),
     k('send', { label: 'FX SEND', aria: `Channel ${i + 1} reverb send`, min: 0, max: 1, def: 0, step: 0.01, fmt: fmtPct, help: 'send', color: '#b388ff' }),
     k('pan',  { label: 'PAN', aria: `Channel ${i + 1} pan`, min: -1, max: 1, def: 0, step: 0.01, fmt: fmtPan, help: 'pan', detent: true })));
   const mute = document.createElement('button'); mute.className = 'btn mute'; mute.textContent = 'MUTE'; mute.dataset.help = 'mute';
@@ -460,6 +493,11 @@ function buildMaster() {
   const guard = document.createElement('div');
   guard.className = 'guard'; guard.dataset.help = 'guard'; guard.innerHTML = '<i></i>FEEDBACK GUARD';
   M.guard = guard; s.appendChild(guard);
+  const outs = document.createElement('div'); outs.className = 'outs';
+  outs.innerHTML = '<div><div class="jack out" data-help="mainout"></div>MAIN OUT L</div><div><div class="jack out" data-help="mainout"></div>MAIN OUT R</div>';
+  const oj = outs.querySelectorAll('.jack');
+  M.out = { L: oj[0], R: oj[1] };
+  s.appendChild(outs);
   const wrap = document.createElement('div'); wrap.className = 'mfaders';
   for (const side of ['L', 'R']) {
     const col = document.createElement('div');
@@ -474,6 +512,28 @@ function buildMaster() {
   }
   s.appendChild(wrap);
   return s;
+}
+
+function buildSpeakers() {
+  const col = document.createElement('div');
+  col.className = 'spk-col';
+  M.spk = {};
+  for (const side of ['L', 'R']) {
+    const id = 'spk' + side, info = INFO[id];
+    const cell = document.createElement('div');
+    cell.className = 'spk'; cell.dataset.help = 'speaker';
+    cell.innerHTML = `<div class="spk-title" style="color:${info.color}">${side === 'L' ? 'LEFT' : 'RIGHT'} SPEAKER</div>
+      <svg viewBox="0 0 84 118" aria-hidden="true">
+        <rect x="2" y="2" width="80" height="114" rx="8" fill="#23272e" stroke="#000" stroke-width="3"/>
+        <circle cx="42" cy="28" r="12" fill="#111"/><circle cx="42" cy="28" r="6" fill="#4a5059"/>
+        <g class="cone"><circle cx="42" cy="78" r="30" fill="#111"/><circle cx="42" cy="78" r="24" fill="#3a3f47"/><circle cx="42" cy="78" r="9" fill="#15171a"/></g>
+      </svg>
+      <div class="src-row"><div class="socket"></div><div class="park">unplugged</div></div>`;
+    col.appendChild(cell);
+    sockEl[id] = cell.querySelector('.socket'); parkEl[id] = cell.querySelector('.park');
+    M.spk[side] = { cell, cone: cell.querySelector('.cone') };
+  }
+  return col;
 }
 
 /* ============================== State → UI/audio ============================== */
@@ -497,6 +557,7 @@ function applyCh(i, k) {
     case 'hi': n.hi.gain.setTargetAtTime(c.hi, t, tc); break;
     case 'mid': n.mid.gain.setTargetAtTime(c.mid, t, tc); break;
     case 'lo': n.lo.gain.setTargetAtTime(c.lo, t, tc); break;
+    case 'delay': n.delay.delayTime.setTargetAtTime(c.delay / 1000, t, 0.03); break;
     case 'send': n.send.gain.setTargetAtTime(c.send, t, tc); break;
     case 'pan': n.pan.pan.setTargetAtTime(c.pan, t, tc); break;
     case 'fader': n.fader.gain.setTargetAtTime(dbToGain(posToDb(c.fader)), t, tc); break;
@@ -525,12 +586,22 @@ function applyMaster() {
   A.gR.gain.setTargetAtTime(dbToGain(posToDb(S.mR)), t, 0.015);
   A.revRet.gain.setTargetAtTime(S.rev, t, 0.015);
 }
-const CH_KEYS = ['gain', 'hi', 'mid', 'lo', 'send', 'pan', 'mute', 'solo', 'fader'];
+const CH_KEYS = ['gain', 'hi', 'mid', 'lo', 'delay', 'send', 'pan', 'mute', 'solo', 'fader'];
+function renderLabels() {
+  ui.forEach((u, i) => { if (u.scribble.value.toUpperCase() !== S.labels[i]) u.scribble.value = S.labels[i]; });
+  document.querySelectorAll('#flowPick button').forEach((b, i) => { b.textContent = `${i + 1} ${S.labels[i] || ''}`; });
+}
 function renderAll() {
+  renderLabels();
   S.ch.forEach((_, i) => CH_KEYS.forEach(k => { renderCh(i, k); applyCh(i, k); }));
   applyMuteSolo(); renderMaster(); applyMaster(); routeCables(); updateJacks(); drawCables();
 }
-function resetMixer() { S = defaultState(); renderAll(); }
+// Challenges keep the student's speaker hookup and labels; the Reset button clears everything.
+function resetMixer(keep) {
+  const old = S; S = defaultState();
+  if (keep) { S.cables.spkL = old.cables.spkL; S.cables.spkR = old.cables.spkR; S.labels = old.labels; }
+  renderAll();
+}
 
 /* ============================== Cables ============================== */
 function rel(el) {
@@ -541,21 +612,22 @@ function relPoint(e) { const R = rig.getBoundingClientRect(); return { x: e.clie
 function plugPos(s) {
   if (dragPos[s]) return dragPos[s];
   const c = S.cables[s];
-  return c != null ? rel(ui[c].jack) : rel(parkEl[s]);
+  if (c == null) return rel(parkEl[s]);
+  return rel(isSpk(s) ? M.out[c] : ui[c].jack);
 }
 let drawQueued = false;
 function requestDraw() { if (!drawQueued) { drawQueued = true; requestAnimationFrame(() => { drawQueued = false; drawCables(); }); } }
 function drawCables() {
   svg.setAttribute('width', rig.offsetWidth); svg.setAttribute('height', rig.offsetHeight);
   let html = '';
-  for (const s of SRC) {
+  for (const s of ALL_CABLES) {
     const a = rel(sockEl[s]), p = plugPos(s);
     plugEl[s].style.transform = `translate(${p.x}px,${p.y}px)`;
     const ex = p.x, ey = p.y - 25;
     const k = 30 + Math.max(Math.abs(ey - a.y), Math.abs(ex - a.x)) * 0.35;
     const d = `M${a.x},${a.y} C${a.x},${a.y + k} ${ex},${ey - k} ${ex},${ey}`;
     html += `<path d="${d}" fill="none" stroke="#000" stroke-opacity=".55" stroke-width="10" stroke-linecap="round"/>` +
-            `<path d="${d}" fill="none" stroke="${SRC_INFO[s].color}" stroke-width="6" stroke-linecap="round"/>`;
+            `<path d="${d}" fill="none" stroke="${INFO[s].color}" stroke-width="6" stroke-linecap="round"/>`;
   }
   svg.innerHTML = html;
 }
@@ -565,6 +637,15 @@ function updateJacks() {
     u.jack.classList.toggle('hot', !!s);
     if (s) u.jack.style.setProperty('--jc', SRC_INFO[s].color);
   });
+  for (const out of ['L', 'R']) {
+    const s = SPK.find(k => S.cables[k] === out);
+    M.out[out].classList.toggle('hot', !!s);
+    if (s) M.out[out].style.setProperty('--jc', INFO[s].color);
+  }
+  for (const s of SPK) {
+    plugEl[s].classList.toggle('needs', S.cables[s] == null);
+    M.spk[s.slice(3)].cell.classList.toggle('off', S.cables[s] == null);
+  }
 }
 function routeCables() {
   if (!A) return;
@@ -573,9 +654,13 @@ function routeCables() {
     try { o.disconnect(); } catch (_) { /* nothing connected */ }
     if (S.cables[s] != null) o.connect(A.ch[S.cables[s]].input);
   }
+  // Each speaker plays whichever main output its cable is plugged into.
+  const t = A.ctx.currentTime;
+  for (const out of ['L', 'R']) for (const side of ['L', 'R'])
+    A.route[out + side].gain.setTargetAtTime(S.cables['spk' + side] === out ? 1 : 0, t, 0.005);
 }
 async function plugInto(s, i) {
-  for (const o of SRC) if (o !== s && S.cables[o] === i) S.cables[o] = null; // bump whatever was there
+  for (const o of (isSpk(s) ? SPK : SRC)) if (o !== s && S.cables[o] === i) S.cables[o] = null; // bump whatever was there
   S.cables[s] = i;
   routeCables(); updateJacks(); drawCables();
   if (s === 'mic' && !(A && A.micOn)) {
@@ -605,7 +690,12 @@ function powerUp() {
   A.gL = ctx.createGain(); A.gR = ctx.createGain();
   A.aL = ctx.createAnalyser(); A.aR = ctx.createAnalyser(); A.aL.fftSize = A.aR.fftSize = 1024;
   A.bus.connect(split); split.connect(A.gL, 0); split.connect(A.gR, 1);
-  A.gL.connect(merge, 0, 0); A.gR.connect(merge, 0, 1);
+  A.route = {}; // main out (L/R) → speaker (L/R), switched by the speaker cables
+  for (const out of ['L', 'R']) for (const side of ['L', 'R']) {
+    const g = ctx.createGain(); g.gain.value = 0;
+    (out === 'L' ? A.gL : A.gR).connect(g); g.connect(merge, 0, side === 'L' ? 0 : 1);
+    A.route[out + side] = g;
+  }
   A.gL.connect(A.aL); A.gR.connect(A.aR);
   const lim = ctx.createDynamicsCompressor();
   lim.threshold.value = -2; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.002; lim.release.value = 0.15;
@@ -619,7 +709,7 @@ function powerUp() {
   A.revRet = ctx.createGain();
   A.fx.connect(pre); pre.connect(conv); conv.connect(tone); tone.connect(A.revRet); A.revRet.connect(A.bus);
 
-  // Channel strips: input → gain → [clip] → EQ low/mid/high → mute → fader → (FX send) → pan → main
+  // Channel strips: input → gain → [clip] → EQ low/mid/high → delay → mute → fader → (FX send) → pan → main
   const clipCurve = new Float32Array([-1, 1]);
   for (let i = 0; i < LABELS.length; i++) {
     const n = {};
@@ -630,11 +720,12 @@ function powerUp() {
     n.lo = ctx.createBiquadFilter(); n.lo.type = 'lowshelf'; n.lo.frequency.value = 120;
     n.mid = ctx.createBiquadFilter(); n.mid.type = 'peaking'; n.mid.frequency.value = 1000; n.mid.Q.value = 0.8;
     n.hi = ctx.createBiquadFilter(); n.hi.type = 'highshelf'; n.hi.frequency.value = 8000;
+    n.delay = ctx.createDelay(0.1);
     n.mute = ctx.createGain(); n.fader = ctx.createGain();
     n.aPost = ctx.createAnalyser(); n.aPost.fftSize = 1024;
     n.send = ctx.createGain(); n.pan = ctx.createStereoPanner();
     n.input.connect(n.gain); n.gain.connect(n.aPre); n.gain.connect(n.clip);
-    n.clip.connect(n.lo); n.lo.connect(n.mid); n.mid.connect(n.hi); n.hi.connect(n.mute);
+    n.clip.connect(n.lo); n.lo.connect(n.mid); n.mid.connect(n.hi); n.hi.connect(n.delay); n.delay.connect(n.mute);
     n.mute.connect(n.fader); n.fader.connect(n.aPost); n.fader.connect(n.send); n.send.connect(A.fx);
     n.fader.connect(n.pan); n.pan.connect(A.bus);
     A.ch.push(n);
@@ -751,6 +842,10 @@ function frame(now) {
     }
     ML.L = toDb(peakOf(A.aL)); ML.R = toDb(peakOf(A.aR));
     updateMeter(M.mL, ML.L, dt, now); updateMeter(M.mR, ML.R, dt, now);
+    for (const side of ['L', 'R']) {
+      const out = S.cables['spk' + side], lv = out ? ML[out] : -120;
+      M.spk[side].cone.style.transform = `scale(${1 + 0.07 * pct(lv) / 100 * (0.6 + 0.4 * Math.random())})`;
+    }
     feedbackCheck(now);
     M.guard.classList.toggle('tripped', now < guardUntil);
     if (playing) {
@@ -767,7 +862,11 @@ const HELP = {
   stagebox: ['Stage Box', 'This is where the musicians\' cables start. On a real stage, every mic and instrument plugs into a box on stage, and one thick "snake" cable carries them all to the mixer.'],
   cable: ['XLR Cable', 'Drag a plug onto any channel\'s INPUT jack to send that sound into that channel. Plugging into a jack that\'s already in use bumps the other cable out. Drag a plug away from the jacks to unplug it. (Keyboard: select a plug and press 1–4, or 0 to unplug.)'],
   jack: ['Input Jack', 'Where a cable plugs into a channel. Each channel controls ONE sound source. The channel doesn\'t care what\'s plugged in. Its knobs change whatever you connect.'],
-  scribble: ['Scribble Strip', 'Engineers put tape on the console and write what\'s plugged into each channel so they don\'t get lost. If a cable ends up in the wrong channel, the label is wrong!'],
+  scribble: ['Scribble Strip', 'Engineers put tape on the console and write what\'s plugged into each channel so they don\'t get lost. Click it to write your own label (up to 10 letters). If a cable ends up in the wrong channel, the label is wrong!'],
+  delay: ['Delay', 'Holds the sound back for 0 to 85 milliseconds (thousandths of a second) before it continues through the channel. Sound travels about 1 foot every millisecond, so engineers use delay to line up speakers and mics that are different distances away. Too much delay makes a part sound late and sloppy, out of time with the band!'],
+  mainout: ['Main Out Jacks', 'Where the mixer sends its final LEFT and RIGHT mix. Speakers plug in here. Main Out L should go to the LEFT speaker and Main Out R to the RIGHT speaker. Swap them and the whole mix flips sides!'],
+  speaker: ['Speakers', 'Speakers turn the mixer\'s electrical signal back into sound you can hear. A stereo system needs TWO: one for the left side and one for the right, each with its own cable. In this simulator, the left speaker plays in your left headphone and the right speaker in your right.'],
+  spkcable: ['Speaker Cable', 'Drag this plug onto a MAIN OUT jack on the mixer. Without speaker cables, nobody hears anything, no matter how good the mix is! (Keyboard: select a plug and press L or R, or 0 to unplug.)'],
   gain: ['Gain (Trim)', 'The FIRST control in the channel. It sets how strong the signal is coming INTO the mixer. Set it so the channel meter bounces in the YELLOW. Too low = weak and noisy. Too high = CLIPPING (distortion). Gain is not the volume control; use the fader for that.'],
   clip: ['Clip Light', 'Lights up red when the signal is too strong for the channel. The tops of the sound wave get chopped off ("clipped"), which sounds crunchy and distorted. If it flashes, turn the GAIN down.'],
   eqhi: ['High EQ', 'Turn right to boost or left to cut the treble: cymbals, "S" sounds, sparkle and air (about 8,000 Hz and up). Double-click to reset to 0.'],
@@ -836,12 +935,12 @@ function showModal(title, html, buttons) {
 
 /* ============================== Signal flow view ============================== */
 let flowCh = 1;
-const FLOW = [['src', 'Source'], ['gain', 'Gain'], ['eq', 'EQ'], ['mute', 'Mute / Solo'], ['fader', 'Fader'], ['pan', 'Pan'], ['main', 'Main L / R'], ['ears', '🎧 Your ears']];
+const FLOW = [['src', 'Source'], ['gain', 'Gain'], ['eq', 'EQ'], ['delay', 'Delay'], ['mute', 'Mute / Solo'], ['fader', 'Fader'], ['pan', 'Pan'], ['main', 'Main L / R'], ['spk', '🔊 Speakers'], ['ears', '🎧 Your ears']];
 const flowEls = {};
 function buildFlow() {
   const pick = $('#flowPick');
   LABELS.forEach((l, i) => {
-    const b = document.createElement('button'); b.className = 'hbtn'; b.textContent = `${i + 1} ${l}`;
+    const b = document.createElement('button'); b.className = 'hbtn'; b.textContent = `${i + 1} ${S.labels[i]}`;
     b.onclick = () => setFlowCh(i); pick.appendChild(b);
   });
   const box = $('#flowNodes');
@@ -869,7 +968,9 @@ function renderFlow() {
     eq: `L ${fmtGainDb(c.lo)} · M ${fmtGainDb(c.mid)} · H ${fmtGainDb(c.hi)}`.replace(/ dB/g, ''),
     mute: c.mute ? 'MUTED' : (solo && !c.solo ? 'silenced by solo' : (c.solo ? 'SOLO' : 'on')),
     fader: fmtDb(posToDb(c.fader)), pan: fmtPan(c.pan),
+    delay: Math.round(c.delay) + ' ms',
     main: `L ${fmtDb(dbL)} · R ${fmtDb(dbR)}`, ears: '',
+    spk: `L←${S.cables.spkL ? 'Out ' + S.cables.spkL : '✖'} · R←${S.cables.spkR ? 'Out ' + S.cables.spkR : '✖'}`,
   };
   let block = null; const warn = {};
   if (!src) block = ['src', `Nothing is plugged into Channel ${i + 1}. Drag a cable onto its INPUT jack.`];
@@ -885,6 +986,13 @@ function renderFlow() {
     else if (lOff) warn.main = 'Main LEFT is down, so you only hear the right side.';
     else if (rOff) warn.main = 'Main RIGHT is down, so you only hear the left side.';
   }
+  if (!block) {
+    const lCarries = dbL > -Infinity && c.pan < 0.99, rCarries = dbR > -Infinity && c.pan > -0.99;
+    if (!S.cables.spkL && !S.cables.spkR) block = ['spk', 'No speakers are connected! Drag each speaker cable onto a MAIN OUT jack.'];
+    else if (!((lCarries && spkGets('L')) || (rCarries && spkGets('R')))) block = ['spk', 'No speaker is connected to the output that carries this sound.'];
+    else if (S.cables.spkL === 'R' || S.cables.spkR === 'L') warn.spk = 'The speakers are SWAPPED: left and right are backwards!';
+    else if (!S.cables.spkL || !S.cables.spkR) warn.spk = 'Only one speaker is connected, so you only hear one side.';
+  }
   const sig = L[i].preSlow > -55;
   const bi = block ? FLOW.findIndex(f => f[0] === block[0]) : FLOW.length;
   FLOW.forEach(([id], k) => {
@@ -898,7 +1006,7 @@ function renderFlow() {
   flowEls.branch.classList.toggle('lit', sig && fi < bi && c.send > 0.01 && S.rev > 0.01);
   const st = $('#flowStatus');
   if (block) st.innerHTML = `⛔ <b>Signal stops at ${FLOW[bi][1]}:</b> ${block[1]}`;
-  else if (warn.gain || warn.main) st.innerHTML = `⚠️ ${warn.gain || warn.main}`;
+  else if (warn.gain || warn.main || warn.spk) st.innerHTML = `⚠️ ${warn.gain || warn.main || warn.spk}`;
   else if (sig) st.innerHTML = '✅ Signal is flowing all the way to your ears!';
   else st.innerHTML = src === 'mic' ? '🎤 Path is clear. Say something into the mic!' : '… Waiting for sound.';
 }
@@ -909,49 +1017,61 @@ const noClip = i => i != null && performance.now() - L[i].clipAt > 1000;
 const playingCheck = ['The band is playing (press ▶ Play)', () => playing];
 const CHALLENGES = [
   { id: 'patch', title: 'Patch the Band', hold: 1.5,
-    intro: 'Someone unplugged everything! Read the scribble strips and plug each cable into the channel with its name. Then press ▶ Play and make sure you can hear the whole band.',
-    setup() { resetMixer(); S.cables = { mic: null, piano: null, bass: null, drums: null }; renderAll(); },
-    checks: [['Piano → PIANO channel (Ch 2)', () => S.cables.piano === 1], ['Bass → BASS channel (Ch 3)', () => S.cables.bass === 2],
-      ['Drums → DRUMS channel (Ch 4)', () => S.cables.drums === 3], playingCheck,
+    intro: 'Someone unplugged everything, even the speakers! Plug each instrument into its channel (Piano → 2, Bass → 3, Drums → 4), connect the LEFT and RIGHT speakers to the matching MAIN OUT jacks, then press ▶ Play.',
+    setup() { resetMixer(); S.cables = { mic: null, piano: null, bass: null, drums: null, spkL: null, spkR: null }; renderAll(); },
+    checks: [['Piano → Channel 2', () => S.cables.piano === 1], ['Bass → Channel 3', () => S.cables.bass === 2],
+      ['Drums → Channel 4', () => S.cables.drums === 3], ['Left speaker → MAIN OUT L', () => S.cables.spkL === 'L'],
+      ['Right speaker → MAIN OUT R', () => S.cables.spkR === 'R'], playingCheck,
       ['You can hear all three in the Main outputs', () => heardSrc('piano') && heardSrc('bass') && heardSrc('drums')]] },
   { id: 'gainlow', title: 'Gain Staging', hold: 8,
     intro: 'The drums are coming in way too quietly. Turn up the drum channel\'s GAIN until its meter bounces in the YELLOW zone, without lighting CLIP. Keep it there for 8 seconds.',
-    setup() { resetMixer(); setCh(3, 'gain', -20); },
+    setup() { resetMixer(true); setCh(3, 'gain', -20); },
     checks: [playingCheck, ['Drum meter peaks in the YELLOW', () => inYellow(S.cables.drums)], ['No clipping', () => noClip(S.cables.drums)]] },
   { id: 'hot', title: 'Too Hot!', hold: 5,
     intro: 'The piano gain is cranked so high that it\'s CLIPPING. Hear that crunchy distortion? Bring the piano\'s GAIN down until CLIP stays off and its meter sits in the YELLOW for 5 seconds.',
-    setup() { resetMixer(); setCh(1, 'gain', 18); },
+    setup() { resetMixer(true); setCh(1, 'gain', 18); },
     checks: [playingCheck, ['Piano CLIP light stays off', () => noClip(S.cables.piano)], ['Piano meter peaks in the YELLOW', () => inYellow(S.cables.piano)]] },
   { id: 'silent', title: 'Where Did the Sound Go?', hold: 1.5,
     intro: 'The band is plugged in, but something is wrong. Find and fix EVERY problem. Tip: open 🔀 Signal Flow and check each channel to see where the signal stops.',
-    setup() { resetMixer(); setCh(1, 'mute', true); setCh(2, 'fader', 0); setCh(0, 'solo', true); setMaster('mR', 0); },
+    setup() { resetMixer(true); setCh(1, 'mute', true); setCh(2, 'fader', 0); setCh(0, 'solo', true); setMaster('mR', 0); },
     checks: [playingCheck, ['No channels soloed', () => !anySolo()], ['You can hear the piano', () => heardSrc('piano')], ['You can hear the bass', () => heardSrc('bass')],
       ['You can hear the drums', () => heardSrc('drums')], ['Main LEFT is up (above −10 dB)', () => posToDb(S.mL) > -10], ['Main RIGHT is up (above −10 dB)', () => posToDb(S.mR) > -10]] },
   { id: 'lopsided', title: 'Lopsided Mix', hold: 1.5,
     intro: 'The whole mix leans to one side. Make the Main LEFT and RIGHT faders match (within 1 dB of each other, both above −10 dB) and bring the bass back to the center.',
-    setup() { resetMixer(); setMaster('mR', dbToPos(-18)); setCh(2, 'pan', 1); },
+    setup() { resetMixer(true); setMaster('mR', dbToPos(-18)); setCh(2, 'pan', 1); },
     checks: [playingCheck, ['Main L and R match (within 1 dB)', () => { const l = posToDb(S.mL), r = posToDb(S.mR); return l > -10 && r > -10 && Math.abs(l - r) <= 1; }],
       ['Bass panned to the center', () => { const c = chOf('bass'); return !!c && Math.abs(c.pan) <= 0.05; }], ['You can hear the bass', () => heardSrc('bass')]] },
   { id: 'stereo', title: 'Paint a Stereo Picture', hold: 1.5,
     intro: 'Spread the band out like a real stage: put the piano on the LEFT side (at least L30), and keep the bass and drums in the CENTER. Close your eyes and listen with headphones!',
-    setup() { resetMixer(); setCh(1, 'pan', 0.6); setCh(3, 'pan', -0.8); },
+    setup() { resetMixer(true); setCh(1, 'pan', 0.6); setCh(3, 'pan', -0.8); },
     checks: [playingCheck, ['Piano panned left (L30 or more)', () => { const c = chOf('piano'); return !!c && c.pan <= -0.3; }],
       ['Bass in the center', () => { const c = chOf('bass'); return !!c && Math.abs(c.pan) <= 0.05; }],
       ['Drums in the center', () => { const c = chOf('drums'); return !!c && Math.abs(c.pan) <= 0.05; }],
       ['You can hear the whole band', () => heardSrc('piano') && heardSrc('bass') && heardSrc('drums')]] },
+  { id: 'crossed', title: 'Crossed Wires', hold: 1.5,
+    intro: 'The piano is panned LEFT, but it comes out of the RIGHT speaker! Someone crossed the speaker cables. Fix them so the left speaker gets MAIN OUT L and the right speaker gets MAIN OUT R.',
+    setup() { resetMixer(true); setCh(1, 'pan', -0.7); S.cables.spkL = 'R'; S.cables.spkR = 'L'; renderAll(); },
+    checks: [playingCheck, ['Left speaker → MAIN OUT L', () => S.cables.spkL === 'L'], ['Right speaker → MAIN OUT R', () => S.cables.spkR === 'R'],
+      ['Piano still panned left', () => { const c = chOf('piano'); return !!c && c.pan <= -0.3; }], ['You can hear the piano', () => heardSrc('piano')]] },
+  { id: 'sync', title: 'Out of Sync', hold: 2,
+    intro: 'The piano and bass sound sloppy, like they\'re dragging behind the drums. Someone turned up their DELAY knobs! Listen, then set each DELAY back to 0 ms so the band locks in together.',
+    setup() { resetMixer(true); setCh(1, 'delay', 85); setCh(2, 'delay', 60); },
+    checks: [playingCheck, ['Piano DELAY at 0 ms', () => { const c = chOf('piano'); return !!c && c.delay < 1; }],
+      ['Bass DELAY at 0 ms', () => { const c = chOf('bass'); return !!c && c.delay < 1; }],
+      ['You can hear the whole band', () => heardSrc('piano') && heardSrc('bass') && heardSrc('drums')]] },
   { id: 'muddy', title: 'Muddy Piano', hold: 2,
     intro: 'Someone boosted the piano\'s LOW EQ way too much, and now it sounds boomy and muddy. Cut the piano\'s LOW EQ to −3 dB or less so it sounds clear. Try a little HIGH boost for sparkle!',
-    setup() { resetMixer(); setCh(1, 'lo', 12); },
+    setup() { resetMixer(true); setCh(1, 'lo', 12); },
     checks: [playingCheck, ['Piano LOW EQ at −3 dB or lower', () => { const c = chOf('piano'); return !!c && c.lo <= -3; }], ['You can hear the piano', () => heardSrc('piano')]] },
   { id: 'verb', title: 'Reverb on the Vocal', hold: 1.5,
     intro: 'Plug the 🎤 MIC cable into the VOCAL channel (Ch 1). Put reverb on your voice ONLY: turn up the vocal FX SEND and the REVERB RETURN, and turn the instruments\' FX SENDs all the way down. Then say something!',
-    setup() { resetMixer(); [1, 2, 3].forEach(i => setCh(i, 'send', 0.5)); setMaster('rev', 0); },
+    setup() { resetMixer(true); [1, 2, 3].forEach(i => setCh(i, 'send', 0.5)); setMaster('rev', 0); },
     checks: [['Mic → VOCAL channel (Ch 1)', () => S.cables.mic === 0], ['Vocal FX SEND at 30% or more', () => S.ch[0].send >= 0.3],
       ['Piano, Bass and Drums FX SENDs at 0', () => [1, 2, 3].every(i => S.ch[i].send <= 0.02)], ['REVERB RETURN at 30% or more', () => S.rev >= 0.3],
       ['Your voice reaches the Main outputs', () => S.cables.mic != null && heard(S.cables.mic)]] },
   { id: 'talk', title: 'Talk Over the Band', hold: 0,
     intro: 'Plug the 🎤 MIC into the VOCAL channel and press ▶ Play. Set the levels so your voice is LOUDER than every instrument, then talk or sing. It needs 3 seconds of you on top (the time adds up).',
-    setup() { resetMixer(); talkTime = 0; },
+    setup() { resetMixer(true); talkTime = 0; },
     checks: [['Mic → VOCAL channel (Ch 1)', () => S.cables.mic === 0], playingCheck,
       [() => `Your voice is on top: ${talkTime.toFixed(1)} / 3.0 s`, () => talkTime >= 3]] },
 ];
@@ -1038,6 +1158,8 @@ buildStage();
 const strips = $('#strips');
 LABELS.forEach((_, i) => strips.appendChild(buildStrip(i)));
 strips.appendChild(buildMaster());
+strips.appendChild(buildSpeakers());
+buildPlugs();
 buildFlow(); buildChallenges();
 renderAll();
 new ResizeObserver(requestDraw).observe(rig);
