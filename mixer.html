@@ -97,10 +97,10 @@ main{display:flex;gap:12px;padding:12px;align-items:flex-start;flex-wrap:wrap}
 .plug:focus-visible{box-shadow:0 0 0 3px var(--accent)}
 .plug.needs{animation:needs 1.4s infinite}
 @keyframes needs{50%{box-shadow:0 0 0 6px #ffffff55,0 4px 8px #000b}}
-.outs{display:flex;gap:18px;justify-content:center;margin-top:24px}
-.outs>div{display:flex;flex-direction:column;align-items:center;gap:15px;font-size:8px;font-weight:700;letter-spacing:.4px;color:var(--muted);text-align:center}
+.outs{display:flex;gap:18px;justify-content:center;margin-top:8px}
+.outs>div{display:flex;flex-direction:column;align-items:center;gap:12px;font-size:8px;font-weight:700;letter-spacing:.4px;color:var(--muted);text-align:center}
 .jack.out{width:34px;height:34px}
-.spk-col{width:136px;display:flex;flex-direction:column;gap:8px}
+.spk-col{width:136px;display:flex;flex-direction:column;gap:8px;margin-left:14px}
 .spk{flex:1;background:#101216;border:1px solid var(--line);border-radius:10px;padding:5px 8px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:opacity .2s}
 .spk.off{opacity:.55}
 .spk-title{font-size:11px;font-weight:700;letter-spacing:.6px}
@@ -494,11 +494,12 @@ function buildMaster() {
   guard.className = 'guard'; guard.dataset.help = 'guard'; guard.innerHTML = '<i></i>FEEDBACK GUARD';
   M.guard = guard; s.appendChild(guard);
   const outs = document.createElement('div'); outs.className = 'outs';
-  outs.innerHTML = '<div><div class="jack out" data-help="mainout"></div>MAIN OUT L</div><div><div class="jack out" data-help="mainout"></div>MAIN OUT R</div>';
+  outs.innerHTML = '<div>MAIN OUT L<div class="jack out" data-help="mainout"></div></div><div>MAIN OUT R<div class="jack out" data-help="mainout"></div></div>';
   const oj = outs.querySelectorAll('.jack');
   M.out = { L: oj[0], R: oj[1] };
   s.appendChild(outs);
   const wrap = document.createElement('div'); wrap.className = 'mfaders';
+  M.strip = s; M.faderBox = wrap; // speaker cables are routed around this area
   for (const side of ['L', 'R']) {
     const col = document.createElement('div');
     const f = new Fader({ aria: `Main ${side === 'L' ? 'left' : 'right'} fader`, help: 'main' + side, onChange: v => setMaster('m' + side, v) });
@@ -617,15 +618,44 @@ function plugPos(s) {
 }
 let drawQueued = false;
 function requestDraw() { if (!drawQueued) { drawQueued = true; requestAnimationFrame(() => { drawQueued = false; drawCables(); }); } }
+// Polyline through the points with rounded corners.
+function roundedPath(pts, r = 12) {
+  let d = `M${pts[0].x},${pts[0].y}`;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const a = pts[i - 1], p = pts[i], b = pts[i + 1];
+    const d1 = Math.hypot(p.x - a.x, p.y - a.y), d2 = Math.hypot(b.x - p.x, b.y - p.y);
+    if (!d1 || !d2) continue;
+    const rr = Math.min(r, d1 / 2, d2 / 2);
+    d += ` L${p.x + (a.x - p.x) / d1 * rr},${p.y + (a.y - p.y) / d1 * rr}` +
+         ` Q${p.x},${p.y} ${p.x + (b.x - p.x) / d2 * rr},${p.y + (b.y - p.y) / d2 * rr}`;
+  }
+  const z = pts[pts.length - 1];
+  return d + ` L${z.x},${z.y}`;
+}
+// A plugged-in speaker cable drops straight down out of its plug, runs right through the gap
+// between the output jacks and the main faders, then along the gutter to its speaker.
+function speakerCablePath(s, sock, p) {
+  const R = rig.getBoundingClientRect(), box = M.faderBox.getBoundingClientRect();
+  const boxTop = box.top - R.top, gutter = M.strip.getBoundingClientRect().right - R.left;
+  const bottom = p.y + 25;
+  const lane = s === 'spkR' ? 0 : 1; // separate lanes so the two cables don't sit on top of each other
+  const y = Math.min(bottom + 12 + lane * 14, boxTop - 8);
+  const x = gutter + 6 + lane * 11;
+  return roundedPath([{ x: p.x, y: bottom }, { x: p.x, y }, { x, y }, { x, y: sock.y }, sock]);
+}
 function drawCables() {
   svg.setAttribute('width', rig.offsetWidth); svg.setAttribute('height', rig.offsetHeight);
   let html = '';
   for (const s of ALL_CABLES) {
     const a = rel(sockEl[s]), p = plugPos(s);
     plugEl[s].style.transform = `translate(${p.x}px,${p.y}px)`;
-    const ex = p.x, ey = p.y - 25;
-    const k = 30 + Math.max(Math.abs(ey - a.y), Math.abs(ex - a.x)) * 0.35;
-    const d = `M${a.x},${a.y} C${a.x},${a.y + k} ${ex},${ey - k} ${ex},${ey}`;
+    let d;
+    if (isSpk(s) && S.cables[s] != null && !dragPos[s]) d = speakerCablePath(s, a, p);
+    else {
+      const ex = p.x, ey = p.y - 25;
+      const k = 30 + Math.max(Math.abs(ey - a.y), Math.abs(ex - a.x)) * 0.35;
+      d = `M${a.x},${a.y} C${a.x},${a.y + k} ${ex},${ey - k} ${ex},${ey}`;
+    }
     html += `<path d="${d}" fill="none" stroke="#000" stroke-opacity=".55" stroke-width="10" stroke-linecap="round"/>` +
             `<path d="${d}" fill="none" stroke="${INFO[s].color}" stroke-width="6" stroke-linecap="round"/>`;
   }
