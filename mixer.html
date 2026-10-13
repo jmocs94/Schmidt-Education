@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Virtual Mixer</title>
+<!-- Self-contained: no external libraries, fonts or CDNs, so school filters have nothing to block.
+     Audio loops live in mixer-audio/ (12 bars @ 120 BPM = exactly 24 s, mono WAV). -->
+<style>
+:root{
+  --bg:#14161a; --panel:#1d2127; --panel2:#262b33; --line:#39404b; --text:#e8ecf1; --muted:#98a2b0;
+  --accent:#4fc3f7; --green:#3ddc84; --yellow:#ffd54f; --red:#ff5252;
+  --mic:#ff8a65; --piano:#ce93d8; --bass:#4db6ac; --drums:#ffb74d;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+button{font:inherit;color:inherit}
+header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#0d0f12;border-bottom:1px solid var(--line);flex-wrap:wrap}
+header h1{font-size:17px;margin:0 6px 0 0;letter-spacing:.5px;white-space:nowrap}
+.hbtn{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 11px;cursor:pointer;white-space:nowrap}
+.hbtn:hover{border-color:var(--accent)}
+.hbtn.on{background:var(--accent);color:#000;border-color:var(--accent)}
+.hbtn:disabled{opacity:.6;cursor:default}
+#playBtn{min-width:104px;font-weight:700}
+#playBtn.playing{background:var(--green);color:#000;border-color:var(--green)}
+#playBtn.pulse{animation:pulse 1.2s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 6px #3ddc8444}}
+.bars{display:flex;gap:3px}
+.bars span{width:21px;height:21px;border-radius:4px;background:var(--panel2);border:1px solid var(--line);font-size:10px;display:grid;place-items:center;color:var(--muted)}
+.bars span.now{background:var(--accent);color:#000;font-weight:700}
+.spacer{flex:1}
+#helpBtn{width:36px;height:36px;border-radius:50%;font-size:19px;font-weight:800;padding:0}
+main{display:flex;gap:12px;padding:12px;align-items:flex-start;flex-wrap:wrap}
+#console{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;overflow-x:auto;max-width:100%}
+#rig{position:relative;width:max-content}
+#cables{position:absolute;left:0;top:0;pointer-events:none;z-index:4;overflow:visible}
+.stage,.strips{display:flex;gap:8px}
+.stage{margin-bottom:54px}
+.src-cell{width:128px;background:#101216;border:1px solid var(--line);border-radius:10px;padding:5px 8px 8px}
+.src-name{font-size:11px;font-weight:700;letter-spacing:.6px;margin-bottom:5px}
+.src-row{display:flex;align-items:center;gap:10px}
+.socket{width:26px;height:26px;border-radius:50%;background:radial-gradient(#000 40%,#555 44%,#777 65%,#333);border:2px solid #000}
+.park{width:44px;height:52px;border:2px dashed #3a414c;border-radius:8px;font-size:8px;color:#5c6572;display:grid;place-items:center;text-align:center}
+.stage-label{width:180px;display:flex;flex-direction:column;justify-content:center;padding:0 6px;font-size:11px;color:var(--muted)}
+.stage-label b{color:var(--text);font-size:13px;letter-spacing:1px}
+.strip{width:128px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px 5px 6px;display:flex;flex-direction:column;align-items:center;gap:3px;transition:box-shadow .2s}
+.strip.master{width:180px;background:#2b2530}
+.strip.selected{box-shadow:0 0 0 2px var(--accent)}
+.strip.soloed-out{opacity:.72}
+.jackrow{display:flex;align-items:center;gap:6px;width:100%}
+.jack{width:40px;height:40px;flex:none;border-radius:50%;background:radial-gradient(#000 34%,#4a4a4a 37%,#7b7b7b 62%,#2a2a2a);border:2px solid #000;position:relative}
+.jack.hot{box-shadow:0 0 0 2px var(--jc,#fff)}
+.scribble{flex:1;background:#f3eedc;color:#222;font:700 12px/1 "Comic Sans MS","Chalkboard SE","Marker Felt",cursive;padding:5px 3px;border-radius:2px;text-align:center;transform:rotate(-1.5deg);box-shadow:0 1px 2px #0008}
+.row{display:flex;justify-content:space-around;align-items:center;width:100%}
+.sec{font-size:9px;color:var(--muted);letter-spacing:1px;width:100%;text-align:center;border-top:1px solid var(--line);padding-top:2px}
+.knob{display:flex;flex-direction:column;align-items:center;width:40px}
+.klabel{font-size:9px;color:var(--muted);letter-spacing:.4px;white-space:nowrap}
+.dial{width:28px;height:28px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#69727f,#2a2f37 72%);border:2px solid #0a0a0a;cursor:ns-resize;touch-action:none;box-shadow:0 2px 4px #0009;outline:none}
+.knob.big .dial{width:36px;height:36px}
+.dial:focus-visible,.dial.active{box-shadow:0 0 0 2px var(--accent)}
+.rot{width:100%;height:100%;position:relative}
+.rot i{position:absolute;left:50%;top:2px;width:3px;height:40%;margin-left:-1.5px;background:var(--kc,#fff);border-radius:2px}
+.kval{font-size:9px;font-variant-numeric:tabular-nums;height:11px;white-space:nowrap}
+.clip{font-size:9px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--muted)}
+.clip i{width:12px;height:12px;border-radius:50%;background:#3b1616;border:1px solid #000}
+.clip.on i{background:var(--red);box-shadow:0 0 10px var(--red)}
+.btn{border:1px solid #000;border-radius:5px;padding:4px 0;width:48px;font-size:11px;font-weight:700;cursor:pointer;background:#3a404a;color:#cfd5dc}
+.btn.mute.on{background:#e53935;color:#fff}
+.btn.solo.on{background:#fdd835;color:#000}
+.btn.link.on{background:var(--accent);color:#000}
+.fwrap{display:flex;flex-direction:column;align-items:center;margin-top:auto}
+.frow{display:flex;gap:4px;height:166px}
+.scale{position:relative;width:20px;margin:12px 0;font-size:8px;color:var(--muted)}
+.scale span{position:absolute;right:0;transform:translateY(-50%);white-space:nowrap}
+.scale span.zero{color:var(--text);font-weight:700}
+.track{position:relative;width:26px;margin:12px 0;touch-action:none;cursor:pointer;outline:none}
+.track::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:4px;margin-left:-2px;background:#08090b;border-radius:2px}
+.track .zl{position:absolute;left:2px;right:2px;height:2px;background:#6b7380;margin-top:-1px}
+.thumb{position:absolute;left:0;width:26px;height:30px;margin-top:-15px;border-radius:4px;background:linear-gradient(#d5dae0,#8b939c 44%,#2d3238 47%,#2d3238 53%,#8b939c 56%,#d5dae0);cursor:grab;box-shadow:0 3px 6px #000b}
+.track:focus-visible .thumb{box-shadow:0 0 0 2px var(--accent)}
+.fval{font-size:10px;font-variant-numeric:tabular-nums;height:13px}
+.meter{position:relative;width:8px;margin:12px 0;background:#08090b;border-radius:2px;overflow:hidden}
+.meter .fill{position:absolute;inset:0;background:linear-gradient(to top,var(--green) 0,var(--green) 70%,var(--yellow) 70%,var(--yellow) 95%,var(--red) 95%)}
+.meter .cover{position:absolute;left:0;right:0;top:0;height:100%;background:#08090b}
+.meter .hold{position:absolute;left:0;right:0;height:2px;bottom:0;background:#fff}
+.chnum{font-size:12px;font-weight:800;color:var(--muted)}
+.mtitle{font-weight:800;letter-spacing:2px;font-size:13px}
+.mfaders{display:flex;gap:8px;margin-top:auto}
+.mfaders .lab{font-size:11px;font-weight:800;text-align:center}
+.guard{display:flex;align-items:center;gap:5px;font-size:9px;letter-spacing:.5px;color:var(--muted)}
+.guard i{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
+.guard.tripped i{background:var(--red);box-shadow:0 0 8px var(--red)}
+.plug{position:absolute;left:0;top:0;width:38px;height:50px;margin:-25px 0 0 -19px;border-radius:7px 7px 12px 12px;background:linear-gradient(#636a75,#2b3036);border:2px solid var(--c);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:16px;cursor:grab;touch-action:none;z-index:5;box-shadow:0 4px 8px #000b;user-select:none;outline:none}
+.plug small{font-size:8px;font-weight:800;color:var(--c);letter-spacing:.3px}
+.plug.dragging{cursor:grabbing;z-index:6;transform-origin:center}
+.plug:focus-visible{box-shadow:0 0 0 3px var(--accent)}
+/* Sidebar */
+#side{width:330px;flex:none;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;position:sticky;top:12px;max-height:calc(100vh - 90px);overflow:auto}
+#side[hidden]{display:none}
+.tabs{display:flex;gap:6px;margin-bottom:10px}
+.tabs .hbtn{flex:1;padding:5px 6px;font-size:13px}
+#sideClose{flex:none}
+.pick{display:flex;gap:4px;margin-bottom:8px}
+.pick button{flex:1;font-size:11px;padding:4px 2px}
+.fstatus{padding:8px;border-radius:8px;background:#101216;font-size:13px;margin-bottom:8px;line-height:1.35}
+.fnode{border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:#14171c;display:flex;justify-content:space-between;gap:6px;font-size:13px;transition:background .15s,border-color .15s}
+.fnode span{color:var(--muted);font-size:12px;text-align:right}
+.fnode.lit{border-color:var(--green);background:#14261c}
+.fnode.lit span{color:#b9f6ca}
+.fnode.warn{border-color:var(--yellow);background:#2a2614}
+.fnode.blocked{border-color:var(--red);background:#2e1515}
+.fnode.dim{opacity:.38}
+.farrow{text-align:center;color:var(--muted);font-size:11px;line-height:14px}
+.farrow.lit{color:var(--green)}
+.fbranch{margin:4px 0 0 22px;font-size:12px;border-left:2px dashed var(--line);padding:4px 8px;color:var(--muted)}
+.fbranch.lit{border-color:#b388ff;color:#d1c4e9}
+.clist{display:block;width:100%;text-align:left;margin-bottom:4px;font-size:13px}
+.clist.done{border-color:var(--green)}
+.clist.active{background:var(--accent);color:#000}
+.ccard{background:#101216;border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:10px}
+.ccard h3{margin:0 0 6px;font-size:15px}
+.ccard p{margin:0 0 8px;font-size:13px;line-height:1.4;color:#cfd6df}
+.checks{list-style:none;padding:0;margin:0 0 8px}
+.checks li{font-size:13px;padding:3px 0 3px 22px;position:relative}
+.checks li::before{content:"✖";position:absolute;left:2px;color:var(--red)}
+.checks li.ok::before{content:"✔";color:var(--green)}
+.holdbar{height:6px;background:#2a2f37;border-radius:3px;overflow:hidden;margin-bottom:8px}
+.holdbar i{display:block;height:100%;width:0;background:var(--green)}
+.cbtns{display:flex;gap:6px}
+.success{border-color:var(--green);background:#13261a}
+.trophy{text-align:center;border-color:var(--yellow);background:#2a2614}
+.progress{font-size:12px;color:var(--muted);margin:6px 0}
+/* Help */
+body.help-mode [data-help]{outline:2px dashed var(--accent);outline-offset:2px;cursor:help}
+body.help-mode [data-help] *{cursor:help}
+#helpBanner{display:none;position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:var(--accent);color:#000;padding:8px 16px;border-radius:20px;font-weight:600;z-index:50;font-size:14px;box-shadow:0 4px 14px #000a;text-align:center;max-width:92vw}
+body.help-mode #helpBanner{display:block}
+#helpCard{position:fixed;z-index:60;width:290px;background:#fff;color:#1b1f24;border-radius:10px;padding:12px 14px;box-shadow:0 8px 28px #000c;font-size:14px;line-height:1.45}
+#helpCard[hidden]{display:none}
+#helpCard h4{margin:0 0 6px;font-size:16px}
+#helpCard button{position:absolute;right:6px;top:4px;background:none;border:0;font-size:18px;cursor:pointer;color:#555}
+/* Modal */
+.modal{position:fixed;inset:0;background:#000b;display:grid;place-items:center;z-index:100;padding:16px}
+.modal .card{background:#fff;color:#1b1f24;border-radius:14px;max-width:560px;width:100%;padding:20px 22px;box-shadow:0 10px 40px #000;max-height:90vh;overflow:auto}
+.modal h2{margin:0 0 10px}
+.modal p{line-height:1.5;margin:0 0 10px}
+.modal .def{background:#eef6fb;border-left:4px solid var(--accent);padding:10px 12px;border-radius:6px;margin:10px 0}
+.loop{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;font-weight:700;margin:12px 0;font-size:15px}
+.loop span{background:#f1f3f5;border-radius:8px;padding:6px 10px}
+.loop em{color:#e53935;font-style:normal}
+.modal .actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px}
+.modal .actions button{border:0;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;background:#e3e7eb}
+.modal .actions button.primary{background:#00796b;color:#fff}
+@media (max-width:1100px){#side{width:100%;position:static;max-height:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎚️ Virtual Mixer</h1>
+  <button id="playBtn" class="hbtn" data-help="play" disabled>Power off</button>
+  <div class="bars" id="bars" data-help="bars"></div>
+  <div class="spacer"></div>
+  <button id="flowBtn" class="hbtn" data-help="flow">🔀 Signal Flow</button>
+  <button id="chalBtn" class="hbtn" data-help="challenges">🏆 Challenges</button>
+  <button id="resetBtn" class="hbtn" data-help="reset">↺ Reset</button>
+  <button id="helpBtn" class="hbtn" aria-label="Help: explain the controls">?</button>
+</header>
+
+<main>
+  <div id="console">
+    <div id="rig">
+      <div class="stage" id="stage"></div>
+      <div class="strips" id="strips"></div>
+      <svg id="cables" aria-hidden="true"></svg>
+    </div>
+  </div>
+
+  <aside id="side" hidden>
+    <div class="tabs">
+      <button class="hbtn" data-tab="flow">🔀 Signal Flow</button>
+      <button class="hbtn" data-tab="chal">🏆 Challenges</button>
+      <button class="hbtn" id="sideClose" aria-label="Close panel">✕</button>
+    </div>
+    <div id="tab-flow">
+      <div class="pick" id="flowPick"></div>
+      <div class="fstatus" id="flowStatus"></div>
+      <div id="flowNodes"></div>
+    </div>
+    <div id="tab-chal">
+      <div id="chalCard"></div>
+      <div class="progress" id="chalProgress"></div>
+      <div id="chalList"></div>
+    </div>
+  </aside>
+</main>
+
+<div id="helpBanner">HELP MODE: tap any outlined control to learn what it does. Press <b>?</b> again to go back to mixing.</div>
+<div id="helpCard" hidden><button aria-label="Close">×</button><h4></h4><div></div></div>
+<div id="modalRoot"></div>
+
+<script>
+"use strict";
+/* ============================== Constants & helpers ============================== */
+const SRC = ['mic', 'piano', 'bass', 'drums'];
+const SRC_INFO = {
+  mic:   { name: 'Mic',   icon: '🎤', color: 'var(--mic)' },
+  piano: { name: 'Piano', icon: '🎹', color: 'var(--piano)' },
+  bass:  { name: 'Bass',  icon: '🎸', color: 'var(--bass)' },
+  drums: { name: 'Drums', icon: '🥁', color: 'var(--drums)' },
+};
+const TRACKS = ['piano', 'bass', 'drums'];
+const LABELS = ['VOCAL', 'PIANO', 'BASS', 'DRUMS'];
+const LOOP_SECONDS = 24, BAR_SECONDS = 2; // 12 bars of 4/4 at 120 BPM
+const F0 = 0.75; // fader position of 0 dB
+const TICKS = [10, 5, 0, -5, -10, -20, -30, -40, -Infinity];
+const YELLOW_LOW = -18, RED_LOW = -3; // meter zones in dBFS
+
+const $ = s => document.querySelector(s);
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+function posToDb(p) {
+  if (p <= 0.005) return -Infinity;
+  if (p >= F0) return (p - F0) / (1 - F0) * 10;
+  return -70 * Math.pow((F0 - p) / F0, 1.6);
+}
+function dbToPos(db) {
+  if (db === -Infinity) return 0;
+  if (db >= 0) return F0 + db / 10 * (1 - F0);
+  return F0 * (1 - Math.pow(-db / 70, 1 / 1.6));
+}
+const dbToGain = db => db === -Infinity ? 0 : Math.pow(10, db / 20);
+const toDb = x => x > 1e-6 ? 20 * Math.log10(x) : -120;
+const fmtDb = db => db === -Infinity ? '−∞' : (db > 0.04 ? '+' : '') + db.toFixed(1) + ' dB';
+const fmtGainDb = v => (v > 0 ? '+' : '') + (Math.round(v * 2) / 2) + ' dB';
+const fmtPct = v => Math.round(v * 100) + '%';
+const fmtPan = v => Math.abs(v) < 0.005 ? 'C' : (v < 0 ? 'L' : 'R') + Math.round(Math.abs(v) * 100);
+const pct = db => clamp((db + 60) / 60, 0, 1) * 100;
+
+/* ============================== Mixer state ============================== */
+function defaultState() {
+  return {
+    ch: LABELS.map(() => ({ gain: 0, hi: 0, mid: 0, lo: 0, send: 0, pan: 0, mute: false, solo: false, fader: F0 })),
+    mL: F0, mR: F0, rev: 0.5, link: false,
+    cables: { mic: null, piano: 1, bass: 2, drums: 3 },
+  };
+}
+let S = defaultState();
+let A = null;            // audio graph, built on power-up
+let playing = false, startT = 0;
+const L = LABELS.map(() => ({ preFast: -120, preSlow: -120, postFast: -120, postSlow: -120, clipAt: -1e9 }));
+const ML = { L: -120, R: -120 };
+
+const anySolo = () => S.ch.some(c => c.solo);
+const chOf = src => S.cables[src] == null ? null : S.ch[S.cables[src]];
+const srcIn = i => SRC.find(s => S.cables[s] === i) || null;
+const mainOn = () => posToDb(S.mL) > -Infinity || posToDb(S.mR) > -Infinity;
+const heard = i => i != null && L[i].postSlow > -45 && mainOn();
+const heardSrc = s => heard(S.cables[s]);
+
+/* ============================== UI widgets ============================== */
+class Knob {
+  constructor(o) {
+    this.o = o;
+    const el = this.el = document.createElement('div');
+    el.className = 'knob' + (o.big ? ' big' : '');
+    el.dataset.help = o.help;
+    el.innerHTML = `<div class="klabel">${o.label}</div><div class="dial" tabindex="0" role="slider" aria-label="${o.aria}"><div class="rot"><i></i></div></div><div class="kval"></div>`;
+    if (o.color) el.style.setProperty('--kc', o.color);
+    this.dial = el.querySelector('.dial'); this.rot = el.querySelector('.rot'); this.val = el.querySelector('.kval');
+    let sx = 0, sy = 0, sv = 0;
+    this.dial.addEventListener('pointerdown', e => {
+      e.preventDefault(); this.dial.setPointerCapture(e.pointerId);
+      sx = e.clientX; sy = e.clientY; sv = this.v; this.dial.focus(); this.dial.classList.add('active');
+    });
+    this.dial.addEventListener('pointermove', e => {
+      if (!this.dial.hasPointerCapture(e.pointerId)) return;
+      this.input(sv + ((sy - e.clientY) + (e.clientX - sx)) / 160 * (o.max - o.min));
+    });
+    const end = () => this.dial.classList.remove('active');
+    this.dial.addEventListener('pointerup', end);
+    this.dial.addEventListener('pointercancel', end);
+    this.dial.addEventListener('dblclick', () => this.input(o.def));
+    this.dial.addEventListener('keydown', e => {
+      const st = o.step * (e.shiftKey ? 10 : 2);
+      if (e.key === 'ArrowUp' || e.key === 'ArrowRight') { this.input(this.v + st); e.preventDefault(); }
+      else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') { this.input(this.v - st); e.preventDefault(); }
+      else if (e.key === 'Home') { this.input(o.def); e.preventDefault(); }
+    });
+  }
+  input(v) {
+    const o = this.o;
+    v = clamp(v, o.min, o.max);
+    if (o.detent && Math.abs(v - o.def) < (o.max - o.min) * 0.03) v = o.def;
+    v = Math.round(v / o.step) * o.step;
+    o.onChange(+v.toFixed(4));
+  }
+  render(v) {
+    this.v = v;
+    const a = -135 + 270 * (v - this.o.min) / (this.o.max - this.o.min);
+    this.rot.style.transform = `rotate(${a}deg)`;
+    this.val.textContent = this.o.fmt(v);
+    this.dial.setAttribute('aria-valuetext', this.o.fmt(v));
+  }
+}
+
+class Fader {
+  constructor(o) {
+    this.o = o;
+    const el = this.el = document.createElement('div');
+    el.className = 'fwrap';
+    el.innerHTML = `<div class="frow"><div class="scale">${TICKS.map(t =>
+      `<span class="${t === 0 ? 'zero' : ''}" style="top:${(1 - dbToPos(t)) * 100}%">${t === -Infinity ? '−∞' : (t > 0 ? '+' + t : t)}</span>`).join('')}</div>` +
+      `<div class="track" tabindex="0" role="slider" aria-label="${o.aria}" data-help="${o.help}"><div class="zl" style="top:${(1 - F0) * 100}%"></div><div class="thumb"></div></div></div><div class="fval"></div>`;
+    this.row = el.querySelector('.frow'); this.track = el.querySelector('.track');
+    this.thumb = el.querySelector('.thumb'); this.val = el.querySelector('.fval');
+    let sy = 0, sp = 0, h = 1;
+    this.track.addEventListener('pointerdown', e => {
+      e.preventDefault(); this.track.setPointerCapture(e.pointerId); this.track.focus();
+      const r = this.track.getBoundingClientRect(); h = r.height;
+      if (e.target !== this.thumb) this.input(1 - (e.clientY - r.top) / h);
+      sy = e.clientY; sp = this.p;
+    });
+    this.track.addEventListener('pointermove', e => {
+      if (!this.track.hasPointerCapture(e.pointerId)) return;
+      this.input(sp + (sy - e.clientY) / h);
+    });
+    this.track.addEventListener('dblclick', () => this.input(F0));
+    this.track.addEventListener('keydown', e => {
+      const st = e.shiftKey ? 0.1 : 0.02;
+      if (e.key === 'ArrowUp' || e.key === 'ArrowRight') { this.input(this.p + st); e.preventDefault(); }
+      else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') { this.input(this.p - st); e.preventDefault(); }
+      else if (e.key === 'Home') { this.input(F0); e.preventDefault(); }
+      else if (e.key === 'End') { this.input(0); e.preventDefault(); }
+    });
+  }
+  input(p) { p = clamp(p, 0, 1); if (Math.abs(p - F0) < 0.012) p = F0; this.o.onChange(p); }
+  render(p) {
+    this.p = p;
+    this.thumb.style.top = (1 - p) * 100 + '%';
+    const t = fmtDb(posToDb(p));
+    this.val.textContent = t; this.track.setAttribute('aria-valuetext', t);
+  }
+}
+
+function makeMeter(help) {
+  const el = document.createElement('div');
+  el.className = 'meter'; el.dataset.help = help;
+  el.innerHTML = '<div class="fill"></div><div class="cover"></div><div class="hold"></div>';
+  return { el, cover: el.children[1], holdEl: el.children[2], disp: -120, hv: -120, holdT: 0 };
+}
+function updateMeter(m, db, dt, now) {
+  m.disp = Math.max(db, m.disp - 30 * dt);
+  if (db >= m.hv) { m.hv = db; m.holdT = now; }
+  else if (now - m.holdT > 1000) m.hv = Math.max(db, m.hv - 40 * dt);
+  m.cover.style.height = (100 - pct(m.disp)) + '%';
+  m.holdEl.style.bottom = `calc(${pct(m.hv)}% - 2px)`;
+}
+
+/* ============================== Build the console ============================== */
+const rig = $('#rig'), svg = $('#cables');
+const ui = [];
+const sockEl = {}, parkEl = {}, plugEl = {};
+const dragPos = {};
+
+function buildStage() {
+  const stage = $('#stage');
+  for (const s of SRC) {
+    const info = SRC_INFO[s];
+    const cell = document.createElement('div');
+    cell.className = 'src-cell'; cell.dataset.help = 'stagebox';
+    cell.innerHTML = `<div class="src-name" style="color:${info.color}">${info.icon} ${info.name.toUpperCase()}</div><div class="src-row"><div class="socket"></div><div class="park">unplugged</div></div>`;
+    stage.appendChild(cell);
+    sockEl[s] = cell.querySelector('.socket'); parkEl[s] = cell.querySelector('.park');
+  }
+  const lab = document.createElement('div');
+  lab.className = 'stage-label';
+  lab.innerHTML = '<b>◀ STAGE BOX</b>Where the musicians plug in. Drag a cable\'s plug onto a channel\'s INPUT jack below.';
+  stage.appendChild(lab);
+
+  for (const s of SRC) {
+    const p = document.createElement('div');
+    p.className = 'plug'; p.tabIndex = 0; p.dataset.help = 'cable'; p.dataset.src = s;
+    p.style.setProperty('--c', SRC_INFO[s].color);
+    p.setAttribute('role', 'button');
+    p.setAttribute('aria-label', `${SRC_INFO[s].name} cable. Press 1 to 4 to plug into a channel, 0 to unplug.`);
+    p.innerHTML = `${SRC_INFO[s].icon}<small>${SRC_INFO[s].name.toUpperCase()}</small>`;
+    rig.appendChild(p); plugEl[s] = p;
+    p.addEventListener('pointerdown', e => {
+      e.preventDefault(); p.setPointerCapture(e.pointerId); p.focus();
+      dragPos[s] = relPoint(e); p.classList.add('dragging'); drawCables();
+    });
+    p.addEventListener('pointermove', e => {
+      if (!dragPos[s]) return;
+      dragPos[s] = relPoint(e); requestDraw();
+    });
+    const drop = e => {
+      if (!dragPos[s]) return;
+      const pt = relPoint(e); dragPos[s] = null; p.classList.remove('dragging');
+      let best = null, bd = 48;
+      ui.forEach((u, i) => { const c = rel(u.jack); const d = Math.hypot(c.x - pt.x, c.y - pt.y); if (d < bd) { bd = d; best = i; } });
+      if (best == null) unplug(s); else plugInto(s, best);
+    };
+    p.addEventListener('pointerup', drop);
+    p.addEventListener('pointercancel', drop);
+    p.addEventListener('keydown', e => {
+      if (e.key >= '1' && e.key <= '4') plugInto(s, +e.key - 1);
+      else if (e.key === '0' || e.key === 'Delete' || e.key === 'Backspace') unplug(s);
+    });
+  }
+}
+
+function buildStrip(i) {
+  const s = document.createElement('div');
+  s.className = 'strip'; s.dataset.ch = i;
+  s.innerHTML = `<div class="jackrow"><div class="jack" data-help="jack" aria-label="Channel ${i + 1} input jack"></div><div class="scribble" data-help="scribble">${LABELS[i]}</div></div>`;
+  const u = { strip: s, jack: s.querySelector('.jack') };
+  const k = (key, o) => { u[key] = new Knob({ ...o, onChange: v => setCh(i, key, v) }); return u[key].el; };
+  const row = (...els) => { const r = document.createElement('div'); r.className = 'row'; els.forEach(e => r.appendChild(e)); return r; };
+  const sec = t => { const d = document.createElement('div'); d.className = 'sec'; d.textContent = t; return d; };
+
+  const clip = document.createElement('div');
+  clip.className = 'clip'; clip.dataset.help = 'clip'; clip.innerHTML = '<i></i>CLIP';
+  u.clip = clip;
+  s.appendChild(row(k('gain', { label: 'GAIN', aria: `Channel ${i + 1} gain`, min: -20, max: 40, def: 0, step: 0.5, fmt: fmtGainDb, help: 'gain', big: true, color: '#ff6b6b' }), clip));
+  s.appendChild(sec('EQ'));
+  s.appendChild(row(
+    k('hi',  { label: 'HIGH', aria: `Channel ${i + 1} high EQ`, min: -15, max: 15, def: 0, step: 0.5, fmt: fmtGainDb, help: 'eqhi', detent: true, color: '#64b5f6' }),
+    k('mid', { label: 'MID',  aria: `Channel ${i + 1} mid EQ`,  min: -15, max: 15, def: 0, step: 0.5, fmt: fmtGainDb, help: 'eqmid', detent: true, color: '#81c784' }),
+    k('lo',  { label: 'LOW',  aria: `Channel ${i + 1} low EQ`,  min: -15, max: 15, def: 0, step: 0.5, fmt: fmtGainDb, help: 'eqlo', detent: true, color: '#ffb74d' })));
+  s.appendChild(row(
+    k('send', { label: 'FX SEND', aria: `Channel ${i + 1} reverb send`, min: 0, max: 1, def: 0, step: 0.01, fmt: fmtPct, help: 'send', color: '#b388ff' }),
+    k('pan',  { label: 'PAN', aria: `Channel ${i + 1} pan`, min: -1, max: 1, def: 0, step: 0.01, fmt: fmtPan, help: 'pan', detent: true })));
+  const mute = document.createElement('button'); mute.className = 'btn mute'; mute.textContent = 'MUTE'; mute.dataset.help = 'mute';
+  const solo = document.createElement('button'); solo.className = 'btn solo'; solo.textContent = 'SOLO'; solo.dataset.help = 'solo';
+  mute.onclick = () => setCh(i, 'mute', !S.ch[i].mute);
+  solo.onclick = () => setCh(i, 'solo', !S.ch[i].solo);
+  u.mute = mute; u.solo = solo;
+  s.appendChild(row(mute, solo));
+  u.fader = new Fader({ aria: `Channel ${i + 1} fader`, help: 'fader', onChange: v => setCh(i, 'fader', v) });
+  u.meter = makeMeter('meter');
+  u.fader.row.appendChild(u.meter.el);
+  s.appendChild(u.fader.el);
+  const num = document.createElement('div'); num.className = 'chnum'; num.textContent = i + 1;
+  s.appendChild(num);
+  s.addEventListener('click', () => { if (!$('#side').hidden) setFlowCh(i); });
+  ui[i] = u;
+  return s;
+}
+
+const M = {};
+function buildMaster() {
+  const s = document.createElement('div');
+  s.className = 'strip master';
+  s.innerHTML = '<div class="mtitle">MAIN</div>';
+  M.rev = new Knob({ label: 'REVERB RETURN', aria: 'Reverb return level', min: 0, max: 1, def: 0.5, step: 0.01, fmt: fmtPct, help: 'reverb', big: true, color: '#b388ff', onChange: v => setMaster('rev', v) });
+  s.appendChild(M.rev.el);
+  const link = document.createElement('button');
+  link.className = 'btn link'; link.textContent = 'LINK L+R'; link.style.width = '80px'; link.dataset.help = 'link';
+  link.onclick = () => setMaster('link', !S.link);
+  M.link = link; s.appendChild(link);
+  const guard = document.createElement('div');
+  guard.className = 'guard'; guard.dataset.help = 'guard'; guard.innerHTML = '<i></i>FEEDBACK GUARD';
+  M.guard = guard; s.appendChild(guard);
+  const wrap = document.createElement('div'); wrap.className = 'mfaders';
+  for (const side of ['L', 'R']) {
+    const col = document.createElement('div');
+    const f = new Fader({ aria: `Main ${side === 'L' ? 'left' : 'right'} fader`, help: 'main' + side, onChange: v => setMaster('m' + side, v) });
+    const m = makeMeter('mastermeter');
+    f.row.appendChild(m.el);
+    col.appendChild(f.el);
+    const lab = document.createElement('div'); lab.className = 'lab'; lab.textContent = side === 'L' ? 'LEFT' : 'RIGHT';
+    col.appendChild(lab);
+    wrap.appendChild(col);
+    M['f' + side] = f; M['m' + side] = m;
+  }
+  s.appendChild(wrap);
+  return s;
+}
+
+/* ============================== State → UI/audio ============================== */
+function setCh(i, k, v) {
+  S.ch[i][k] = v;
+  renderCh(i, k);
+  applyCh(i, k);
+  if (k === 'mute' || k === 'solo') applyMuteSolo();
+}
+function renderCh(i, k) {
+  const u = ui[i], c = S.ch[i];
+  if (k === 'mute' || k === 'solo') { u[k].classList.toggle('on', c[k]); u[k].setAttribute('aria-pressed', c[k]); }
+  else if (k === 'fader') u.fader.render(c.fader);
+  else u[k].render(c[k]);
+}
+function applyCh(i, k) {
+  if (!A) return;
+  const n = A.ch[i], c = S.ch[i], t = A.ctx.currentTime, tc = 0.015;
+  switch (k) {
+    case 'gain': n.gain.gain.setTargetAtTime(dbToGain(c.gain), t, tc); break;
+    case 'hi': n.hi.gain.setTargetAtTime(c.hi, t, tc); break;
+    case 'mid': n.mid.gain.setTargetAtTime(c.mid, t, tc); break;
+    case 'lo': n.lo.gain.setTargetAtTime(c.lo, t, tc); break;
+    case 'send': n.send.gain.setTargetAtTime(c.send, t, tc); break;
+    case 'pan': n.pan.pan.setTargetAtTime(c.pan, t, tc); break;
+    case 'fader': n.fader.gain.setTargetAtTime(dbToGain(posToDb(c.fader)), t, tc); break;
+  }
+}
+function applyMuteSolo() {
+  const solo = anySolo();
+  S.ch.forEach((c, i) => {
+    ui[i].strip.classList.toggle('soloed-out', solo && !c.solo);
+    if (A) A.ch[i].mute.gain.setTargetAtTime(!c.mute && (!solo || c.solo) ? 1 : 0, A.ctx.currentTime, 0.008);
+  });
+}
+function setMaster(k, v) {
+  S[k] = v;
+  if (S.link && (k === 'mL' || k === 'mR')) { S.mL = S.mR = v; }
+  renderMaster(); applyMaster();
+}
+function renderMaster() {
+  M.rev.render(S.rev); M.fL.render(S.mL); M.fR.render(S.mR);
+  M.link.classList.toggle('on', S.link); M.link.setAttribute('aria-pressed', S.link);
+}
+function applyMaster() {
+  if (!A) return;
+  const t = A.ctx.currentTime;
+  A.gL.gain.setTargetAtTime(dbToGain(posToDb(S.mL)), t, 0.015);
+  A.gR.gain.setTargetAtTime(dbToGain(posToDb(S.mR)), t, 0.015);
+  A.revRet.gain.setTargetAtTime(S.rev, t, 0.015);
+}
+const CH_KEYS = ['gain', 'hi', 'mid', 'lo', 'send', 'pan', 'mute', 'solo', 'fader'];
+function renderAll() {
+  S.ch.forEach((_, i) => CH_KEYS.forEach(k => { renderCh(i, k); applyCh(i, k); }));
+  applyMuteSolo(); renderMaster(); applyMaster(); routeCables(); updateJacks(); drawCables();
+}
+function resetMixer() { S = defaultState(); renderAll(); }
+
+/* ============================== Cables ============================== */
+function rel(el) {
+  const r = el.getBoundingClientRect(), R = rig.getBoundingClientRect();
+  return { x: r.left + r.width / 2 - R.left, y: r.top + r.height / 2 - R.top };
+}
+function relPoint(e) { const R = rig.getBoundingClientRect(); return { x: e.clientX - R.left, y: e.clientY - R.top }; }
+function plugPos(s) {
+  if (dragPos[s]) return dragPos[s];
+  const c = S.cables[s];
+  return c != null ? rel(ui[c].jack) : rel(parkEl[s]);
+}
+let drawQueued = false;
+function requestDraw() { if (!drawQueued) { drawQueued = true; requestAnimationFrame(() => { drawQueued = false; drawCables(); }); } }
+function drawCables() {
+  svg.setAttribute('width', rig.offsetWidth); svg.setAttribute('height', rig.offsetHeight);
+  let html = '';
+  for (const s of SRC) {
+    const a = rel(sockEl[s]), p = plugPos(s);
+    plugEl[s].style.transform = `translate(${p.x}px,${p.y}px)`;
+    const ex = p.x, ey = p.y - 25;
+    const k = 30 + Math.max(Math.abs(ey - a.y), Math.abs(ex - a.x)) * 0.35;
+    const d = `M${a.x},${a.y} C${a.x},${a.y + k} ${ex},${ey - k} ${ex},${ey}`;
+    html += `<path d="${d}" fill="none" stroke="#000" stroke-opacity=".55" stroke-width="10" stroke-linecap="round"/>` +
+            `<path d="${d}" fill="none" stroke="${SRC_INFO[s].color}" stroke-width="6" stroke-linecap="round"/>`;
+  }
+  svg.innerHTML = html;
+}
+function updateJacks() {
+  ui.forEach((u, i) => {
+    const s = srcIn(i);
+    u.jack.classList.toggle('hot', !!s);
+    if (s) u.jack.style.setProperty('--jc', SRC_INFO[s].color);
+  });
+}
+function routeCables() {
+  if (!A) return;
+  for (const s of SRC) {
+    const o = A.srcOut[s];
+    try { o.disconnect(); } catch (_) { /* nothing connected */ }
+    if (S.cables[s] != null) o.connect(A.ch[S.cables[s]].input);
+  }
+}
+async function plugInto(s, i) {
+  for (const o of SRC) if (o !== s && S.cables[o] === i) S.cables[o] = null; // bump whatever was there
+  S.cables[s] = i;
+  routeCables(); updateJacks(); drawCables();
+  if (s === 'mic' && !(A && A.micOn)) {
+    const ok = await ensureMic();
+    if (!ok) unplug('mic');
+  }
+}
+function unplug(s) { S.cables[s] = null; routeCables(); updateJacks(); drawCables(); }
+
+/* ============================== Audio engine ============================== */
+function makeImpulse(ctx, dur) {
+  const sr = ctx.sampleRate, len = Math.floor(sr * dur), b = ctx.createBuffer(2, len, sr);
+  for (let c = 0; c < 2; c++) {
+    const d = b.getChannelData(c);
+    for (let i = 0; i < len; i++) { const t = i / len; d[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 3) * Math.exp(-2 * t); }
+  }
+  return b;
+}
+function powerUp() {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+  ctx.resume();
+  A = { ctx, ch: [], srcOut: {}, buf: {}, players: [], micOn: false };
+
+  // Main bus: stereo → separate L and R faders → limiter (ear protection) → output
+  A.bus = ctx.createGain(); A.bus.channelCount = 2; A.bus.channelCountMode = 'explicit';
+  const split = ctx.createChannelSplitter(2), merge = ctx.createChannelMerger(2);
+  A.gL = ctx.createGain(); A.gR = ctx.createGain();
+  A.aL = ctx.createAnalyser(); A.aR = ctx.createAnalyser(); A.aL.fftSize = A.aR.fftSize = 1024;
+  A.bus.connect(split); split.connect(A.gL, 0); split.connect(A.gR, 1);
+  A.gL.connect(merge, 0, 0); A.gR.connect(merge, 0, 1);
+  A.gL.connect(A.aL); A.gR.connect(A.aR);
+  const lim = ctx.createDynamicsCompressor();
+  lim.threshold.value = -2; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.002; lim.release.value = 0.15;
+  merge.connect(lim); lim.connect(ctx.destination);
+
+  // Reverb: FX bus → pre-delay → convolver → tone → return level → main bus
+  A.fx = ctx.createGain();
+  const pre = ctx.createDelay(0.1); pre.delayTime.value = 0.025;
+  const conv = ctx.createConvolver(); conv.buffer = makeImpulse(ctx, 2.4);
+  const tone = ctx.createBiquadFilter(); tone.type = 'lowpass'; tone.frequency.value = 6500;
+  A.revRet = ctx.createGain();
+  A.fx.connect(pre); pre.connect(conv); conv.connect(tone); tone.connect(A.revRet); A.revRet.connect(A.bus);
+
+  // Channel strips: input → gain → [clip] → EQ low/mid/high → mute → fader → (FX send) → pan → main
+  const clipCurve = new Float32Array([-1, 1]);
+  for (let i = 0; i < LABELS.length; i++) {
+    const n = {};
+    n.input = ctx.createGain(); n.input.channelCount = 1; n.input.channelCountMode = 'explicit'; // channels are mono
+    n.gain = ctx.createGain();
+    n.aPre = ctx.createAnalyser(); n.aPre.fftSize = 1024;
+    n.clip = ctx.createWaveShaper(); n.clip.curve = clipCurve; // anything past full scale gets chopped off = real distortion
+    n.lo = ctx.createBiquadFilter(); n.lo.type = 'lowshelf'; n.lo.frequency.value = 120;
+    n.mid = ctx.createBiquadFilter(); n.mid.type = 'peaking'; n.mid.frequency.value = 1000; n.mid.Q.value = 0.8;
+    n.hi = ctx.createBiquadFilter(); n.hi.type = 'highshelf'; n.hi.frequency.value = 8000;
+    n.mute = ctx.createGain(); n.fader = ctx.createGain();
+    n.aPost = ctx.createAnalyser(); n.aPost.fftSize = 1024;
+    n.send = ctx.createGain(); n.pan = ctx.createStereoPanner();
+    n.input.connect(n.gain); n.gain.connect(n.aPre); n.gain.connect(n.clip);
+    n.clip.connect(n.lo); n.lo.connect(n.mid); n.mid.connect(n.hi); n.hi.connect(n.mute);
+    n.mute.connect(n.fader); n.fader.connect(n.aPost); n.fader.connect(n.send); n.send.connect(A.fx);
+    n.fader.connect(n.pan); n.pan.connect(A.bus);
+    A.ch.push(n);
+  }
+  for (const s of SRC) A.srcOut[s] = ctx.createGain();
+  A.micAn = ctx.createAnalyser(); A.micAn.fftSize = 2048; A.micAn.smoothingTimeConstant = 0.5;
+
+  renderAll();
+  loadTracks();
+}
+
+async function loadTracks() {
+  const btn = $('#playBtn');
+  btn.disabled = true; btn.textContent = 'Loading…';
+  try {
+    await Promise.all(TRACKS.map(async t => {
+      const r = await fetch(`mixer-audio/${t}.wav`);
+      if (!r.ok) throw new Error(`${t}.wav: HTTP ${r.status}`);
+      A.buf[t] = await A.ctx.decodeAudioData(await r.arrayBuffer());
+    }));
+    btn.disabled = false; btn.textContent = '▶ Play'; btn.classList.add('pulse');
+  } catch (e) {
+    btn.textContent = '⚠ No tracks';
+    showModal('Couldn\'t load the band', `<p>The piano, bass and drum tracks didn't load (${e.message}).</p><p>This page needs to be opened from the website, not as a file on your computer. If it keeps happening, tell your teacher.</p>`, [{ label: 'OK', primary: true }]);
+  }
+}
+function play() {
+  if (!A || !TRACKS.every(t => A.buf[t])) return;
+  A.ctx.resume();
+  startT = A.ctx.currentTime + 0.08;
+  A.players = TRACKS.map(t => {
+    const s = A.ctx.createBufferSource();
+    s.buffer = A.buf[t]; s.loop = true; s.connect(A.srcOut[t]); s.start(startT);
+    return s;
+  });
+  playing = true;
+  const b = $('#playBtn'); b.textContent = '■ Stop'; b.classList.add('playing'); b.classList.remove('pulse');
+}
+function stop() {
+  A.players.forEach(p => { try { p.stop(); } catch (_) { /* already stopped */ } });
+  A.players = []; playing = false;
+  const b = $('#playBtn'); b.textContent = '▶ Play'; b.classList.remove('playing');
+  document.querySelectorAll('#bars span').forEach(s => s.classList.remove('now'));
+}
+
+async function ensureMic() {
+  if (A.micOn) return true;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showModal('Microphone not available', '<p>This browser can only use the microphone on a secure (https://) web page. Ask your teacher for the correct link.</p>', [{ label: 'OK', primary: true }]);
+    return false;
+  }
+  try {
+    // Turn OFF the browser's automatic voice processing so the GAIN knob is the only thing changing your level.
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    A.micSrc = A.ctx.createMediaStreamSource(stream);
+    A.micSrc.connect(A.srcOut.mic); A.micSrc.connect(A.micAn);
+    A.micOn = true;
+    return true;
+  } catch (e) {
+    const blocked = e && (e.name === 'NotAllowedError' || e.name === 'SecurityError');
+    showModal('Microphone blocked', blocked
+      ? '<p>The microphone permission was blocked. Click the microphone/lock icon in the address bar and choose <b>Allow</b>, then plug the mic cable in again.</p><p>If there\'s no option to allow it, your school may block microphones on this site. Ask your teacher.</p>'
+      : `<p>No microphone could be found or opened (${e && e.name ? e.name : 'unknown error'}). Check that a mic is connected.</p>`,
+      [{ label: 'OK', primary: true }]);
+    return false;
+  }
+}
+
+/* ============================== Feedback guard ============================== */
+const fbuf = new Float32Array(1024);
+let fbCount = 0, fbBin = -1, guardUntil = 0;
+function feedbackCheck(now) {
+  const ch = S.cables.mic;
+  if (!A || !A.micOn || ch == null || L[ch].postFast < -40) { fbCount = Math.max(0, fbCount - 2); return; }
+  A.micAn.getFloatFrequencyData(fbuf);
+  const binHz = A.ctx.sampleRate / A.micAn.fftSize;
+  const lo = Math.ceil(80 / binHz), hi = Math.min(fbuf.length - 1, Math.floor(8000 / binHz));
+  let max = -200, at = -1;
+  for (let b = lo; b <= hi; b++) { const v = Math.max(fbuf[b], -140); if (v > max) { max = v; at = b; } }
+  let sum = 0, n = 0;
+  for (let b = lo; b <= hi; b++) if (Math.abs(b - at) > 3) { sum += Math.max(fbuf[b], -140); n++; }
+  const rest = n ? sum / n : -140;
+  // Feedback = one loud, steady, pure tone towering over everything else.
+  if (max > -35 && max - rest > 40 && Math.abs(at - fbBin) <= 2) fbCount++;
+  else fbCount = Math.max(0, fbCount - 2);
+  fbBin = at;
+  if (fbCount > 30) {
+    fbCount = 0; guardUntil = now + 4000;
+    setCh(ch, 'mute', true);
+    showModal('🔊 Feedback detected!',
+      `<p>The Feedback Guard heard one loud, steady tone that kept going — the sound of a <b>feedback loop</b> (or maybe a really good whistle!). It <b>muted Channel ${ch + 1}</b> to protect your ears.</p>
+       <p><b>To fix it:</b> make sure your headphones are on, turn your computer's speaker volume down, lower the mic GAIN or fader, then press MUTE on Channel ${ch + 1} to turn the channel back on.</p>`,
+      [{ label: 'Got it', primary: true }]);
+  }
+}
+
+/* ============================== Animation loop (meters) ============================== */
+const tbuf = new Float32Array(1024);
+function peakOf(an) { an.getFloatTimeDomainData(tbuf); let m = 0; for (let i = 0; i < tbuf.length; i++) { const a = Math.abs(tbuf[i]); if (a > m) m = a; } return m; }
+let lastFrame = performance.now(), lastBar = -1, settleUntil = 0;
+function frame(now) {
+  const dt = Math.min(0.1, (now - lastFrame) / 1000); lastFrame = now;
+  if (A) {
+    for (let i = 0; i < LABELS.length; i++) {
+      const pre = peakOf(A.ch[i].aPre), l = L[i];
+      l.preFast = toDb(pre); l.postFast = toDb(peakOf(A.ch[i].aPost));
+      if (now > settleUntil) { // analysers still hold old audio for a moment after a challenge setup
+        if (pre > 1) l.clipAt = now;
+        l.preSlow = Math.max(l.preFast, l.preSlow - 6 * dt);
+        l.postSlow = Math.max(l.postFast, l.postSlow - 15 * dt);
+      }
+      updateMeter(ui[i].meter, l.preFast, dt, now);
+      ui[i].clip.classList.toggle('on', now - l.clipAt < 500);
+    }
+    ML.L = toDb(peakOf(A.aL)); ML.R = toDb(peakOf(A.aR));
+    updateMeter(M.mL, ML.L, dt, now); updateMeter(M.mR, ML.R, dt, now);
+    feedbackCheck(now);
+    M.guard.classList.toggle('tripped', now < guardUntil);
+    if (playing) {
+      const t = A.ctx.currentTime - startT;
+      const bar = t < 0 ? 0 : Math.floor((t % LOOP_SECONDS) / BAR_SECONDS);
+      if (bar !== lastBar) { document.querySelectorAll('#bars span').forEach((s, k) => s.classList.toggle('now', k === bar)); lastBar = bar; }
+    } else lastBar = -1;
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ============================== Help overlay ============================== */
+const HELP = {
+  stagebox: ['Stage Box', 'This is where the musicians\' cables start. On a real stage, every mic and instrument plugs into a box on stage, and one thick "snake" cable carries them all to the mixer.'],
+  cable: ['XLR Cable', 'Drag a plug onto any channel\'s INPUT jack to send that sound into that channel. Plugging into a jack that\'s already in use bumps the other cable out. Drag a plug away from the jacks to unplug it. (Keyboard: select a plug and press 1–4, or 0 to unplug.)'],
+  jack: ['Input Jack', 'Where a cable plugs into a channel. Each channel controls ONE sound source. The channel doesn\'t care what\'s plugged in. Its knobs change whatever you connect.'],
+  scribble: ['Scribble Strip', 'Engineers put tape on the console and write what\'s plugged into each channel so they don\'t get lost. If a cable ends up in the wrong channel, the label is wrong!'],
+  gain: ['Gain (Trim)', 'The FIRST control in the channel. It sets how strong the signal is coming INTO the mixer. Set it so the channel meter bounces in the YELLOW. Too low = weak and noisy. Too high = CLIPPING (distortion). Gain is not the volume control; use the fader for that.'],
+  clip: ['Clip Light', 'Lights up red when the signal is too strong for the channel. The tops of the sound wave get chopped off ("clipped"), which sounds crunchy and distorted. If it flashes, turn the GAIN down.'],
+  eqhi: ['High EQ', 'Turn right to boost or left to cut the treble: cymbals, "S" sounds, sparkle and air (about 8,000 Hz and up). Double-click to reset to 0.'],
+  eqmid: ['Mid EQ', 'Boosts or cuts the middle frequencies (around 1,000 Hz), where most of an instrument\'s or voice\'s character lives. Cutting a little mid can make room for other sounds.'],
+  eqlo: ['Low EQ', 'Boosts or cuts the bass frequencies (about 120 Hz and below): kick drum thump, bass guitar, boominess. Too much low on everything makes a mix sound muddy.'],
+  send: ['FX Send', 'Sends a copy of this channel to the reverb effect. More send = more reverb on THIS channel only. It\'s "post-fader": pull the fader down and the reverb goes down too. The REVERB RETURN also has to be up to hear it.'],
+  pan: ['Pan', 'Places the sound between the LEFT and RIGHT speakers. C (center) = equally in both. Turn left or right to move the sound. Headphones make it easy to hear!'],
+  mute: ['Mute', 'Turns the channel off instantly without moving the fader, so your level stays where you set it. Press again to turn it back on.'],
+  solo: ['Solo', 'Lets you hear ONLY the soloed channel(s). Every other channel goes silent. Great for checking one sound, but don\'t forget to turn it off or the rest of the band disappears!'],
+  fader: ['Channel Fader', 'The volume of this channel in the mix. The 0 line means "no change". Above 0 boosts, below cuts, and all the way down (−∞) is silent. Double-click to reset to 0.'],
+  meter: ['Channel Meter', 'Shows the level coming IN to the channel (after the gain, before the fader). That\'s why moving the fader doesn\'t change it! Green = OK, Yellow = great, Red = too hot. Watch the MAIN meters to see what the fader does.'],
+  reverb: ['Reverb Return', 'The volume of the reverb coming back into the mix. Each channel\'s FX SEND decides how much of that channel goes INTO the reverb. This knob decides how loud the reverb is in the main output.'],
+  link: ['Link L+R', 'Locks the Main Left and Main Right faders together so moving one moves both, like most real mixers.'],
+  guard: ['Feedback Guard', 'Listens for the screaming howl of a feedback loop. If it hears one, it mutes the mic\'s channel instantly to protect your ears. Green = listening, Red = it just caught one.'],
+  mainL: ['Main Left Fader', 'The volume of everything going to the LEFT speaker or headphone. Most mixers move left and right together; here they\'re separate so you can hear what each side does.'],
+  mainR: ['Main Right Fader', 'The volume of everything going to the RIGHT speaker or headphone. Most mixers move left and right together; here they\'re separate so you can hear what each side does.'],
+  mastermeter: ['Main Meters', 'Show the final level going out to the left and right sides. If they hit red, the whole mix is too loud: lower the channel faders or main faders. (A safety limiter protects your ears.)'],
+  play: ['Play / Stop', 'Starts and stops the band: a 12-bar blues with piano, bass and drums at 120 beats per minute. The tracks keep playing in time even when their cables are unplugged.'],
+  bars: ['Bar Counter', 'A 12-bar blues repeats a pattern that is 12 bars (measures) long. The lit box shows which bar the band is playing right now.'],
+  flow: ['Signal Flow', 'Shows the path sound takes through one channel and lights up where signal is flowing. If you can\'t hear something, look for where it turns RED. That\'s where the sound stops.'],
+  challenges: ['Challenges', 'Real problems that live sound engineers solve every day. The mixer checks your work automatically.'],
+  reset: ['Reset', 'Puts every knob, fader and cable back where it started.'],
+};
+let helpMode = false;
+const helpCard = $('#helpCard');
+function setHelp(on) { helpMode = on; document.body.classList.toggle('help-mode', on); $('#helpBtn').classList.toggle('on', on); if (!on) helpCard.hidden = true; }
+function showHelp(el) {
+  const [title, text] = HELP[el.dataset.help] || ['', ''];
+  helpCard.querySelector('h4').textContent = title;
+  helpCard.querySelector('div').textContent = text;
+  helpCard.hidden = false;
+  const r = el.getBoundingClientRect(), w = 290, h = helpCard.offsetHeight;
+  let x = r.right + 12; if (x + w > innerWidth - 8) x = r.left - w - 12; if (x < 8) x = clamp(r.left, 8, innerWidth - w - 8);
+  let y = clamp(r.top, 8, innerHeight - h - 8);
+  if (x === clamp(r.left, 8, innerWidth - w - 8) && r.right + 12 + w > innerWidth - 8 && r.left - w - 12 < 8) y = clamp(r.bottom + 8, 8, innerHeight - h - 8);
+  helpCard.style.left = x + 'px'; helpCard.style.top = y + 'px';
+}
+$('#helpBtn').onclick = () => setHelp(!helpMode);
+helpCard.querySelector('button').onclick = () => { helpCard.hidden = true; };
+const helpExempt = e => e.target.closest('#helpBtn,#helpCard,.modal');
+document.addEventListener('pointerdown', e => {
+  if (!helpMode || helpExempt(e)) return;
+  e.preventDefault(); e.stopPropagation();
+  const t = e.target.closest('[data-help]');
+  if (t) showHelp(t); else helpCard.hidden = true;
+}, true);
+for (const ev of ['click', 'dblclick']) document.addEventListener(ev, e => { if (helpMode && !helpExempt(e)) { e.preventDefault(); e.stopPropagation(); } }, true);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && helpMode) setHelp(false); });
+
+/* ============================== Modal ============================== */
+function showModal(title, html, buttons) {
+  const root = $('#modalRoot');
+  const m = document.createElement('div');
+  m.className = 'modal';
+  m.innerHTML = `<div class="card" role="dialog" aria-modal="true"><h2>${title}</h2>${html}<div class="actions"></div></div>`;
+  const acts = m.querySelector('.actions');
+  for (const b of buttons) {
+    const el = document.createElement('button');
+    el.textContent = b.label; if (b.primary) el.className = 'primary';
+    el.onclick = () => { m.remove(); if (b.onClick) b.onClick(); };
+    acts.appendChild(el);
+  }
+  root.appendChild(m);
+  acts.lastChild.focus();
+}
+
+/* ============================== Signal flow view ============================== */
+let flowCh = 1;
+const FLOW = [['src', 'Source'], ['gain', 'Gain'], ['eq', 'EQ'], ['mute', 'Mute / Solo'], ['fader', 'Fader'], ['pan', 'Pan'], ['main', 'Main L / R'], ['ears', '🎧 Your ears']];
+const flowEls = {};
+function buildFlow() {
+  const pick = $('#flowPick');
+  LABELS.forEach((l, i) => {
+    const b = document.createElement('button'); b.className = 'hbtn'; b.textContent = `${i + 1} ${l}`;
+    b.onclick = () => setFlowCh(i); pick.appendChild(b);
+  });
+  const box = $('#flowNodes');
+  FLOW.forEach(([id, name], k) => {
+    if (k) { const a = document.createElement('div'); a.className = 'farrow'; a.textContent = '▼'; box.appendChild(a); flowEls['a' + id] = a; }
+    const n = document.createElement('div'); n.className = 'fnode'; n.innerHTML = `<b>${name}</b><span></span>`;
+    box.appendChild(n); flowEls[id] = n;
+    if (id === 'fader') { const br = document.createElement('div'); br.className = 'fbranch'; box.appendChild(br); flowEls.branch = br; }
+  });
+  setFlowCh(1);
+}
+function setFlowCh(i) {
+  flowCh = i;
+  document.querySelectorAll('#flowPick button').forEach((b, k) => b.classList.toggle('on', k === i));
+  ui.forEach((u, k) => u.strip.classList.toggle('selected', k === i && !$('#side').hidden && sideTab === 'flow'));
+  renderFlow();
+}
+function renderFlow() {
+  if ($('#side').hidden || sideTab !== 'flow') return;
+  const i = flowCh, c = S.ch[i], src = srcIn(i), now = performance.now();
+  const solo = anySolo(), dbL = posToDb(S.mL), dbR = posToDb(S.mR);
+  const vals = {
+    src: src ? `${SRC_INFO[src].icon} ${SRC_INFO[src].name}` : 'nothing plugged in',
+    gain: fmtGainDb(c.gain),
+    eq: `L ${fmtGainDb(c.lo)} · M ${fmtGainDb(c.mid)} · H ${fmtGainDb(c.hi)}`.replace(/ dB/g, ''),
+    mute: c.mute ? 'MUTED' : (solo && !c.solo ? 'silenced by solo' : (c.solo ? 'SOLO' : 'on')),
+    fader: fmtDb(posToDb(c.fader)), pan: fmtPan(c.pan),
+    main: `L ${fmtDb(dbL)} · R ${fmtDb(dbR)}`, ears: '',
+  };
+  let block = null; const warn = {};
+  if (!src) block = ['src', `Nothing is plugged into Channel ${i + 1}. Drag a cable onto its INPUT jack.`];
+  else if (src !== 'mic' && !playing) block = ['src', 'The band isn\'t playing. Press ▶ Play.'];
+  else if (src === 'mic' && !(A && A.micOn)) block = ['src', 'The microphone isn\'t on.'];
+  if (!block && now - L[i].clipAt < 1000) warn.gain = 'CLIPPING! Turn the gain down.';
+  if (!block && c.mute) block = ['mute', 'This channel is MUTED. Press MUTE to turn it back on.'];
+  else if (!block && solo && !c.solo) block = ['mute', 'Another channel is SOLOED, so this one is silenced.'];
+  if (!block && posToDb(c.fader) === -Infinity) block = ['fader', 'The fader is all the way down (−∞).'];
+  if (!block) {
+    const lOff = dbL === -Infinity, rOff = dbR === -Infinity;
+    if ((lOff && rOff) || (lOff && c.pan >= 0.99) || (rOff && c.pan <= -0.99)) block = ['main', 'The MAIN fader(s) this sound goes to are all the way down.'];
+    else if (lOff) warn.main = 'Main LEFT is down, so you only hear the right side.';
+    else if (rOff) warn.main = 'Main RIGHT is down, so you only hear the left side.';
+  }
+  const sig = L[i].preSlow > -55;
+  const bi = block ? FLOW.findIndex(f => f[0] === block[0]) : FLOW.length;
+  FLOW.forEach(([id], k) => {
+    const n = flowEls[id];
+    n.className = 'fnode' + (k > bi ? ' dim' : k === bi ? ' blocked' : sig ? ' lit' : '') + (warn[id] && k < bi ? ' warn' : '');
+    n.querySelector('span').textContent = vals[id];
+    if (k) flowEls['a' + id].className = 'farrow' + (k <= bi && sig && k - 1 < bi ? ' lit' : '');
+  });
+  const fi = FLOW.findIndex(f => f[0] === 'fader');
+  flowEls.branch.textContent = `↳ FX Send ${fmtPct(c.send)} → Reverb → Return ${fmtPct(S.rev)} → Main`;
+  flowEls.branch.classList.toggle('lit', sig && fi < bi && c.send > 0.01 && S.rev > 0.01);
+  const st = $('#flowStatus');
+  if (block) st.innerHTML = `⛔ <b>Signal stops at ${FLOW[bi][1]}:</b> ${block[1]}`;
+  else if (warn.gain || warn.main) st.innerHTML = `⚠️ ${warn.gain || warn.main}`;
+  else if (sig) st.innerHTML = '✅ Signal is flowing all the way to your ears!';
+  else st.innerHTML = src === 'mic' ? '🎤 Path is clear. Say something into the mic!' : '… Waiting for sound.';
+}
+
+/* ============================== Challenges ============================== */
+const inYellow = i => i != null && L[i].preSlow >= YELLOW_LOW && L[i].preSlow <= RED_LOW;
+const noClip = i => i != null && performance.now() - L[i].clipAt > 1000;
+const playingCheck = ['The band is playing (press ▶ Play)', () => playing];
+const CHALLENGES = [
+  { id: 'patch', title: 'Patch the Band', hold: 1.5,
+    intro: 'Someone unplugged everything! Read the scribble strips and plug each cable into the channel with its name. Then press ▶ Play and make sure you can hear the whole band.',
+    setup() { resetMixer(); S.cables = { mic: null, piano: null, bass: null, drums: null }; renderAll(); },
+    checks: [['Piano → PIANO channel (Ch 2)', () => S.cables.piano === 1], ['Bass → BASS channel (Ch 3)', () => S.cables.bass === 2],
+      ['Drums → DRUMS channel (Ch 4)', () => S.cables.drums === 3], playingCheck,
+      ['You can hear all three in the Main outputs', () => heardSrc('piano') && heardSrc('bass') && heardSrc('drums')]] },
+  { id: 'gainlow', title: 'Gain Staging', hold: 8,
+    intro: 'The drums are coming in way too quietly. Turn up the drum channel\'s GAIN until its meter bounces in the YELLOW zone, without lighting CLIP. Keep it there for 8 seconds.',
+    setup() { resetMixer(); setCh(3, 'gain', -20); },
+    checks: [playingCheck, ['Drum meter peaks in the YELLOW', () => inYellow(S.cables.drums)], ['No clipping', () => noClip(S.cables.drums)]] },
+  { id: 'hot', title: 'Too Hot!', hold: 5,
+    intro: 'The piano gain is cranked so high that it\'s CLIPPING. Hear that crunchy distortion? Bring the piano\'s GAIN down until CLIP stays off and its meter sits in the YELLOW for 5 seconds.',
+    setup() { resetMixer(); setCh(1, 'gain', 18); },
+    checks: [playingCheck, ['Piano CLIP light stays off', () => noClip(S.cables.piano)], ['Piano meter peaks in the YELLOW', () => inYellow(S.cables.piano)]] },
+  { id: 'silent', title: 'Where Did the Sound Go?', hold: 1.5,
+    intro: 'The band is plugged in, but something is wrong. Find and fix EVERY problem. Tip: open 🔀 Signal Flow and check each channel to see where the signal stops.',
+    setup() { resetMixer(); setCh(1, 'mute', true); setCh(2, 'fader', 0); setCh(0, 'solo', true); setMaster('mR', 0); },
+    checks: [playingCheck, ['No channels soloed', () => !anySolo()], ['You can hear the piano', () => heardSrc('piano')], ['You can hear the bass', () => heardSrc('bass')],
+      ['You can hear the drums', () => heardSrc('drums')], ['Main LEFT is up (above −10 dB)', () => posToDb(S.mL) > -10], ['Main RIGHT is up (above −10 dB)', () => posToDb(S.mR) > -10]] },
+  { id: 'lopsided', title: 'Lopsided Mix', hold: 1.5,
+    intro: 'The whole mix leans to one side. Make the Main LEFT and RIGHT faders match (within 1 dB of each other, both above −10 dB) and bring the bass back to the center.',
+    setup() { resetMixer(); setMaster('mR', dbToPos(-18)); setCh(2, 'pan', 1); },
+    checks: [playingCheck, ['Main L and R match (within 1 dB)', () => { const l = posToDb(S.mL), r = posToDb(S.mR); return l > -10 && r > -10 && Math.abs(l - r) <= 1; }],
+      ['Bass panned to the center', () => { const c = chOf('bass'); return !!c && Math.abs(c.pan) <= 0.05; }], ['You can hear the bass', () => heardSrc('bass')]] },
+  { id: 'stereo', title: 'Paint a Stereo Picture', hold: 1.5,
+    intro: 'Spread the band out like a real stage: put the piano on the LEFT side (at least L30), and keep the bass and drums in the CENTER. Close your eyes and listen with headphones!',
+    setup() { resetMixer(); setCh(1, 'pan', 0.6); setCh(3, 'pan', -0.8); },
+    checks: [playingCheck, ['Piano panned left (L30 or more)', () => { const c = chOf('piano'); return !!c && c.pan <= -0.3; }],
+      ['Bass in the center', () => { const c = chOf('bass'); return !!c && Math.abs(c.pan) <= 0.05; }],
+      ['Drums in the center', () => { const c = chOf('drums'); return !!c && Math.abs(c.pan) <= 0.05; }],
+      ['You can hear the whole band', () => heardSrc('piano') && heardSrc('bass') && heardSrc('drums')]] },
+  { id: 'muddy', title: 'Muddy Piano', hold: 2,
+    intro: 'Someone boosted the piano\'s LOW EQ way too much, and now it sounds boomy and muddy. Cut the piano\'s LOW EQ to −3 dB or less so it sounds clear. Try a little HIGH boost for sparkle!',
+    setup() { resetMixer(); setCh(1, 'lo', 12); },
+    checks: [playingCheck, ['Piano LOW EQ at −3 dB or lower', () => { const c = chOf('piano'); return !!c && c.lo <= -3; }], ['You can hear the piano', () => heardSrc('piano')]] },
+  { id: 'verb', title: 'Reverb on the Vocal', hold: 1.5,
+    intro: 'Plug the 🎤 MIC cable into the VOCAL channel (Ch 1). Put reverb on your voice ONLY: turn up the vocal FX SEND and the REVERB RETURN, and turn the instruments\' FX SENDs all the way down. Then say something!',
+    setup() { resetMixer(); [1, 2, 3].forEach(i => setCh(i, 'send', 0.5)); setMaster('rev', 0); },
+    checks: [['Mic → VOCAL channel (Ch 1)', () => S.cables.mic === 0], ['Vocal FX SEND at 30% or more', () => S.ch[0].send >= 0.3],
+      ['Piano, Bass and Drums FX SENDs at 0', () => [1, 2, 3].every(i => S.ch[i].send <= 0.02)], ['REVERB RETURN at 30% or more', () => S.rev >= 0.3],
+      ['Your voice reaches the Main outputs', () => S.cables.mic != null && heard(S.cables.mic)]] },
+  { id: 'talk', title: 'Talk Over the Band', hold: 0,
+    intro: 'Plug the 🎤 MIC into the VOCAL channel and press ▶ Play. Set the levels so your voice is LOUDER than every instrument, then talk or sing. It needs 3 seconds of you on top (the time adds up).',
+    setup() { resetMixer(); talkTime = 0; },
+    checks: [['Mic → VOCAL channel (Ch 1)', () => S.cables.mic === 0], playingCheck,
+      [() => `Your voice is on top: ${talkTime.toFixed(1)} / 3.0 s`, () => talkTime >= 3]] },
+];
+let active = null, holdStart = null, talkTime = 0, chalDone = false;
+const done = new Set();
+function buildChallenges() { renderChalList(); renderChalCard(); }
+function renderChalList() {
+  $('#chalProgress').textContent = `Completed ${done.size} of ${CHALLENGES.length}`;
+  $('#chalList').innerHTML = CHALLENGES.map((c, k) =>
+    `<button class="hbtn clist ${done.has(c.id) ? 'done' : ''} ${active === k ? 'active' : ''}" data-k="${k}">${done.has(c.id) ? '✅' : (k + 1) + '.'} ${c.title}</button>`).join('');
+  $('#chalList').querySelectorAll('button').forEach(b => b.onclick = () => startChallenge(+b.dataset.k));
+}
+function renderChalCard() {
+  const card = $('#chalCard');
+  if (done.size === CHALLENGES.length && active == null) {
+    card.innerHTML = `<div class="ccard trophy"><h3>🏆 All ${CHALLENGES.length} challenges complete!</h3><p>Show this screen to your teacher.</p><p><b>${new Date().toLocaleString()}</b></p></div>`;
+    return;
+  }
+  if (active == null) { card.innerHTML = '<div class="ccard"><h3>Pick a challenge</h3><p>Each challenge sets up the mixer with a problem to solve. The mixer checks your work automatically.</p></div>'; return; }
+  const c = CHALLENGES[active];
+  card.innerHTML = `<div class="ccard"><h3>${active + 1}. ${c.title}</h3><p>${c.intro}</p><ul class="checks"></ul>${c.hold ? '<div class="holdbar"><i></i></div>' : ''}<div class="cbtns"><button class="hbtn" id="cRestart">↺ Restart</button><button class="hbtn" id="cExit">Exit</button></div></div>`;
+  $('#cRestart').onclick = () => startChallenge(active);
+  $('#cExit').onclick = () => { active = null; renderChalList(); renderChalCard(); };
+  tickChallenge();
+}
+function startChallenge(k) {
+  active = k; holdStart = null; talkTime = 0; chalDone = false;
+  CHALLENGES[k].setup();
+  L.forEach(l => { l.preSlow = l.postSlow = -120; l.clipAt = -1e9; }); // forget levels from before the setup
+  settleUntil = performance.now() + 200;
+  renderChalList(); renderChalCard();
+}
+function tickChallenge() {
+  if (active == null || chalDone) return;
+  const c = CHALLENGES[active], now = performance.now();
+  if (c.id === 'talk') {
+    const m = S.cables.mic;
+    if (m != null && playing && mainOn() && L[m].postFast > -35) {
+      const band = Math.max(...L.filter((_, i) => i !== m).map(l => l.postSlow));
+      if (L[m].postFast > band) talkTime = Math.min(3, talkTime + 0.1);
+    }
+  }
+  const res = c.checks.map(([, test]) => !!test());
+  const ul = document.querySelector('#chalCard .checks');
+  if (ul) ul.innerHTML = c.checks.map(([label], k) => `<li class="${res[k] ? 'ok' : ''}">${typeof label === 'function' ? label() : label}</li>`).join('');
+  const all = res.every(Boolean);
+  if (all) { if (holdStart == null) holdStart = now; } else holdStart = null;
+  const prog = all ? (c.hold ? Math.min(1, (now - holdStart) / (c.hold * 1000)) : 1) : 0;
+  const bar = document.querySelector('#chalCard .holdbar i');
+  if (bar) bar.style.width = prog * 100 + '%';
+  if (all && prog >= 1) {
+    chalDone = true; done.add(c.id);
+    const next = CHALLENGES.findIndex(x => !done.has(x.id));
+    $('#chalCard').innerHTML = `<div class="ccard success"><h3>🎉 Challenge complete!</h3><p><b>${c.title}</b>: nice work, engineer.</p><div class="cbtns">${next >= 0 ? '<button class="hbtn on" id="cNext">Next challenge ▶</button>' : ''}<button class="hbtn" id="cExit">Back to list</button></div></div>`;
+    if (next >= 0) $('#cNext').onclick = () => startChallenge(next);
+    $('#cExit').onclick = () => { active = null; renderChalList(); renderChalCard(); };
+    renderChalList();
+  }
+}
+
+/* ============================== Sidebar & header ============================== */
+let sideTab = 'flow';
+function openSide(tab) {
+  const side = $('#side');
+  if (!side.hidden && sideTab === tab) { side.hidden = true; }
+  else { side.hidden = false; sideTab = tab; }
+  $('#tab-flow').hidden = sideTab !== 'flow'; $('#tab-chal').hidden = sideTab !== 'chal';
+  document.querySelectorAll('.tabs [data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === sideTab));
+  $('#flowBtn').classList.toggle('on', !side.hidden && sideTab === 'flow');
+  $('#chalBtn').classList.toggle('on', !side.hidden && sideTab === 'chal');
+  setFlowCh(flowCh);
+  requestDraw();
+}
+$('#flowBtn').onclick = () => openSide('flow');
+$('#chalBtn').onclick = () => openSide('chal');
+document.querySelectorAll('.tabs [data-tab]').forEach(b => b.onclick = () => { if (sideTab !== b.dataset.tab) openSide(b.dataset.tab); });
+$('#sideClose').onclick = () => openSide(sideTab);
+$('#resetBtn').onclick = () => { resetMixer(); if (active != null) { active = null; renderChalList(); renderChalCard(); } };
+$('#playBtn').onclick = () => playing ? stop() : play();
+
+/* ============================== Start-up ============================== */
+$('#bars').innerHTML = Array.from({ length: 12 }, (_, k) => `<span>${k + 1}</span>`).join('');
+buildStage();
+const strips = $('#strips');
+LABELS.forEach((_, i) => strips.appendChild(buildStrip(i)));
+strips.appendChild(buildMaster());
+buildFlow(); buildChallenges();
+renderAll();
+new ResizeObserver(requestDraw).observe(rig);
+addEventListener('resize', requestDraw);
+setInterval(() => { tickChallenge(); renderFlow(); }, 100);
+requestAnimationFrame(frame);
+
+showModal('🎧 Put on your headphones first!', `
+  <p>This mixer can use your Chromebook's <b>microphone</b>. If sound comes out of your speakers instead of headphones, you could create a <b>feedback loop</b>.</p>
+  <div class="def"><b>What is a feedback loop?</b><br>A feedback loop happens when a microphone picks up the sound coming out of a speaker. That sound goes back into the mixer, comes out of the speaker even louder, gets picked up by the mic again… and around and around it goes, getting louder every trip, until it turns into a loud <b>squeal or howl</b>.</div>
+  <div class="loop"><span>🎤 Mic</span>→<span>🎚️ Mixer</span>→<span>🔊 Speaker</span>→<em>↩ back into the mic, louder!</em></div>
+  <p><b>Headphones break the loop</b> because the microphone can't hear what's playing in your ears. Also, start with your computer's volume turned <b>down low</b>.</p>`,
+  [{ label: '🎧 My headphones are on. Power up the mixer!', primary: true, onClick: powerUp }]);
+</script>
+</body>
+</html>
