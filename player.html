@@ -128,10 +128,14 @@
 <script>
 /* ---------- Data (relative paths so they work on schmidt-education.com) ---------- */
 const TRACKS=[
-  {title:'I Just Cant Wait To Be King',url:'Crescendos-26-27/01-IJustCantWaitToBeKing-All.mp3'},
-  {title:'King of Anything Youll Be Back - Performance',url:'Crescendos-26-27/02-YoullBeBack-KingOfAnything-All-New.mp3'},
-  {title:'What It Sounds Like — Performance',url:'Crescendos-26-27/03-WhatItSoundsLike-All.mp3'},
-  {title:'Long Live - Performance',url:'Crescendos-26-27/04-LongLive-New.mp3'},
+  {title:"01 - I Just Can't Wait (Accompaniment)",url:'Crescendos-26-27/01-IJustCantWaitToBeKing-Accompaniment.mp3'},
+  {title:'02 - King of Anything Youll Be Back (Accompaniment)',url:'Crescendos-26-27/02-KingOfAnything-YoullBeBack-Accompaniment.mp3'},
+  {title:'03 - What It Sounds Like (Accompaniment)',url:'Crescendos-26-27/03-WhatItSoundsLike-Accompaniment.mp3'},
+  {title:'04 - Long Live (Accompaniment)',url:'Crescendos-26-27/04-LongLive-Accompaniment.mp3'},
+  {title:"01 - I Just Can't Wait (Performance)",url:'Crescendos-26-27/01-IJustCantWaitToBeKing-All.mp3'},
+  {title:'02 - King of Anything Youll Be Back (Performance)',url:'Crescendos-26-27/02-YoullBeBack-KingOfAnything-All-New.mp3'},
+  {title:'03 - What It Sounds Like (Performance)',url:'Crescendos-26-27/03-WhatItSoundsLike-All.mp3'},
+  {title:'04 - Long Live (Performance)',url:'Crescendos-26-27/04-LongLive-New.mp3'},
 ];
 
 /* ---------- Elements ---------- */
@@ -170,7 +174,7 @@ const wavesurfer=WaveSurfer.create({
 });
 
 /* ---------- State ---------- */
-let playlist=TRACKS.slice(0,4);
+let playlist=TRACKS.slice();
 let current=0;
 let gap=2.0;
 let gapTimer=null;
