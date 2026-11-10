@@ -125,6 +125,12 @@
   }
   .emergency-note{font-size:.8rem;color:var(--muted);margin:.3rem 0 .6rem}
   .hidden-input{display:none}
+  #preloadCard{
+    max-width:900px;margin:0 auto 1.25rem;padding:.6rem 1rem;
+    display:flex;flex-wrap:wrap;align-items:center;gap:.75rem;font-size:.9rem;
+  }
+  .tag.ok{color:var(--ok)}
+  .tag.warn{color:var(--danger)}
 </style>
 </head>
 <body>
@@ -144,8 +150,14 @@
     <li><strong>Loading a track interrupts whatever is currently playing</strong> — there's only one "live" track at a time, same as a real cue player.</li>
     <li>Drag the ⋮⋮ handle to reorder the setlist. Use ✖ to drop a number from tonight's run, or "Add Local File" / the emergency YouTube box to bring in something new.</li>
     <li>"Keep screen awake" stops the booth laptop/Chromebook from locking mid-show — leave it checked.</li>
+    <li>Tracks preload into the browser's memory as soon as this page opens. Once a track shows <strong>✓ cached</strong>, it'll keep playing even if the venue's Wi-Fi drops. Keep this tab open for the whole show — reloading the page clears the cache and starts the download over.</li>
   </ul>
 </details>
+
+<div class="card" id="preloadCard">
+  <span id="preloadStatus">⏳ Checking offline cache…</span>
+  <button id="retryPreloadBtn" class="btn" style="display:none">🔁 Retry Failed</button>
+</div>
 
 <div class="app">
   <section class="card now-playing" id="nowPlayingCard">
@@ -298,6 +310,8 @@ const ytUrlInput=document.getElementById('ytUrlInput');
 const ytTitleInput=document.getElementById('ytTitleInput');
 const addYtBtn=document.getElementById('addYtBtn');
 const audio=document.getElementById('audioEl');
+const preloadStatusEl=document.getElementById('preloadStatus');
+const retryPreloadBtn=document.getElementById('retryPreloadBtn');
 
 /* ---------- State ---------- */
 let nextTrackId=1;
@@ -333,6 +347,89 @@ function ensureAudioGraph(){
 
 audio.volume=1;
 audio.addEventListener('ended', ()=>{ updatePlayPauseBtn(); });
+
+/* ---------- Offline preloading (so the show survives a dropped Wi-Fi connection) ---------- */
+const preloadCache=new Map(); // url -> {status:'loading'|'ready'|'failed', blobUrl, size, attempts}
+const MAX_PRELOAD_ATTEMPTS=3;
+const PRELOAD_CONCURRENCY=3;
+const SETLIST_URLS=AUDIO_TRACKS.map(t=>encodePath('DAHS Cabaret/'+t.file));
+
+function getPreloadEntry(url){
+  let e=preloadCache.get(url);
+  if(!e){ e={status:'pending',blobUrl:null,size:0,attempts:0}; preloadCache.set(url,e); }
+  return e;
+}
+
+function preloadSourceFor(track){
+  if(track.local) return track.url;
+  const e=preloadCache.get(track.url);
+  return (e && e.status==='ready') ? e.blobUrl : track.url;
+}
+
+async function preloadOne(url){
+  const entry=getPreloadEntry(url);
+  if(entry.status==='ready') return;
+  entry.status='loading';
+  updatePreloadStatus();
+  for(let attempt=1;attempt<=MAX_PRELOAD_ATTEMPTS;attempt++){
+    entry.attempts=attempt;
+    try{
+      const res=await fetch(url);
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const blob=await res.blob();
+      entry.blobUrl=URL.createObjectURL(blob);
+      entry.size=blob.size;
+      entry.status='ready';
+      updatePreloadStatus();
+      renderPlaylist();
+      return;
+    }catch(err){
+      if(attempt<MAX_PRELOAD_ATTEMPTS){
+        await new Promise(r=>setTimeout(r,attempt*1000));
+      }else{
+        entry.status='failed';
+        updatePreloadStatus();
+        renderPlaylist();
+      }
+    }
+  }
+}
+
+async function preloadAll(urls){
+  let idx=0;
+  async function worker(){ while(idx<urls.length){ await preloadOne(urls[idx++]); } }
+  await Promise.all(Array.from({length:PRELOAD_CONCURRENCY},worker));
+}
+
+function updatePreloadStatus(){
+  let ready=0,failed=0,bytes=0;
+  SETLIST_URLS.forEach(u=>{
+    const e=preloadCache.get(u);
+    if(!e) return;
+    if(e.status==='ready'){ ready++; bytes+=e.size; }
+    else if(e.status==='failed') failed++;
+  });
+  const total=SETLIST_URLS.length;
+  const mb=(bytes/1048576).toFixed(1);
+  if(ready===total){
+    preloadStatusEl.textContent=`✅ All ${total} tracks cached (${mb} MB) — safe to lose Wi-Fi`;
+    preloadStatusEl.style.color='var(--ok)';
+    retryPreloadBtn.style.display='none';
+  }else{
+    preloadStatusEl.textContent=`⏳ Offline cache: ${ready} of ${total} tracks ready (${mb} MB so far)`+(failed?` · ${failed} failed`:'');
+    preloadStatusEl.style.color=failed?'var(--danger)':'var(--muted)';
+    retryPreloadBtn.style.display=failed?'inline-block':'none';
+  }
+}
+
+retryPreloadBtn.addEventListener('click', ()=>{
+  const failedUrls=[...preloadCache.entries()].filter(([,e])=>e.status==='failed').map(([u])=>u);
+  failedUrls.forEach(u=>preloadCache.delete(u));
+  preloadAll(failedUrls);
+});
+
+updatePreloadStatus();
+preloadAll(SETLIST_URLS);
 
 /* ---------- YouTube emergency engine ---------- */
 let ytPlayer=null, ytPlayerReady=false, ytApiReady=false, pendingYtAction=null;
@@ -391,7 +488,7 @@ function loadTrackById(id, autoplay){
     setEqSpeedDisabled(false);
     if(ytPlayer && ytPlayerReady) ytPlayer.pauseVideo();
     ensureAudioGraph();
-    audio.src=track.url;
+    audio.src=preloadSourceFor(track);
     audio.playbackRate=parseFloat(speedSlider.value);
     audio.preservesPitch=true;
     audio.mozPreservesPitch=true;
@@ -555,6 +652,13 @@ function renderPlaylist(){
       const tag=document.createElement('span');
       tag.className='tag';
       tag.textContent='(YouTube)';
+      title.append(tag);
+    }else if(!track.local){
+      const e=preloadCache.get(track.url);
+      const tag=document.createElement('span');
+      if(e && e.status==='ready'){ tag.className='tag ok'; tag.textContent='✓ cached'; }
+      else if(e && e.status==='failed'){ tag.className='tag warn'; tag.textContent='⚠ not cached'; }
+      else{ tag.className='tag'; tag.textContent='⏳ caching…'; }
       title.append(tag);
     }
 
