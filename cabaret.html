@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="color-scheme" content="dark" />
+<title>DAHS Cabaret Night 2026 — Track Player</title>
+<script src="https://www.youtube.com/iframe_api"></script>
+<style>
+  :root{
+    --bg:#1b1b1e;
+    --panel:#242428;
+    --panel-alt:#2a2a2f;
+    --border:#3a3a40;
+    --text:#f1efe9;
+    --muted:#a8a6a0;
+    --accent:#d4af37;
+    --accent-dark:#9c7f22;
+    --danger:#e0556b;
+    --ok:#4caf7d;
+  }
+  *{box-sizing:border-box}
+  body{
+    font-family:Helvetica,Arial,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    padding:1.5rem;
+    margin:0;
+  }
+  header{text-align:center;margin-bottom:1rem}
+  h1{color:var(--accent);margin:.25rem 0;font-size:1.6rem}
+  h2{color:var(--accent);font-size:1.05rem;margin:.25rem 0 .75rem}
+  p{color:var(--muted)}
+  a{color:var(--accent)}
+  details{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:.75rem 1rem;
+    max-width:900px;
+    margin:0 auto 1.25rem;
+    text-align:left;
+  }
+  summary{cursor:pointer;color:var(--accent);font-weight:600}
+  details ul{margin:.6rem 0 0;padding-left:1.2rem;color:var(--text)}
+  details li{margin:.25rem 0}
+  kbd{
+    background:var(--panel-alt);
+    border:1px solid var(--border);
+    border-bottom-width:2px;
+    border-radius:5px;
+    padding:.05rem .4rem;
+    font-family:monospace;
+    color:var(--accent);
+  }
+  .app{display:grid;grid-template-columns:minmax(300px,1fr) minmax(320px,1fr);gap:1rem;align-items:start;max-width:1200px;margin:0 auto}
+  @media (max-width:900px){.app{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:1rem}
+  .now-playing{transition:box-shadow .3s ease}
+  .now-playing.ending-soon{
+    box-shadow:0 0 0 2px var(--danger);
+    animation:pulse 1s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{box-shadow:0 0 0 2px var(--danger)}
+    50%{box-shadow:0 0 14px 2px var(--danger)}
+  }
+  #nowLabel{font-size:1.3rem;font-weight:700;min-height:1.6em;word-break:break-word}
+  #nowSub{color:var(--muted);font-size:.9rem;min-height:1.2em}
+  .progress-wrap{margin:.75rem 0;cursor:pointer}
+  .progress-bar{height:10px;border-radius:6px;background:var(--panel-alt);border:1px solid var(--border);overflow:hidden}
+  .progress-fill{height:100%;background:var(--accent);width:0%}
+  .time-row{display:flex;justify-content:space-between;font-size:.85rem;color:var(--muted);margin-top:.25rem}
+  .transport{display:flex;gap:.6rem;justify-content:center;align-items:center;margin:1rem 0}
+  .btn{
+    appearance:none;border:none;border-radius:10px;padding:.55rem .9rem;
+    cursor:pointer;background:var(--panel-alt);color:var(--text);font-weight:600;
+    border:1px solid var(--border);
+  }
+  .btn:hover{background:#34343a}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn-accent{background:var(--accent);color:#1b1b1e;border-color:var(--accent-dark)}
+  .btn-accent:hover{background:#e3bf52}
+  .btn-danger{background:var(--danger);color:#1b1b1e;border-color:#a83a4c}
+  .btn-big{font-size:1.3rem;padding:.7rem 1.3rem;min-width:3.2rem}
+  .controls-grid{display:grid;grid-template-columns:1fr;gap:.6rem;margin-top:1rem}
+  .control-row{display:flex;align-items:center;gap:.6rem}
+  .control-row label{flex:0 0 90px;color:var(--muted);font-size:.9rem}
+  .control-row input[type=range]{flex:1}
+  .control-row .val{width:3.4rem;text-align:right;font-size:.85rem;color:var(--text)}
+  .eq-row label{flex:0 0 70px}
+  .status-row{display:flex;flex-wrap:wrap;gap:.75rem;align-items:center;margin-top:.75rem;font-size:.85rem;color:var(--muted)}
+  .status-row label{display:flex;align-items:center;gap:.35rem;cursor:pointer}
+  #ytBox{display:none;margin-top:.75rem}
+  #ytBox.visible{display:block}
+  #ytPlayerWrap{max-width:360px;aspect-ratio:16/9;margin:0 auto;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+  #ytPlayerWrap iframe{width:100%;height:100%}
+  .playlist{list-style:none;margin:0;padding:0;max-height:480px;overflow:auto;border:1px solid var(--border);border-radius:10px}
+  .playlist-item{
+    display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:.6rem;
+    padding:.6rem .7rem;border-bottom:1px solid var(--border);cursor:grab;background:var(--panel);
+  }
+  .playlist-item:last-child{border-bottom:none}
+  .playlist-item:active{cursor:grabbing}
+  .playlist-item.dragging{opacity:.5}
+  .playlist-item.drag-over{box-shadow:0 0 0 2px var(--accent) inset}
+  .playlist-item.active{background:#332b16}
+  .drag-handle{color:var(--muted)}
+  .item-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.92rem}
+  .item-title .tag{color:var(--muted);font-size:.78rem;margin-left:.3rem}
+  .icon-btn{
+    appearance:none;border:none;background:var(--panel-alt);color:var(--text);border-radius:999px;
+    padding:.2rem;width:1.8rem;height:1.8rem;cursor:pointer;border:1px solid var(--border);
+  }
+  .icon-btn:hover{background:#34343a}
+  .icon-btn.danger{background:#3a2228;color:var(--danger);border-color:#5a2a33}
+  .icon-btn.danger:hover{background:#4a2a32}
+  .toolbar{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.75rem}
+  .add-panel{border-top:1px solid var(--border);margin-top:.9rem;padding-top:.8rem}
+  .add-panel h3{margin:.2rem 0 .5rem;color:var(--muted);font-size:.9rem;text-transform:uppercase;letter-spacing:.04em}
+  .add-panel .row{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.5rem}
+  .add-panel input[type=text]{
+    flex:1;min-width:160px;background:var(--panel-alt);border:1px solid var(--border);
+    color:var(--text);border-radius:8px;padding:.45rem .6rem;
+  }
+  .emergency-note{font-size:.8rem;color:var(--muted);margin:.3rem 0 .6rem}
+  .hidden-input{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎭 DAHS Cabaret Night 2026 — Track Player</h1>
+  <p>Backing track cue player. Nothing auto-advances — you're always in control of when the next number starts.</p>
+</header>
+
+<details open>
+  <summary>ℹ How to use (click to collapse)</summary>
+  <ul>
+    <li><kbd>Space</kbd> or <kbd>P</kbd> — Play / Pause</li>
+    <li><kbd>N</kbd> or <kbd>→</kbd> — Next track</li>
+    <li><kbd>B</kbd> or <kbd>←</kbd> — Previous track</li>
+    <li><kbd>M</kbd> — Mute / unmute (bonus shortcut)</li>
+    <li>Click a track once to load it (paused); double-click to load and play immediately.</li>
+    <li><strong>Loading a track interrupts whatever is currently playing</strong> — there's only one "live" track at a time, same as a real cue player.</li>
+    <li>Drag the ⋮⋮ handle to reorder the setlist. Use ✖ to drop a number from tonight's run, or "Add Local File" / the emergency YouTube box to bring in something new.</li>
+    <li>"Keep screen awake" stops the booth laptop/Chromebook from locking mid-show — leave it checked.</li>
+  </ul>
+</details>
+
+<div class="app">
+  <section class="card now-playing" id="nowPlayingCard">
+    <h2>Now Playing</h2>
+    <div id="nowLabel">Nothing loaded yet</div>
+    <div id="nowSub"></div>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="time-row"><span id="timeElapsed">0:00</span><span id="timeTotal">0:00</span></div>
+    </div>
+
+    <div class="transport">
+      <button id="prevBtn" class="btn btn-big" title="Previous (B / ←)">⏮</button>
+      <button id="playPauseBtn" class="btn btn-accent btn-big" title="Play/Pause (Space / P)">▶️</button>
+      <button id="nextBtn" class="btn btn-big" title="Next (N / →)">⏭</button>
+    </div>
+
+    <div class="controls-grid">
+      <div class="control-row">
+        <label for="volume">Volume</label>
+        <input id="volume" type="range" min="0" max="1" step="0.01" value="1">
+        <span class="val" id="volumeVal">100%</span>
+      </div>
+      <div class="control-row">
+        <label for="speed">Speed</label>
+        <input id="speed" type="range" min="0.5" max="1.5" step="0.05" value="1">
+        <span class="val" id="speedVal">1.00×</span>
+      </div>
+      <div class="control-row eq-row">
+        <label for="eqLow">EQ Low</label>
+        <input id="eqLow" type="range" min="-12" max="12" step="1" value="0">
+        <span class="val" id="eqLowVal">0 dB</span>
+      </div>
+      <div class="control-row eq-row">
+        <label for="eqLowMid">Low-Mid</label>
+        <input id="eqLowMid" type="range" min="-12" max="12" step="1" value="0">
+        <span class="val" id="eqLowMidVal">0 dB</span>
+      </div>
+      <div class="control-row eq-row">
+        <label for="eqHighMid">High-Mid</label>
+        <input id="eqHighMid" type="range" min="-12" max="12" step="1" value="0">
+        <span class="val" id="eqHighMidVal">0 dB</span>
+      </div>
+      <div class="control-row eq-row">
+        <label for="eqHigh">EQ High</label>
+        <input id="eqHigh" type="range" min="-12" max="12" step="1" value="0">
+        <span class="val" id="eqHighVal">0 dB</span>
+      </div>
+    </div>
+
+    <p class="emergency-note" id="eqDisabledNote" style="display:none">EQ and Speed don't apply to the emergency YouTube track — only to local audio.</p>
+
+    <div class="status-row">
+      <label><input type="checkbox" id="keepAwakeToggle" checked> 🔆 Keep screen awake</label>
+      <span id="wakeLockStatus">(active)</span>
+      <label><input type="checkbox" id="muteToggle"> 🔇 Mute</label>
+    </div>
+
+    <div id="ytBox">
+      <div id="ytPlayerWrap"><div id="ytPlayer"></div></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Tonight's Setlist</h2>
+    <div class="toolbar">
+      <button id="addLocalBtn" class="btn">➕ Add Local File</button>
+      <button id="resetOrderBtn" class="btn">↺ Reset to Original Setlist</button>
+    </div>
+    <ul id="playlist" class="playlist"></ul>
+
+    <div class="add-panel">
+      <h3>🚨 Emergency: Add a YouTube Track</h3>
+      <p class="emergency-note">Only use this if a real backing track is missing. It needs an internet connection, and EQ/Speed won't apply to it — audio/video only.</p>
+      <div class="row">
+        <input type="text" id="ytUrlInput" class="hidden-input-no" placeholder="YouTube URL or video ID">
+        <input type="text" id="ytTitleInput" placeholder="Track name (e.g. #15 - Song Title)">
+      </div>
+      <button id="addYtBtn" class="btn">➕ Add YouTube Track</button>
+    </div>
+  </section>
+</div>
+
+<input type="file" id="filePicker" accept="audio/*" class="hidden-input" />
+<audio id="audioEl" preload="auto"></audio>
+
+<script>
+/* ---------- Setlist data ---------- */
+const AUDIO_TRACKS = [
+  { number:'01', title:"So Easy (To Fall In Love) (Karaoke Version)", file:"#01 - So Easy (To Fall In Love) (Karaoke Version).mp3" },
+  { number:'02', title:"Now You Know (Practice Track – Piano)", file:"#02 - Now You Know Practice Track - Piano.mp3" },
+  { number:'06', title:"Would You Fall in Love with Me Again (Karaoke – Cut)", file:"#06 - Would You Fall in Love with Me Again [Karaoke] - Cut.mp3" },
+  { number:'07', title:"Coming Up Roses (Karaoke Version – Cut)", file:"#07 - Coming Up Roses (Karaoke Version) - Cut.mp3" },
+  { number:'09', title:"Ashes (Instrumental)", file:"#09 - Ashes (Instrumental).mp3" },
+  { number:'10', title:"Riptide (Piano Karaoke)", file:"#10 - Riptide (Piano Karaoke).mp3" },
+  { number:'13', title:"I Didn't Plan It (from Waitress – Cut)", file:"#13 - I Didn_t Plan It from Waitress - Cut.mp3" },
+  { number:'14', title:"Independently Owned (Instrumental)", file:"#14 - Independently Owned (INSTRUMENTAL).mp3" },
+  { number:'18', title:"Burn (Karaoke Version)", file:"#18 - Burn (Karaoke Version).mp3" },
+  { number:'19', title:"For Good (Piano Only)", file:"#19 - For Good (piano only).m4a" },
+  { number:'24', title:"Unethical (Karaoke Version)", file:"#24 - UNETHICAL (Karaoke Version).mp3" },
+  { number:'26', title:"In a Crowd of Thousands (from Anastasia – Cut)", file:"#26 - In a Crowd of Thousands from Anastasia - Cut.mp3" },
+  { number:'27', title:"The Anonymous Ones (Karaoke Instrumental – Cut)", file:"#27 - The Anonymous Ones - Karaoke Instrumental - Cut.mp3" },
+  { number:'28', title:"What It Sounds Like (Karaoke Version – Cut)", file:"#28 - What It Sounds Like (Karaoke Version) - Cut.mp3" },
+];
+
+function encodePath(path){ return path.split('/').map(encodeURIComponent).join('/'); }
+
+function defaultPlaylist(){
+  return AUDIO_TRACKS.map(t => makeTrack({
+    type:'audio',
+    label:`#${t.number} — ${t.title}`,
+    url: encodePath('DAHS Cabaret/' + t.file)
+  }));
+}
+
+/* ---------- Elements ---------- */
+const nowLabel=document.getElementById('nowLabel');
+const nowSub=document.getElementById('nowSub');
+const nowPlayingCard=document.getElementById('nowPlayingCard');
+const progressWrap=document.getElementById('progressWrap');
+const progressFill=document.getElementById('progressFill');
+const timeElapsed=document.getElementById('timeElapsed');
+const timeTotal=document.getElementById('timeTotal');
+const prevBtn=document.getElementById('prevBtn');
+const playPauseBtn=document.getElementById('playPauseBtn');
+const nextBtn=document.getElementById('nextBtn');
+const volumeSlider=document.getElementById('volume');
+const volumeVal=document.getElementById('volumeVal');
+const speedSlider=document.getElementById('speed');
+const speedVal=document.getElementById('speedVal');
+const eqLowSlider=document.getElementById('eqLow');
+const eqLowMidSlider=document.getElementById('eqLowMid');
+const eqHighMidSlider=document.getElementById('eqHighMid');
+const eqHighSlider=document.getElementById('eqHigh');
+const eqLowVal=document.getElementById('eqLowVal');
+const eqLowMidVal=document.getElementById('eqLowMidVal');
+const eqHighMidVal=document.getElementById('eqHighMidVal');
+const eqHighVal=document.getElementById('eqHighVal');
+const eqDisabledNote=document.getElementById('eqDisabledNote');
+const keepAwakeToggle=document.getElementById('keepAwakeToggle');
+const wakeLockStatus=document.getElementById('wakeLockStatus');
+const muteToggle=document.getElementById('muteToggle');
+const ytBox=document.getElementById('ytBox');
+const playlistEl=document.getElementById('playlist');
+const addLocalBtn=document.getElementById('addLocalBtn');
+const resetOrderBtn=document.getElementById('resetOrderBtn');
+const filePicker=document.getElementById('filePicker');
+const ytUrlInput=document.getElementById('ytUrlInput');
+const ytTitleInput=document.getElementById('ytTitleInput');
+const addYtBtn=document.getElementById('addYtBtn');
+const audio=document.getElementById('audioEl');
+
+/* ---------- State ---------- */
+let nextTrackId=1;
+function makeTrack(base){ return Object.assign({id:nextTrackId++}, base); }
+
+let playlist=defaultPlaylist();
+let currentId=null;
+let muted=false;
+
+function currentTrack(){ return playlist.find(t=>t.id===currentId) || null; }
+function currentIndex(){ return playlist.findIndex(t=>t.id===currentId); }
+
+/* ---------- Web Audio graph (EQ + volume) ---------- */
+let audioCtx=null, sourceNode=null, eqLow, eqLowMid, eqHighMid, eqHigh, masterGain;
+
+function ensureAudioGraph(){
+  if(audioCtx){ if(audioCtx.state==='suspended') audioCtx.resume(); return; }
+  audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  sourceNode=audioCtx.createMediaElementSource(audio);
+  eqLow=audioCtx.createBiquadFilter(); eqLow.type='lowshelf'; eqLow.frequency.value=120;
+  eqLowMid=audioCtx.createBiquadFilter(); eqLowMid.type='peaking'; eqLowMid.frequency.value=500; eqLowMid.Q.value=1;
+  eqHighMid=audioCtx.createBiquadFilter(); eqHighMid.type='peaking'; eqHighMid.frequency.value=2000; eqHighMid.Q.value=1;
+  eqHigh=audioCtx.createBiquadFilter(); eqHigh.type='highshelf'; eqHigh.frequency.value=6000;
+  masterGain=audioCtx.createGain(); masterGain.gain.value=parseFloat(volumeSlider.value);
+  eqLow.gain.value=parseFloat(eqLowSlider.value);
+  eqLowMid.gain.value=parseFloat(eqLowMidSlider.value);
+  eqHighMid.gain.value=parseFloat(eqHighMidSlider.value);
+  eqHigh.gain.value=parseFloat(eqHighSlider.value);
+  sourceNode.connect(eqLow).connect(eqLowMid).connect(eqHighMid).connect(eqHigh).connect(masterGain).connect(audioCtx.destination);
+}
+
+['click','keydown','touchstart'].forEach(evt=>document.addEventListener(evt,()=>ensureAudioGraph(),{once:true}));
+
+audio.volume=1;
+audio.addEventListener('ended', ()=>{ updatePlayPauseBtn(); });
+
+/* ---------- YouTube emergency engine ---------- */
+let ytPlayer=null, ytPlayerReady=false, ytApiReady=false, pendingYtAction=null;
+
+function onYouTubeIframeAPIReady(){
+  ytApiReady=true;
+  if(pendingYtAction){ const fn=pendingYtAction; pendingYtAction=null; fn(); }
+}
+
+function ensureYtPlayer(initialId, onReadyCb){
+  if(ytPlayer){ onReadyCb && onReadyCb(); return; }
+  const create=()=>{
+    ytPlayer=new YT.Player('ytPlayer',{
+      videoId:initialId,
+      events:{
+        onReady:()=>{ ytPlayerReady=true; if(muted) ytPlayer.mute(); onReadyCb && onReadyCb(); },
+        onStateChange:()=>{ updatePlayPauseBtn(); }
+      }
+    });
+  };
+  if(ytApiReady) create(); else pendingYtAction=create;
+}
+
+function extractYouTubeId(input){
+  input=(input||'').trim();
+  if(/^[\w-]{11}$/.test(input)) return input;
+  const patterns=[/[?&]v=([\w-]{11})/,/youtu\.be\/([\w-]{11})/,/embed\/([\w-]{11})/];
+  for(const p of patterns){ const m=input.match(p); if(m) return m[1]; }
+  return null;
+}
+
+/* ---------- Load / playback ---------- */
+function loadTrackById(id, autoplay){
+  const track=playlist.find(t=>t.id===id);
+  if(!track) return;
+  currentId=id;
+
+  if(track.type==='youtube'){
+    ytBox.classList.add('visible');
+    eqDisabledNote.style.display='block';
+    setEqSpeedDisabled(true);
+    audio.pause();
+    ensureYtPlayer(track.videoId, ()=>{
+      ytPlayer.cueVideoById(track.videoId);
+      ytPlayer.setVolume(Math.round(parseFloat(volumeSlider.value)*100));
+      if(autoplay) ytPlayer.playVideo();
+    });
+    if(ytPlayer && ytPlayerReady){
+      ytPlayer.cueVideoById(track.videoId);
+      ytPlayer.setVolume(Math.round(parseFloat(volumeSlider.value)*100));
+      if(autoplay) ytPlayer.playVideo();
+    }
+  }else{
+    ytBox.classList.remove('visible');
+    eqDisabledNote.style.display='none';
+    setEqSpeedDisabled(false);
+    if(ytPlayer && ytPlayerReady) ytPlayer.pauseVideo();
+    ensureAudioGraph();
+    audio.src=track.url;
+    audio.playbackRate=parseFloat(speedSlider.value);
+    audio.preservesPitch=true;
+    audio.mozPreservesPitch=true;
+    audio.webkitPreservesPitch=true;
+    audio.muted=muted;
+    if(autoplay) audio.play().catch(()=>{});
+  }
+
+  renderPlaylist();
+  updateNowPlaying();
+  updatePlayPauseBtn();
+}
+
+function setEqSpeedDisabled(disabled){
+  [speedSlider,eqLowSlider,eqLowMidSlider,eqHighMidSlider,eqHighSlider].forEach(el=>{ el.disabled=disabled; });
+}
+
+function nextTrack(){
+  const idx=currentIndex();
+  if(idx<0){ if(playlist.length) loadTrackById(playlist[0].id,false); return; }
+  if(idx<playlist.length-1) loadTrackById(playlist[idx+1].id, isPlaying());
+}
+
+function prevTrack(){
+  const idx=currentIndex();
+  if(idx<=0) return;
+  loadTrackById(playlist[idx-1].id, isPlaying());
+}
+
+function isPlaying(){
+  const track=currentTrack();
+  if(!track) return false;
+  if(track.type==='youtube') return !!(ytPlayer && ytPlayerReady && ytPlayer.getPlayerState()===YT.PlayerState.PLAYING);
+  return !audio.paused && !audio.ended;
+}
+
+function togglePlayPause(){
+  const track=currentTrack();
+  if(!track){ if(playlist.length) loadTrackById(playlist[0].id,true); return; }
+  if(track.type==='youtube'){
+    if(!ytPlayer || !ytPlayerReady) return;
+    if(ytPlayer.getPlayerState()===YT.PlayerState.PLAYING) ytPlayer.pauseVideo(); else ytPlayer.playVideo();
+  }else{
+    ensureAudioGraph();
+    if(audio.paused) audio.play().catch(()=>{}); else audio.pause();
+  }
+  setTimeout(updatePlayPauseBtn,30);
+}
+
+function updatePlayPauseBtn(){
+  playPauseBtn.textContent=isPlaying()?'⏸':'▶️';
+}
+
+function updateNowPlaying(){
+  const track=currentTrack();
+  const idx=currentIndex();
+  if(!track){ nowLabel.textContent='Nothing loaded yet'; nowSub.textContent=''; return; }
+  nowLabel.textContent=track.label;
+  nowSub.textContent=`Track ${idx+1} of ${playlist.length}`+(track.type==='youtube'?' • YouTube (emergency)':'');
+}
+
+const fmt=s=>{ if(!isFinite(s)||s<0) s=0; return `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`; };
+
+function updateProgressLoop(){
+  const track=currentTrack();
+  let cur=0, dur=0;
+  if(track && track.type==='youtube' && ytPlayer && ytPlayerReady){
+    cur=ytPlayer.getCurrentTime()||0; dur=ytPlayer.getDuration()||0;
+  }else if(track){
+    cur=audio.currentTime||0; dur=audio.duration||0;
+  }
+  if(dur>0){
+    progressFill.style.width=(cur/dur*100)+'%';
+    timeElapsed.textContent=fmt(cur);
+    timeTotal.textContent=fmt(dur);
+    nowPlayingCard.classList.toggle('ending-soon', isPlaying() && (dur-cur)<=10);
+  }else{
+    progressFill.style.width='0%';
+    timeElapsed.textContent='0:00';
+    timeTotal.textContent='0:00';
+    nowPlayingCard.classList.remove('ending-soon');
+  }
+  requestAnimationFrame(updateProgressLoop);
+}
+requestAnimationFrame(updateProgressLoop);
+
+progressWrap.addEventListener('click', (e)=>{
+  const track=currentTrack();
+  if(!track) return;
+  const rect=progressWrap.getBoundingClientRect();
+  const ratio=Math.min(1,Math.max(0,(e.clientX-rect.left)/rect.width));
+  if(track.type==='youtube'){
+    if(ytPlayer && ytPlayerReady){ const dur=ytPlayer.getDuration()||0; ytPlayer.seekTo(dur*ratio,true); }
+  }else{
+    if(audio.duration) audio.currentTime=audio.duration*ratio;
+  }
+});
+
+/* ---------- Transport buttons ---------- */
+prevBtn.addEventListener('click', prevTrack);
+nextBtn.addEventListener('click', nextTrack);
+playPauseBtn.addEventListener('click', togglePlayPause);
+
+/* ---------- Volume / Speed / EQ ---------- */
+function applyVolume(){
+  const v=parseFloat(volumeSlider.value);
+  volumeVal.textContent=Math.round(v*100)+'%';
+  if(masterGain) masterGain.gain.value=v;
+  if(ytPlayer && ytPlayerReady) ytPlayer.setVolume(Math.round(v*100));
+}
+volumeSlider.addEventListener('input', applyVolume);
+
+speedSlider.addEventListener('input', ()=>{
+  const v=parseFloat(speedSlider.value);
+  speedVal.textContent=v.toFixed(2)+'×';
+  audio.playbackRate=v;
+  audio.preservesPitch=true;
+  audio.mozPreservesPitch=true;
+  audio.webkitPreservesPitch=true;
+});
+
+function wireEq(slider, valEl, getNode){
+  slider.addEventListener('input', ()=>{
+    ensureAudioGraph();
+    const v=parseFloat(slider.value);
+    valEl.textContent=(v>0?'+':'')+v+' dB';
+    const node=getNode();
+    if(node) node.gain.value=v;
+  });
+}
+wireEq(eqLowSlider, eqLowVal, ()=>eqLow);
+wireEq(eqLowMidSlider, eqLowMidVal, ()=>eqLowMid);
+wireEq(eqHighMidSlider, eqHighMidVal, ()=>eqHighMid);
+wireEq(eqHighSlider, eqHighVal, ()=>eqHigh);
+
+muteToggle.addEventListener('change', ()=>{
+  muted=muteToggle.checked;
+  audio.muted=muted;
+  if(ytPlayer && ytPlayerReady){ if(muted) ytPlayer.mute(); else ytPlayer.unMute(); }
+});
+
+/* ---------- Playlist rendering + drag reorder ---------- */
+let dragItemEl=null;
+
+function renderPlaylist(){
+  playlistEl.innerHTML='';
+  playlist.forEach(track=>{
+    const li=document.createElement('li');
+    li.className='playlist-item'+(track.id===currentId?' active':'');
+    li.draggable=true;
+    li.dataset.id=track.id;
+
+    const handle=document.createElement('span');
+    handle.className='drag-handle';
+    handle.textContent='⋮⋮';
+
+    const title=document.createElement('span');
+    title.className='item-title';
+    title.textContent=track.label;
+    if(track.type==='youtube'){
+      const tag=document.createElement('span');
+      tag.className='tag';
+      tag.textContent='(YouTube)';
+      title.append(tag);
+    }
+
+    const remove=document.createElement('button');
+    remove.type='button';
+    remove.className='icon-btn danger';
+    remove.title='Remove from setlist';
+    remove.textContent='✖';
+    remove.addEventListener('click',(e)=>{
+      e.stopPropagation();
+      removeTrack(track.id);
+    });
+
+    li.append(handle,title,remove);
+
+    li.addEventListener('click',(e)=>{
+      if(e.target.closest('.icon-btn')) return;
+      if(track.id===currentId) return;
+      loadTrackById(track.id,false);
+    });
+    li.addEventListener('dblclick',(e)=>{
+      if(e.target.closest('.icon-btn')) return;
+      loadTrackById(track.id,true);
+    });
+
+    playlistEl.append(li);
+  });
+}
+renderPlaylist();
+
+function removeTrack(id){
+  const idx=playlist.findIndex(t=>t.id===id);
+  if(idx<0) return;
+  if(id===currentId){
+    audio.pause();
+    if(ytPlayer && ytPlayerReady) ytPlayer.pauseVideo();
+    currentId=null;
+  }
+  playlist.splice(idx,1);
+  renderPlaylist();
+  updateNowPlaying();
+  updatePlayPauseBtn();
+}
+
+playlistEl.addEventListener('dragstart',(e)=>{
+  const li=e.target.closest('.playlist-item');
+  if(!li) return;
+  dragItemEl=li;
+  li.classList.add('dragging');
+  e.dataTransfer.effectAllowed='move';
+  e.dataTransfer.setData('text/plain','');
+});
+playlistEl.addEventListener('dragend',(e)=>{
+  const li=e.target.closest('.playlist-item');
+  if(li) li.classList.remove('dragging');
+  dragItemEl=null;
+  [...playlistEl.querySelectorAll('.drag-over')].forEach(el=>el.classList.remove('drag-over'));
+});
+playlistEl.addEventListener('dragover',(e)=>{
+  if(!dragItemEl) return;
+  e.preventDefault();
+  const li=e.target.closest('.playlist-item');
+  if(!li || li===dragItemEl) return;
+  [...playlistEl.querySelectorAll('.drag-over')].forEach(el=>{ if(el!==li) el.classList.remove('drag-over'); });
+  li.classList.add('drag-over');
+});
+playlistEl.addEventListener('drop',(e)=>{
+  if(!dragItemEl) return;
+  e.preventDefault();
+  const li=e.target.closest('.playlist-item');
+  if(!li || li===dragItemEl) return;
+  li.classList.remove('drag-over');
+  const rect=li.getBoundingClientRect();
+  const before=(e.clientY-rect.top)<rect.height/2;
+  playlistEl.insertBefore(dragItemEl, before?li:li.nextSibling);
+  const newOrderIds=[...playlistEl.querySelectorAll('.playlist-item')].map(el=>parseInt(el.dataset.id,10));
+  playlist=newOrderIds.map(id=>playlist.find(t=>t.id===id));
+});
+
+/* ---------- Add local file / reset / add YouTube ---------- */
+addLocalBtn.addEventListener('click', ()=>filePicker.click());
+filePicker.addEventListener('change', (e)=>{
+  const f=e.target.files && e.target.files[0];
+  if(!f) return;
+  const url=URL.createObjectURL(f);
+  playlist.push(makeTrack({type:'audio', label:f.name, url, local:true}));
+  renderPlaylist();
+  filePicker.value='';
+});
+
+resetOrderBtn.addEventListener('click', ()=>{
+  audio.pause();
+  if(ytPlayer && ytPlayerReady) ytPlayer.pauseVideo();
+  currentId=null;
+  playlist=defaultPlaylist();
+  renderPlaylist();
+  updateNowPlaying();
+  updatePlayPauseBtn();
+});
+
+addYtBtn.addEventListener('click', ()=>{
+  const id=extractYouTubeId(ytUrlInput.value);
+  if(!id){ alert('Could not find a valid YouTube video ID in that URL.'); return; }
+  const title=ytTitleInput.value.trim() || 'Emergency YouTube Track';
+  playlist.push(makeTrack({type:'youtube', label:title, videoId:id}));
+  renderPlaylist();
+  ytUrlInput.value='';
+  ytTitleInput.value='';
+});
+
+/* ---------- Keep screen awake ---------- */
+let wakeLock=null, keepAwakeEnabled=true;
+
+async function requestWakeLock(){
+  if(!('wakeLock' in navigator)){ wakeLockStatus.textContent='(not supported on this browser)'; return; }
+  try{
+    wakeLock=await navigator.wakeLock.request('screen');
+    wakeLockStatus.textContent='(active)';
+    wakeLock.addEventListener('release',()=>{ wakeLock=null; if(keepAwakeEnabled) wakeLockStatus.textContent='(re-acquiring…)'; });
+  }catch(err){
+    wakeLockStatus.textContent='(could not activate)';
+  }
+}
+function releaseWakeLock(){ if(wakeLock){ wakeLock.release(); wakeLock=null; } wakeLockStatus.textContent='(off)'; }
+function applyWakeLockPreference(){ if(keepAwakeEnabled) requestWakeLock(); else releaseWakeLock(); }
+
+keepAwakeToggle.addEventListener('change',()=>{
+  keepAwakeEnabled=keepAwakeToggle.checked;
+  applyWakeLockPreference();
+});
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible' && keepAwakeEnabled) requestWakeLock();
+});
+function tryWakeLockOnInteraction(){ if(keepAwakeEnabled && !wakeLock) requestWakeLock(); }
+['click','keydown','touchstart'].forEach(evt=>document.addEventListener(evt,tryWakeLockOnInteraction));
+applyWakeLockPreference();
+
+/* ---------- Keyboard shortcuts ---------- */
+document.addEventListener('keydown',(e)=>{
+  if(['INPUT','TEXTAREA','SELECT','BUTTON'].includes(document.activeElement.tagName)) return;
+  switch(e.key){
+    case ' ': e.preventDefault(); togglePlayPause(); break;
+    case 'p': case 'P': togglePlayPause(); break;
+    case 'n': case 'N': case 'ArrowRight': nextTrack(); break;
+    case 'b': case 'B': case 'ArrowLeft': prevTrack(); break;
+    case 'm': case 'M': muteToggle.checked=!muteToggle.checked; muteToggle.dispatchEvent(new Event('change')); break;
+  }
+});
+
+/* ---------- Init ---------- */
+updateNowPlaying();
+</script>
+</body>
+</html>
